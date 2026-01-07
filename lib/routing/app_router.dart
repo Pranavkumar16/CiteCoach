@@ -13,6 +13,7 @@ import '../features/setup/presentation/privacy_screen.dart';
 import '../features/setup/presentation/setup_complete_screen.dart';
 import '../features/setup/presentation/splash_screen.dart';
 import '../features/setup/providers/setup_provider.dart';
+import '../features/voice/presentation/voice_overlay_screen.dart';
 
 /// Route paths as constants for type-safe navigation.
 abstract final class AppRoutes {
@@ -193,10 +194,10 @@ GoRouter createRouter(Ref ref) {
         name: 'voiceInput',
         builder: (context, state) {
           final documentIdStr = state.uri.queryParameters['documentId'];
-          return _PlaceholderScreen(
-            name: 'Voice Input',
-            extra: 'Document: $documentIdStr',
-          );
+          final documentId = documentIdStr != null 
+              ? int.tryParse(documentIdStr) ?? 0 
+              : 0;
+          return VoiceOverlayScreen(documentId: documentId);
         },
       ),
 

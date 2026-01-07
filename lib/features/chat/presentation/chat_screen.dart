@@ -87,11 +87,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  void _handleVoiceStart() {
-    // Navigate to voice input screen
-    context.push(
+  void _handleVoiceStart() async {
+    // Navigate to voice input screen and wait for result
+    final result = await context.push<String>(
       '${AppRoutes.voiceInput}?documentId=${widget.documentId}',
     );
+    
+    // If we got transcribed text, send it as a message
+    if (result != null && result.isNotEmpty) {
+      ref.read(chatProvider.notifier).sendMessage(
+        result,
+        inputMethod: InputMethod.voice,
+      );
+      Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+    }
   }
 
   void _handleClearChat() async {
