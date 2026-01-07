@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/library/presentation/library_screen.dart';
+import '../features/processing/presentation/document_ready_screen.dart';
+import '../features/processing/presentation/processing_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
 import '../features/setup/presentation/model_setup_screen.dart';
@@ -27,6 +29,7 @@ abstract final class AppRoutes {
 
   // Document specific
   static const String processing = '/document/:id/processing';
+  static const String documentReady = '/document/:id/ready';
   static const String reader = '/document/:id/reader';
   static const String chat = '/document/:id/chat';
 
@@ -148,9 +151,16 @@ GoRouter createRouter(Ref ref) {
         path: '/document/:id/processing',
         name: 'processing',
         builder: (context, state) {
-          final documentId = state.pathParameters['id']!;
-          return _PlaceholderScreen(
-              name: 'Processing', extra: 'Document: $documentId');
+          final documentId = int.parse(state.pathParameters['id']!);
+          return ProcessingScreen(documentId: documentId);
+        },
+      ),
+      GoRoute(
+        path: '/document/:id/ready',
+        name: 'documentReady',
+        builder: (context, state) {
+          final documentId = int.parse(state.pathParameters['id']!);
+          return DocumentReadyScreen(documentId: documentId);
         },
       ),
       GoRoute(
