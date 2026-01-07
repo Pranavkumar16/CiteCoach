@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/chat/presentation/chat_screen.dart';
 import '../features/library/presentation/library_screen.dart';
 import '../features/processing/presentation/document_ready_screen.dart';
 import '../features/processing/presentation/processing_screen.dart';
@@ -35,6 +36,7 @@ abstract final class AppRoutes {
 
   // Voice overlay (shown as dialog/overlay)
   static const String voice = '/voice';
+  static const String voiceInput = '/voice-input';
 
   // Download required (when user chose "Download Later")
   static const String downloadRequired = '/download-required';
@@ -167,11 +169,12 @@ GoRouter createRouter(Ref ref) {
         path: '/document/:id/reader',
         name: 'reader',
         builder: (context, state) {
-          final documentId = state.pathParameters['id']!;
-          final initialPage = state.uri.queryParameters['page'];
+          final documentId = int.parse(state.pathParameters['id']!);
+          final pageStr = state.uri.queryParameters['page'];
+          final initialPage = pageStr != null ? int.tryParse(pageStr) : null;
           return _PlaceholderScreen(
             name: 'Reader',
-            extra: 'Document: $documentId, Page: $initialPage',
+            extra: 'Document: $documentId, Page: ${initialPage ?? 1}',
           );
         },
       ),
@@ -179,9 +182,21 @@ GoRouter createRouter(Ref ref) {
         path: '/document/:id/chat',
         name: 'chat',
         builder: (context, state) {
-          final documentId = state.pathParameters['id']!;
+          final documentId = int.parse(state.pathParameters['id']!);
+          return ChatScreen(documentId: documentId);
+        },
+      ),
+
+      // Voice Input
+      GoRoute(
+        path: AppRoutes.voiceInput,
+        name: 'voiceInput',
+        builder: (context, state) {
+          final documentIdStr = state.uri.queryParameters['documentId'];
           return _PlaceholderScreen(
-              name: 'Chat', extra: 'Document: $documentId');
+            name: 'Voice Input',
+            extra: 'Document: $documentIdStr',
+          );
         },
       ),
 
