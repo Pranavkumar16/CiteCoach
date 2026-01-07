@@ -58,6 +58,8 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   riverpod_generator: ^2.4.0
   build_runner: ^2.4.9
+  sqflite_common_ffi: ^2.3.3
+  shared_preferences_platform_interface: ^2.3.2
 
 flutter:
   uses-material-design: true
