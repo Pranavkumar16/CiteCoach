@@ -5,30 +5,74 @@ abstract final class AppStrings {
   static const String appName = 'CiteCoach';
   static const String appTagline = 'Offline document intelligence';
   
-  // Setup Flow
+  // Setup Flow - Privacy Screen
   static const String privacyTitle = '100% Offline & Private';
+  static const String privacySubtitle = 
+      'Your documents stay on your device. No data ever leaves.';
   static const String privacyDescription = 
       'CiteCoach works completely offline. Your documents never leave your device.';
+  static const String privacyFeature1Title = 'Fully Offline';
+  static const String privacyFeature1Desc = 'No internet required after initial setup';
+  static const String privacyFeature2Title = 'On-Device AI';
+  static const String privacyFeature2Desc = 'All processing happens locally on your phone';
+  static const String privacyFeature3Title = 'No Cloud Upload';
+  static const String privacyFeature3Desc = 'Your PDFs are never sent to any server';
   
+  // Setup Flow - Model Setup Screen
   static const String modelSetupTitle = 'One-Time Setup';
+  static const String modelSetupSubtitle = 
+      'Download the AI model to enable intelligent Q&A';
   static const String modelSetupDescription = 
       'Download the offline intelligence engine (1.5GB) to enable Q&A. This happens once.';
+  static const String modelName = 'Gemma 2B';
+  static const String modelDescription = 'Lightweight AI optimized for documents';
   static const String modelSize = '1.5 GB';
   static const String modelNetwork = 'Wi-Fi only';
   static const String modelTime = '~3-5 minutes';
+  static const String downloadSizeLabel = 'Download Size';
+  static const String storageNeededLabel = 'Storage Needed';
+  static const String requirementsTitle = 'Requirements';
+  static const String requirement1 = 'Wi-Fi connection recommended';
+  static const String requirement2 = 'At least 2GB free storage';
+  static const String requirement3 = 'Keep app open during download';
   
+  // Setup Flow - Download Screen
+  static const String downloadNowButton = 'Download Now';
   static const String downloadNow = 'Download Now';
   static const String downloadLater = 'Download Later';
+  static const String skipForNowButton = 'Skip for Now';
   static const String downloading = 'Downloading...';
+  static const String downloadingTitle = 'Downloading AI Model';
+  static const String downloadingSubtitle = 
+      'This may take a few minutes depending on your connection';
   static const String downloadingDescription = 
       "This may take a few minutes. You can leave the app—we'll continue in the background.";
+  static const String downloadInProgress = 'Download in Progress';
+  static const String downloadPaused = 'Download Paused';
+  static const String downloadError = 'Download Error';
+  static const String storageUsed = 'Storage used';
   static const String pause = 'Pause';
+  static const String pauseButton = 'Pause';
   static const String resume = 'Resume';
+  static const String resumeButton = 'Resume';
+  static const String paused = 'Paused';
+  static const String ready = 'Ready';
+  static const String retryButton = 'Retry Download';
   
-  static const String setupCompleteTitle = "You're Ready!";
+  // Setup Flow - Complete Screen
+  static const String setupCompleteTitle = 'All Set!';
+  static const String setupCompleteSubtitle = 
+      'CiteCoach is now fully configured for offline use';
   static const String setupCompleteDescription = 
       'CiteCoach is now fully offline. Import a PDF to start getting evidence-based answers.';
   static const String getStarted = 'Get Started';
+  static const String startUsingApp = 'Start Using CiteCoach';
+  static const String capability1Title = 'Read PDFs Anywhere';
+  static const String capability1Desc = 'Open and annotate documents offline';
+  static const String capability2Title = 'Ask Questions';
+  static const String capability2Desc = 'Get AI answers with page citations';
+  static const String capability3Title = 'Voice Interaction';
+  static const String capability3Desc = 'Ask questions by voice, hear answers aloud';
   
   // Library
   static const String libraryTitle = 'Library';

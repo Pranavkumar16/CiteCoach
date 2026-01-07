@@ -44,12 +44,25 @@ abstract final class AppColors {
   static const Color error = Color(0xFFFF3B30);
   static const Color info = Color(0xFF0071E3);
 
+  // Base colors
+  static const Color white = Colors.white;
+  static const Color black = Colors.black;
+
   // UI Colors
   static const Color background = slate50;
+  static const Color backgroundPrimary = slate50;
+  static const Color backgroundSecondary = slate100;
   static const Color surface = Colors.white;
+  static const Color surfacePrimary = Colors.white;
   static const Color surfaceVariant = slate100;
   static const Color border = slate200;
   static const Color borderLight = Color(0xFFE2E8F0);
+  
+  // Semantic colors with more specific names
+  static const Color successGreen = Color(0xFF34C759);
+  static const Color warningOrange = Color(0xFFFF9500);
+  static const Color errorRed = Color(0xFFFF3B30);
+  static const Color infoBlue = Color(0xFF0071E3);
   
   // Text Colors
   static const Color textPrimary = slate900;

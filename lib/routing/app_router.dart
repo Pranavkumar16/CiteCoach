@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/setup/domain/setup_state.dart';
+import '../features/setup/presentation/download_progress_screen.dart';
+import '../features/setup/presentation/model_setup_screen.dart';
+import '../features/setup/presentation/privacy_screen.dart';
+import '../features/setup/presentation/setup_complete_screen.dart';
+import '../features/setup/presentation/splash_screen.dart';
+import '../features/setup/providers/setup_provider.dart';
+
 /// Route paths as constants for type-safe navigation.
 abstract final class AppRoutes {
   // Setup flow
@@ -47,35 +55,63 @@ GoRouter createRouter(Ref ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
+    redirect: (context, state) {
+      final setupState = ref.read(setupProvider);
+      final currentPath = state.uri.path;
+      
+      // List of setup paths
+      final setupPaths = [
+        AppRoutes.splash,
+        AppRoutes.privacy,
+        AppRoutes.modelSetup,
+        AppRoutes.downloadProgress,
+        AppRoutes.setupComplete,
+      ];
+      
+      final isSetupPath = setupPaths.contains(currentPath);
+      final isSetupCompleted = setupState.currentStep == SetupStep.done;
+      
+      // If setup is completed and user tries to access setup screens,
+      // redirect to library
+      if (isSetupCompleted && isSetupPath) {
+        return AppRoutes.library;
+      }
+      
+      // If setup is not completed and user tries to access main app,
+      // redirect to current setup step
+      if (!isSetupCompleted && !isSetupPath) {
+        return setupState.currentStep.routePath;
+      }
+      
+      // No redirect needed
+      return null;
+    },
     routes: [
       // Setup Flow
       GoRoute(
         path: AppRoutes.splash,
         name: 'splash',
-        builder: (context, state) => const _PlaceholderScreen(name: 'Splash'),
+        builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
         path: AppRoutes.privacy,
         name: 'privacy',
-        builder: (context, state) => const _PlaceholderScreen(name: 'Privacy'),
+        builder: (context, state) => const PrivacyScreen(),
       ),
       GoRoute(
         path: AppRoutes.modelSetup,
         name: 'modelSetup',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Model Setup'),
+        builder: (context, state) => const ModelSetupScreen(),
       ),
       GoRoute(
         path: AppRoutes.downloadProgress,
         name: 'downloadProgress',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Download Progress'),
+        builder: (context, state) => const DownloadProgressScreen(),
       ),
       GoRoute(
         path: AppRoutes.setupComplete,
         name: 'setupComplete',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Setup Complete'),
+        builder: (context, state) => const SetupCompleteScreen(),
       ),
 
       // Main App - Shell Route for bottom navigation

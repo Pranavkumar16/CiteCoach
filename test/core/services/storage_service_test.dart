@@ -150,21 +150,6 @@ void main() {
   });
 
   group('StorageService - Setup Step Extension', () {
-    test('initial step is privacy', () {
-      expect(storageService.currentSetupStep, equals(SetupStep.privacy));
-    });
-
-    test('step progresses through setup', () async {
-      await storageService.setPrivacyAccepted(true);
-      expect(storageService.currentSetupStep, equals(SetupStep.modelDownload));
-
-      await storageService.setModelDownloaded(true);
-      expect(storageService.currentSetupStep, equals(SetupStep.complete));
-
-      await storageService.setSetupCompleted(true);
-      expect(storageService.currentSetupStep, equals(SetupStep.done));
-    });
-
     test('canAccessLibrary requires privacy accepted', () async {
       expect(storageService.canAccessLibrary, isFalse);
       

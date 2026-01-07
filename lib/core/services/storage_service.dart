@@ -238,20 +238,6 @@ class StorageService {
 
 /// Extension for easier access to setup state.
 extension SetupStateExtension on StorageService {
-  /// Determine the current setup step.
-  SetupStep get currentSetupStep {
-    if (!isPrivacyAccepted) {
-      return SetupStep.privacy;
-    }
-    if (!isModelDownloaded) {
-      return SetupStep.modelDownload;
-    }
-    if (!isSetupCompleted) {
-      return SetupStep.complete;
-    }
-    return SetupStep.done;
-  }
-
   /// Check if user can access main app (model may not be downloaded).
   bool get canAccessLibrary {
     return isPrivacyAccepted;
@@ -261,19 +247,4 @@ extension SetupStateExtension on StorageService {
   bool get canUseChat {
     return isModelDownloaded;
   }
-}
-
-/// Setup flow steps.
-enum SetupStep {
-  /// Show privacy screen.
-  privacy,
-
-  /// Show model download screen.
-  modelDownload,
-
-  /// Show setup complete screen.
-  complete,
-
-  /// Setup is done, show main app.
-  done,
 }

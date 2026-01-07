@@ -105,12 +105,22 @@ abstract final class AppDimensions {
   static const double progressBarHeight = 10.0;
   static const double progressBarRadius = 10.0;
   
+  // Icon containers
+  static const double iconContainerXs = 32.0;
+  static const double iconContainerSm = 40.0;
+  static const double iconContainerMd = 48.0;
+  static const double iconContainerLg = 56.0;
+  
   // Setup screen
   static const double setupIconSize = 80.0;
   static const double setupMaxWidth = 280.0;
   static const double logoSizeLarge = 180.0;
   static const double logoSizeMedium = 120.0;
   static const double logoSizeSmall = 64.0;
+  static const double logoSizeLg = 96.0;
+  static const double logoSizeMd = 64.0;
+  static const double logoSizeSm = 40.0;
+  static const double iconSizeSetup = 80.0;
   
   // PDF Reader
   static const double pageIndicatorHeight = 48.0;
