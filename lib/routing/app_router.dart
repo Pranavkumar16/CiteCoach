@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/library/presentation/library_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
 import '../features/setup/presentation/model_setup_screen.dart';
@@ -123,8 +124,7 @@ GoRouter createRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.library,
             name: 'library',
-            builder: (context, state) =>
-                const _PlaceholderScreen(name: 'Library'),
+            builder: (context, state) => const LibraryScreen(),
           ),
           GoRoute(
             path: AppRoutes.settings,

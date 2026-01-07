@@ -212,19 +212,24 @@ class DashedButton extends StatelessWidget {
     required this.onPressed,
     required this.text,
     this.isEnabled = true,
+    this.isLoading = false,
     this.width,
     this.height = AppDimensions.buttonHeightLg,
+    this.icon,
   });
 
   final VoidCallback? onPressed;
   final String text;
   final bool isEnabled;
+  final bool isLoading;
   final double? width;
   final double height;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    final opacity = isEnabled ? 1.0 : 0.5;
+    final effectiveEnabled = isEnabled && !isLoading;
+    final opacity = effectiveEnabled ? 1.0 : 0.5;
 
     return AnimatedOpacity(
       duration: AppDimensions.animationFast,
@@ -236,7 +241,7 @@ class DashedButton extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           child: InkWell(
-            onTap: isEnabled ? onPressed : null,
+            onTap: effectiveEnabled ? onPressed : null,
             borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
             splashColor: AppColors.primaryIndigo.withOpacity(0.1),
             child: CustomPaint(
@@ -248,14 +253,38 @@ class DashedButton extends StatelessWidget {
                 radius: AppDimensions.radiusLg,
               ),
               child: Center(
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.textSecondary,
+                          ),
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (icon != null) ...[
+                            Icon(
+                              icon,
+                              color: AppColors.textSecondary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: AppDimensions.spacingXs),
+                          ],
+                          Text(
+                            text,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
           ),
@@ -333,12 +362,14 @@ class SmallActionButton extends StatelessWidget {
     required this.text,
     this.isPrimary = false,
     this.isEnabled = true,
+    this.icon,
   });
 
   final VoidCallback? onPressed;
   final String text;
   final bool isPrimary;
   final bool isEnabled;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -357,13 +388,22 @@ class SmallActionButton extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Center(
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, color: Colors.white, size: 16),
+                      const SizedBox(width: AppDimensions.spacingXs),
+                    ],
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -387,13 +427,22 @@ class SmallActionButton extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Center(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: AppColors.primaryIndigo,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, color: AppColors.primaryIndigo, size: 16),
+                    const SizedBox(width: AppDimensions.spacingXs),
+                  ],
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      color: AppColors.primaryIndigo,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
