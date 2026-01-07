@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CiteCoach V1 - Production Wireframes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f4f8;
+            padding: 40px 20px;
+            color: #0f172a;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-align: center;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1.3rem;
+            color: #64748b;
+            margin-bottom: 50px;
+        }
+
+        .journey-section {
+            margin-bottom: 80px;
+        }
+
+        .journey-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding: 25px;
+            background: white;
+            border-radius: 24px;
+            border-left: 6px solid #6366f1;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
+        }
+
+        .journey-description {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .mockup-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .phone-frame {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border-radius: 50px;
+            padding: 16px;
+            box-shadow: 0 30px 60px -12px rgba(15, 23, 42, 0.5);
+            aspect-ratio: 9/19.5;
+            max-width: 380px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140px;
+            height: 32px;
+            background: #0f172a;
+            border-radius: 0 0 24px 24px;
+            z-index: 10;
+        }
+
+        .screen {
+            background: #f8fafc;
+            border-radius: 38px;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .screen-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen-label {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.95rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        /* App Header */
+        .app-header {
+            background: white;
+            padding: 60px 20px 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .header-icon {
+            font-size: 1.3rem;
+            color: #6366f1;
+            cursor: pointer;
+        }
+
+        /* Splash Screen */
+        .splash-screen {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            color: white;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .splash-screen::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.1); opacity: 0.5; }
+        }
+
+        .kinetic-logo {
+            width: 180px;
+            height: 180px;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 20px 40px rgba(0,0,0,0.2));
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-name {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tagline {
+            font-size: 1.15rem;
+            opacity: 0.95;
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Setup Screens */
+        .setup-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 30px;
+            text-align: center;
+            background: #f8fafc;
+        }
+
+        .setup-icon {
+            font-size: 5rem;
+            margin-bottom: 25px;
+        }
+
+        .setup-title {
+            font-size: 1.9rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: #0f172a;
+        }
+
+        .setup-text {
+            font-size: 1rem;
+            color: #64748b;
+            line-height: 1.7;
+            margin-bottom: 25px;
+            max-width: 300px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            padding: 18px 40px;
+            border-radius: 28px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            max-width: 280px;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+            transition: all 0.3s;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #6366f1;
+            padding: 18px 40px;
+            border-radius: 28px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            border: 2px solid #6366f1;
+            cursor: pointer;
+            width: 100%;
+            max-width: 280px;
+            margin-top: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            max-width: 280px;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #a855f7);
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+
+        /* Library */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 6rem;
+            margin-bottom: 25px;
+            opacity: 0.4;
+        }
+
+        .empty-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #0f172a;
+        }
+
+        .empty-text {
+            font-size: 0.95rem;
+            color: #64748b;
+            line-height: 1.7;
+            margin-bottom: 30px;
+            max-width: 260px;
+        }
+
+        .doc-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 0 20px 15px;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+            display: flex;
+            gap: 15px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .doc-thumb {
+            width: 75px;
+            height: 100px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .doc-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .doc-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #0f172a;
+        }
+
+        .doc-meta {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 10px;
+        }
+
+        /* Chat */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 16px 20px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .message-user {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 6px;
+        }
+
+        .message-ai {
+            background: white;
+            color: #0f172a;
+            align-self: flex-start;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        .citation {
+            display: inline-block;
+            background: #6366f1;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin: 0 4px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .citation:hover {
+            background: #a855f7;
+            transform: scale(1.05);
+        }
+
+        .speaker-btn {
+            background: #f1f5f9;
+            color: #6366f1;
+            padding: 10px 18px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            display: inline-block;
+            cursor: pointer;
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+        }
+
+        .chat-input-container {
+            background: white;
+            padding: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: #f8fafc;
+            border-radius: 28px;
+            padding: 10px 18px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .chat-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 0.95rem;
+            outline: none;
+            color: #0f172a;
+        }
+
+        .chat-mic-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            flex: 1;
+            color: #94a3b8;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active {
+            color: #6366f1;
+        }
+
+        .nav-icon {
+            font-size: 1.5rem;
+        }
+
+        .nav-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* PDF Reader */
+        .pdf-reader {
+            flex: 1;
+            overflow-y: auto;
+            background: #e2e8f0;
+            position: relative;
+        }
+
+        .pdf-page {
+            background: white;
+            margin: 20px;
+            padding: 35px 28px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            min-height: 450px;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: #1e293b;
+        }
+
+        .fab {
+            position: absolute;
+            right: 25px;
+            bottom: 25px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);
+            cursor: pointer;
+        }
+
+        /* Voice Overlay */
+        .voice-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.97), rgba(168, 85, 247, 0.97));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 40px 30px;
+        }
+
+        .voice-icon {
+            font-size: 5rem;
+            color: white;
+            margin-bottom: 25px;
+            animation: pulse-voice 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-voice {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .voice-state-text {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .voice-transcript {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 22px;
+            margin-bottom: 25px;
+            max-width: 300px;
+            width: 100%;
+            color: white;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .voice-btn {
+            padding: 16px 36px;
+            border-radius: 28px;
+            border: 2px solid white;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .spec-box {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin-top: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .spec-box h3 {
+            margin-bottom: 15px;
+            color: #6366f1;
+            font-weight: 700;
+        }
+
+        .spec-box ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .spec-box li {
+            margin-bottom: 10px;
+            color: #475569;
+        }
+
+        @media (max-width: 768px) {
+            .mockup-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CiteCoach V1</h1>
+        <p class="subtitle">
+            Production-Grade Wireframes • Kinetic Identity • V1 Features Only
+        </p>
+
+        <!-- ============================================ -->
+        <!-- JOURNEY 1: FIRST LAUNCH & MODEL SETUP -->
+        <!-- ============================================ -->
+
+        <div class="journey-section">
+            <div class="journey-title">
+                🚀 Journey 1: First Launch & Model Setup
+            </div>
+            
+            <div class="journey-description">
+                <h3 style="font-weight: 700; margin-bottom: 10px;">User Flow:</h3>
+                <p style="color: #64748b; line-height: 1.7;">New user launches app → Sees splash with kinetic logo → Model setup explanation → Downloads 1.5GB offline engine → Ready to use</p>
+                
+                <h3 style="font-weight: 700; margin-top: 20px; margin-bottom: 10px;">Design Notes:</h3>
+                <p style="color: #64748b; line-height: 1.7;">Modern gradient backgrounds, kinetic logo prominently featured, clear offline messaging without technical jargon</p>
+            </div>
+
+            <div class="mockup-grid">
+                <!-- Screen 1: Splash -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content splash-screen">
+                                <!-- Kinetic Logo SVG -->
+                                <svg class="kinetic-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <linearGradient id="splash-grad" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+                                            <stop stop-color="#ffffff" stop-opacity="0.95"/>
+                                            <stop offset="1" stop-color="#f1f5f9" stop-opacity="0.95"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M20 40C20 23.4315 33.4315 10 50 10H90C95.5228 10 100 14.4772 100 20V80C100 96.5685 86.5685 110 70 110H30C24.4772 110 20 105.523 20 100V40Z" fill="url(#splash-grad)" />
+                                    <path d="M75 45C75 35 65 30 50 30C35 30 25 40 25 55C25 70 35 80 50 80C65 80 75 75 75 65" stroke="#6366f1" stroke-width="12" stroke-linecap="round" />
+                                    <circle cx="75" cy="45" r="8" fill="#6366f1" />
+                                    <circle cx="75" cy="45" r="4" fill="white" />
+                                </svg>
+                                <div class="app-name">CiteCoach</div>
+                                <div class="tagline">Offline document intelligence</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 1</span><br>
+                        Splash (2-3s auto-advance)
+                    </div>
+                </div>
+
+                <!-- Screen 2: Privacy Intro -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content setup-screen">
+                                <div class="setup-icon">🔒</div>
+                                <div class="setup-title">100% Offline & Private</div>
+                                <div class="setup-text">
+                                    CiteCoach works completely offline. Your documents never leave your device.
+                                </div>
+                                <button class="btn-primary">Continue</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 2</span><br>
+                        Privacy Promise
+                    </div>
+                </div>
+
+                <!-- Screen 3: Model Setup Explanation -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content setup-screen">
+                                <div class="setup-icon">📦</div>
+                                <div class="setup-title">One-Time Setup</div>
+                                <div class="setup-text">
+                                    Download the offline intelligence engine (1.5GB) to enable Q&A. This happens once.
+                                </div>
+                                <div style="background: white; padding: 18px; border-radius: 16px; margin-bottom: 25px; width: 100%; max-width: 280px; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                        <span style="font-size: 0.85rem; color: #64748b;">Size:</span>
+                                        <span style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">1.5 GB</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                        <span style="font-size: 0.85rem; color: #64748b;">Network:</span>
+                                        <span style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">Wi-Fi only</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span style="font-size: 0.85rem; color: #64748b;">Time:</span>
+                                        <span style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">~3-5 minutes</span>
+                                    </div>
+                                </div>
+                                <button class="btn-primary">Download Now</button>
+                                <button class="btn-secondary">Download Later</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 3</span><br>
+                        Model Setup (with "Download Later" option)
+                    </div>
+                </div>
+
+                <!-- Screen 4: Downloading -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content setup-screen">
+                                <div class="setup-icon">⬇️</div>
+                                <div class="setup-title">Downloading...</div>
+                                <div class="setup-text">
+                                    This may take a few minutes. You can leave the app—we'll continue in the background.
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 45%;"></div>
+                                </div>
+                                <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 25px;">
+                                    675 MB of 1.5 GB
+                                </div>
+                                <button class="btn-secondary">Pause</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 4</span><br>
+                        Download Progress
+                    </div>
+                </div>
+
+                <!-- Screen 5: Setup Complete -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content setup-screen">
+                                <div class="setup-icon" style="color: #34c759;">✓</div>
+                                <div class="setup-title">You're Ready!</div>
+                                <div class="setup-text">
+                                    CiteCoach is now fully offline. Import a PDF to start getting evidence-based answers.
+                                </div>
+                                <button class="btn-primary">Get Started</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 5</span><br>
+                        Setup Complete
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- JOURNEY 2: IMPORT & PROCESS DOCUMENT -->
+        <!-- ============================================ -->
+
+        <div class="journey-section">
+            <div class="journey-title">
+                📁 Journey 2: Import & Process Document
+            </div>
+            
+            <div class="journey-description">
+                <h3 style="font-weight: 700; margin-bottom: 10px;">User Flow:</h3>
+                <p style="color: #64748b; line-height: 1.7;">Empty library → Tap "Import PDF" → Local file picker → Processing (text extraction, chunking, embeddings) → Document ready for chat</p>
+                
+                <h3 style="font-weight: 700; margin-top: 20px; margin-bottom: 10px;">Processing Time:</h3>
+                <p style="color: #64748b; line-height: 1.7;">~31 seconds for 127-page textbook (one-time per document)</p>
+            </div>
+
+            <div class="mockup-grid">
+                <!-- Screen 6: Empty Library -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="app-header">
+                                    <div class="header-content">
+                                        <div class="header-title">Library</div>
+                                        <div class="header-icon">⚙️</div>
+                                    </div>
+                                </div>
+                                <div class="empty-state">
+                                    <div class="empty-icon">📚</div>
+                                    <div class="empty-title">No Documents Yet</div>
+                                    <div class="empty-text">
+                                        Import a PDF to start asking questions and getting evidence-based answers
+                                    </div>
+                                    <button class="btn-primary">+ Import PDF</button>
+                                </div>
+                                <div class="bottom-nav">
+                                    <div class="nav-item active">
+                                        <div class="nav-icon">📚</div>
+                                        <div class="nav-label">Library</div>
+                                    </div>
+                                    <div class="nav-item">
+                                        <div class="nav-icon">⚙️</div>
+                                        <div class="nav-label">Settings</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 6</span><br>
+                        Empty Library (2 tabs only)
+                    </div>
+                </div>
+
+                <!-- Screen 7: Processing -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content setup-screen">
+                                <div class="setup-icon">⚙️</div>
+                                <div class="setup-title">Processing Document</div>
+                                <div class="setup-text">
+                                    Preparing your document for intelligent Q&A...
+                                </div>
+                                <div style="background: white; padding: 18px; border-radius: 16px; margin-bottom: 20px; width: 100%; max-width: 280px; text-align: left; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);">
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                                        <div style="color: #34c759; font-size: 1.3rem;">✓</div>
+                                        <div style="font-size: 0.9rem; color: #0f172a; font-weight: 600;">Extracting text</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                                        <div style="color: #6366f1; font-size: 1.3rem;">⟳</div>
+                                        <div style="font-size: 0.9rem; font-weight: 700; color: #6366f1;">Indexing for search...</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div style="color: #cbd5e1; font-size: 1.3rem;">○</div>
+                                        <div style="font-size: 0.9rem; color: #94a3b8;">Finalizing</div>
+                                    </div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 60%;"></div>
+                                </div>
+                                <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 20px;">
+                                    Page 76 of 127
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 7</span><br>
+                        Processing (NO auto-flashcards)
+                    </div>
+                </div>
+
+                <!-- Screen 8: Ready -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content setup-screen">
+                                <div class="setup-icon" style="color: #34c759;">✓</div>
+                                <div class="setup-title">Document Ready!</div>
+                                <div class="setup-text">
+                                    You can now ask questions and get evidence-based answers with citations.
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; width: 100%; max-width: 280px;">
+                                    <div style="background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);">
+                                        <div style="font-size: 2rem; font-weight: 800; color: #6366f1; margin-bottom: 6px;">127</div>
+                                        <div style="font-size: 0.85rem; color: #64748b;">Pages</div>
+                                    </div>
+                                    <div style="background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);">
+                                        <div style="font-size: 2rem; font-weight: 800; color: #6366f1; margin-bottom: 6px;">~31s</div>
+                                        <div style="font-size: 0.85rem; color: #64748b;">Processed</div>
+                                    </div>
+                                </div>
+                                <button class="btn-primary">Start Chatting</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 8</span><br>
+                        Processing Complete
+                    </div>
+                </div>
+
+                <!-- Screen 9: Library with Document -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="app-header">
+                                    <div class="header-content">
+                                        <div class="header-title">Library</div>
+                                        <div class="header-icon">⚙️</div>
+                                    </div>
+                                </div>
+                                <div style="flex: 1; overflow-y: auto; background: #f8fafc; padding-top: 20px;">
+                                    <div class="doc-card">
+                                        <div class="doc-thumb">📄</div>
+                                        <div class="doc-info">
+                                            <div class="doc-title">Biology Ch.5 - Respiration</div>
+                                            <div class="doc-meta">127 pages • Added today</div>
+                                            <div style="display: flex; gap: 10px; margin-top: 12px;">
+                                                <button style="flex: 1; padding: 10px; background: linear-gradient(135deg, #6366f1, #a855f7); color: white; border: none; border-radius: 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">Chat</button>
+                                                <button style="flex: 1; padding: 10px; background: #f1f5f9; color: #6366f1; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">Read</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button style="width: calc(100% - 40px); margin: 0 20px; padding: 18px; border: 2px dashed #cbd5e1; background: white; border-radius: 16px; color: #64748b; font-size: 0.95rem; font-weight: 700; cursor: pointer;">
+                                        + Import Another PDF
+                                    </button>
+                                </div>
+                                <div class="bottom-nav">
+                                    <div class="nav-item active">
+                                        <div class="nav-icon">📚</div>
+                                        <div class="nav-label">Library</div>
+                                    </div>
+                                    <div class="nav-item">
+                                        <div class="nav-icon">⚙️</div>
+                                        <div class="nav-label">Settings</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 9</span><br>
+                        Library with Document
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- JOURNEY 3: CHAT WITH CITATIONS -->
+        <!-- ============================================ -->
+
+        <div class="journey-section">
+            <div class="journey-title">
+                💬 Journey 3: Ask Question & Get Cited Answer
+            </div>
+            
+            <div class="journey-description">
+                <h3 style="font-weight: 700; margin-bottom: 10px;">User Flow:</h3>
+                <p style="color: #64748b; line-height: 1.7;">Open chat → Type or speak question → AI searches document → Streams answer with citations → Tap citation to jump to source page</p>
+                
+                <h3 style="font-weight: 700; margin-top: 20px; margin-bottom: 10px;">Core Feature:</h3>
+                <p style="color: #64748b; line-height: 1.7;"><strong>Every answer MUST include citations.</strong> Citations are tappable badges that navigate to exact PDF page.</p>
+            </div>
+
+            <div class="mockup-grid">
+                <!-- Screen 10: Chat Empty -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="app-header">
+                                    <div class="header-content">
+                                        <div class="header-icon">←</div>
+                                        <div class="header-title" style="font-size: 1.3rem;">Biology Ch.5</div>
+                                        <div class="header-icon">⋮</div>
+                                    </div>
+                                </div>
+                                <div class="chat-container">
+                                    <div class="chat-messages">
+                                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px;">
+                                            <div style="font-size: 4.5rem; margin-bottom: 20px; opacity: 0.3;">💬</div>
+                                            <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; color: #0f172a;">Ask a Question</div>
+                                            <div style="font-size: 0.95rem; color: #64748b; max-width: 250px;">
+                                                Get evidence-based answers from this document
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chat-input-container">
+                                        <div class="chat-input-wrapper">
+                                            <input class="chat-input" placeholder="Ask anything...">
+                                            <div class="chat-mic-btn">🎤</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 10</span><br>
+                        Chat Empty State
+                    </div>
+                </div>
+
+                <!-- Screen 11: Question Asked -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="app-header">
+                                    <div class="header-content">
+                                        <div class="header-icon">←</div>
+                                        <div class="header-title" style="font-size: 1.3rem;">Biology Ch.5</div>
+                                        <div class="header-icon">⋮</div>
+                                    </div>
+                                </div>
+                                <div class="chat-container">
+                                    <div class="chat-messages">
+                                        <div class="message message-user">
+                                            What is oxidative phosphorylation?
+                                        </div>
+                                        <div style="background: white; padding: 16px 20px; border-radius: 20px; border-bottom-left-radius: 6px; max-width: 80%; box-shadow: 0 2px 10px rgba(99, 102, 241, 0.08); border: 1px solid #e2e8f0;">
+                                            <div style="display: flex; align-items: center; gap: 12px; color: #6366f1;">
+                                                <div style="width: 22px; height: 22px; border: 3px solid #6366f1; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                                <div style="font-size: 0.9rem; font-weight: 600;">Searching document...</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chat-input-container">
+                                        <div class="chat-input-wrapper">
+                                            <input class="chat-input" placeholder="Ask anything...">
+                                            <div class="chat-mic-btn">🎤</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 11</span><br>
+                        Processing Question
+                    </div>
+                </div>
+
+                <!-- Screen 12: Answer with Citations -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="app-header">
+                                    <div class="header-content">
+                                        <div class="header-icon">←</div>
+                                        <div class="header-title" style="font-size: 1.3rem;">Biology Ch.5</div>
+                                        <div class="header-icon">⋮</div>
+                                    </div>
+                                </div>
+                                <div class="chat-container">
+                                    <div class="chat-messages">
+                                        <div class="message message-user">
+                                            What is oxidative phosphorylation?
+                                        </div>
+                                        <div class="message message-ai">
+                                            Oxidative phosphorylation is the process where mitochondria produce ATP using oxygen and the electron transport chain. This is the final stage of cellular respiration <span class="citation">📄 p.67</span> <span class="citation">📄 p.68</span>
+                                            <div class="speaker-btn">🔊 Read aloud</div>
+                                        </div>
+                                    </div>
+                                    <div class="chat-input-container">
+                                        <div class="chat-input-wrapper">
+                                            <input class="chat-input" placeholder="Ask anything...">
+                                            <div class="chat-mic-btn">🎤</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 12</span><br>
+                        Answer with Citations (CORE FEATURE)
+                    </div>
+                </div>
+
+                <!-- Screen 13: Citation Tapped -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="app-header">
+                                    <div class="header-content">
+                                        <div class="header-icon">←</div>
+                                        <div class="header-title" style="font-size: 1.3rem;">Biology Ch.5</div>
+                                        <div class="header-icon">⋮</div>
+                                    </div>
+                                </div>
+                                <div class="pdf-reader">
+                                    <div style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #6366f1, #a855f7); color: white; padding: 10px 18px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; z-index: 10; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">
+                                        From chat answer →
+                                    </div>
+                                    <div class="pdf-page">
+                                        <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 15px; color: #0f172a;">Chapter 5: Cellular Respiration</div>
+                                        <div style="background: #fef3c7; padding: 4px 0; border-radius: 4px;">
+                                            The process of oxidative phosphorylation involves the transfer of electrons through the electron transport chain to generate a proton gradient across the mitochondrial membrane...
+                                        </div>
+                                    </div>
+                                    <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; border-radius: 28px; padding: 12px 24px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); font-size: 0.85rem; font-weight: 700; color: #0f172a;">
+                                        Page 67 of 127
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 13</span><br>
+                        Jump to Cited Page (highlighted)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- JOURNEY 4: VOICE INTERACTION -->
+        <!-- ============================================ -->
+
+        <div class="journey-section">
+            <div class="journey-title">
+                🎤 Journey 4: Voice Question & Spoken Answer
+            </div>
+            
+            <div class="journey-description">
+                <h3 style="font-weight: 700; margin-bottom: 10px;">User Flow:</h3>
+                <p style="color: #64748b; line-height: 1.7;">Tap mic → Speak question → Live transcript → AI searches → Answer read aloud with TTS → Returns to chat</p>
+                
+                <h3 style="font-weight: 700; margin-top: 20px; margin-bottom: 10px;">Technology:</h3>
+                <p style="color: #64748b; line-height: 1.7;">Platform native STT + TTS (iOS Speech Framework, Android native) - FREE and offline after OS setup</p>
+            </div>
+
+            <div class="mockup-grid">
+                <!-- Screen 14: Voice Listening -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="voice-overlay">
+                                    <div class="voice-icon">🎤</div>
+                                    <div class="voice-state-text">Listening...</div>
+                                    <div style="display: flex; gap: 6px; margin-bottom: 25px;">
+                                        <div style="width: 5px; height: 25px; background: white; border-radius: 3px; opacity: 0.6;"></div>
+                                        <div style="width: 5px; height: 40px; background: white; border-radius: 3px;"></div>
+                                        <div style="width: 5px; height: 55px; background: white; border-radius: 3px;"></div>
+                                        <div style="width: 5px; height: 40px; background: white; border-radius: 3px;"></div>
+                                        <div style="width: 5px; height: 25px; background: white; border-radius: 3px; opacity: 0.6;"></div>
+                                    </div>
+                                    <div class="voice-transcript">
+                                        "What is oxidative phosphorylation?"
+                                    </div>
+                                    <button class="voice-btn">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 14</span><br>
+                        Voice Input (Live Transcript)
+                    </div>
+                </div>
+
+                <!-- Screen 15: Processing -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="voice-overlay">
+                                    <div style="font-size: 4.5rem; color: white; margin-bottom: 25px;">💭</div>
+                                    <div class="voice-state-text">Searching...</div>
+                                    <div style="margin-bottom: 25px;">
+                                        <div style="width: 60px; height: 60px; border: 5px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                    </div>
+                                    <div class="voice-transcript" style="opacity: 0.8; font-size: 0.95rem;">
+                                        Question: "What is oxidative phosphorylation?"
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 15</span><br>
+                        Processing (Retrieving from document)
+                    </div>
+                </div>
+
+                <!-- Screen 16: Speaking Answer -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="voice-overlay">
+                                    <div class="voice-icon">🔊</div>
+                                    <div class="voice-state-text">Speaking...</div>
+                                    <div style="background: rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 22px; margin-bottom: 20px; max-width: 300px; width: 100%; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3);">
+                                        <div style="color: white; font-size: 1rem; line-height: 1.7; margin-bottom: 15px;">
+                                            "Oxidative phosphorylation is the process where mitochondria produce ATP using oxygen and the electron transport chain."
+                                        </div>
+                                        <div style="color: rgba(255,255,255,0.85); font-size: 0.85rem; font-style: italic;">
+                                            📄 From pages 67, 68
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 12px;">
+                                        <button class="voice-btn">Pause</button>
+                                        <button class="voice-btn">Stop</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 16</span><br>
+                        TTS Reading Answer Aloud
+                    </div>
+                </div>
+
+                <!-- Screen 17: PDF Reader -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="app-header">
+                                    <div class="header-content">
+                                        <div class="header-icon">←</div>
+                                        <div class="header-title" style="font-size: 1.3rem;">Biology Ch.5</div>
+                                        <div class="header-icon">⋮</div>
+                                    </div>
+                                </div>
+                                <div class="pdf-reader">
+                                    <div class="pdf-page">
+                                        <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 15px; color: #0f172a;">Mitochondrial Structure</div>
+                                        The mitochondrion has a double membrane structure. The inner membrane is highly folded into cristae, which increases the surface area for ATP production through oxidative phosphorylation...
+                                    </div>
+                                    <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; border-radius: 28px; padding: 12px 24px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 18px;">
+                                        <div style="font-size: 1.2rem; color: #6366f1; cursor: pointer;">◀</div>
+                                        <div style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">Page 67 of 127</div>
+                                        <div style="font-size: 1.2rem; color: #6366f1; cursor: pointer;">▶</div>
+                                    </div>
+                                    <div class="fab">💬</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 17</span><br>
+                        PDF Reader (Minimal - just Chat FAB)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- JOURNEY 5: SETTINGS -->
+        <!-- ============================================ -->
+
+        <div class="journey-section">
+            <div class="journey-title">
+                ⚙️ Journey 5: Settings & Low-Power Mode
+            </div>
+            
+            <div class="journey-description">
+                <h3 style="font-weight: 700; margin-bottom: 10px;">User Flow:</h3>
+                <p style="color: #64748b; line-height: 1.7;">Open settings → View offline status (always locked ON) → Toggle low-power mode → Adjust voice speed</p>
+                
+                <h3 style="font-weight: 700; margin-top: 20px; margin-bottom: 10px;">V1 Simplified:</h3>
+                <p style="color: #64748b; line-height: 1.7;">Only essential controls: offline status, low-power toggle, model info, voice speed. No performance tiers UI.</p>
+            </div>
+
+            <div class="mockup-grid">
+                <!-- Screen 18: Settings -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content">
+                                <div class="app-header">
+                                    <div class="header-content">
+                                        <div class="header-title">Settings</div>
+                                        <div></div>
+                                    </div>
+                                </div>
+                                <div style="flex: 1; overflow-y: auto; background: #f8fafc; padding: 20px;">
+                                    <div style="background: white; border-radius: 16px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(99, 102, 241, 0.05);">
+                                        <div style="padding: 12px 18px; background: #f8fafc; font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            OFFLINE STATUS
+                                        </div>
+                                        <div style="padding: 18px; display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                <div style="font-size: 1.4rem;">🔒</div>
+                                                <div>
+                                                    <div style="font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; color: #0f172a;">Offline Mode</div>
+                                                    <div style="font-size: 0.85rem; color: #64748b;">Always active</div>
+                                                </div>
+                                            </div>
+                                            <div style="width: 50px; height: 28px; background: #6366f1; border-radius: 14px; position: relative; opacity: 0.6;">
+                                                <div style="position: absolute; width: 24px; height: 24px; background: white; border-radius: 50%; top: 2px; right: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: white; border-radius: 16px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(99, 102, 241, 0.05);">
+                                        <div style="padding: 12px 18px; background: #f8fafc; font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            PERFORMANCE
+                                        </div>
+                                        <div style="padding: 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f8fafc;">
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                <div style="font-size: 1.4rem;">⚡</div>
+                                                <div>
+                                                    <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a;">Low-Power Mode</div>
+                                                </div>
+                                            </div>
+                                            <div style="width: 50px; height: 28px; background: #cbd5e1; border-radius: 14px; position: relative;">
+                                                <div style="position: absolute; width: 24px; height: 24px; background: white; border-radius: 50%; top: 2px; left: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);"></div>
+                                            </div>
+                                        </div>
+                                        <div style="padding: 18px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                <div style="font-size: 1.4rem;">📊</div>
+                                                <div>
+                                                    <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a;">Model Info</div>
+                                                </div>
+                                            </div>
+                                            <div style="font-size: 1.1rem; color: #94a3b8;">›</div>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 10px rgba(99, 102, 241, 0.05);">
+                                        <div style="padding: 12px 18px; background: #f8fafc; font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            VOICE
+                                        </div>
+                                        <div style="padding: 18px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                <div style="font-size: 1.4rem;">🔊</div>
+                                                <div>
+                                                    <div style="font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; color: #0f172a;">Speech Speed</div>
+                                                    <div style="font-size: 0.85rem; color: #64748b;">Normal (1.0x)</div>
+                                                </div>
+                                            </div>
+                                            <div style="font-size: 1.1rem; color: #94a3b8;">›</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bottom-nav">
+                                    <div class="nav-item">
+                                        <div class="nav-icon">📚</div>
+                                        <div class="nav-label">Library</div>
+                                    </div>
+                                    <div class="nav-item active">
+                                        <div class="nav-icon">⚙️</div>
+                                        <div class="nav-label">Settings</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 18</span><br>
+                        Settings (Simplified for V1)
+                    </div>
+                </div>
+
+                <!-- Screen 19: Chat Disabled (Download Later) -->
+                <div>
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="screen">
+                            <div class="screen-content setup-screen">
+                                <div class="setup-icon">📦</div>
+                                <div class="setup-title">Download Required</div>
+                                <div class="setup-text">
+                                    Download the offline engine (1.5GB) to start asking questions and getting evidence-based answers.
+                                </div>
+                                <div style="background: rgba(99, 102, 241, 0.1); padding: 16px; border-radius: 12px; margin-bottom: 25px; max-width: 280px; border-left: 4px solid #6366f1;">
+                                    <div style="font-size: 0.85rem; color: #475569; line-height: 1.6;">
+                                        You can still import and read PDFs. Chat will unlock after download.
+                                    </div>
+                                </div>
+                                <button class="btn-primary">Download Now (1.5GB)</button>
+                                <button class="btn-secondary">Back to Library</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-label">
+                        <span class="step-number">Screen 19</span><br>
+                        Chat Disabled (if "Download Later" chosen)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- IMPLEMENTATION NOTES -->
+        <!-- ============================================ -->
+
+        <div class="spec-box">
+            <h3>🎯 Implementation Notes</h3>
+            <ul>
+                <li><strong>Logo:</strong> Kinetic gradient bubble with "C" cutout and eye accent. Use SVG from uploaded file.</li>
+                <li><strong>Color Scheme:</strong> Indigo-purple gradient (#6366f1 → #a855f7), white, slate grays</li>
+                <li><strong>Setup Flow:</strong> Simple, non-technical. "Download Later" option available.</li>
+                <li><strong>Chat Interface:</strong> Gradient message bubbles, tappable citation badges, speaker button on every answer</li>
+                <li><strong>Voice:</strong> Platform native (free). Full-screen gradient overlay with live transcript.</li>
+                <li><strong>Citations:</strong> ALWAYS present. Tappable. Navigate to PDF with highlighting.</li>
+                <li><strong>Settings:</strong> Simplified. Offline mode locked ON. Low-power toggle. Voice speed control.</li>
+                <li><strong>Navigation:</strong> 2 bottom tabs only (Library, Settings). No bookmarks tab.</li>
+                <li><strong>PDF Reader:</strong> Minimal. Just chat FAB button. Clean page navigation.</li>
+            </ul>
+        </div>
+
+        <div class="spec-box">
+            <h3>🚫 NOT in V1 (Removed)</h3>
+            <ul>
+                <li>❌ Bookmarks tab and features</li>
+                <li>❌ Flashcards (any kind)</li>
+                <li>❌ Auto-summaries during import</li>
+                <li>❌ Cross-document search</li>
+                <li>❌ OCR for scanned PDFs</li>
+                <li>❌ Cloud storage options</li>
+                <li>❌ Performance tier selector UI</li>
+                <li>❌ Study sessions or spaced repetition</li>
+            </ul>
+        </div>
+
+        <div class="spec-box">
+            <h3>📊 Screen Count</h3>
+            <ul>
+                <li>Journey 1: First launch & setup (5 screens)</li>
+                <li>Journey 2: Import & process (4 screens)</li>
+                <li>Journey 3: Chat with citations (4 screens)</li>
+                <li>Journey 4: Voice interaction & PDF (4 screens)</li>
+                <li>Journey 5: Settings (2 screens)</li>
+                <li><strong>Total: 19 production wireframes</strong></li>
+            </ul>
+        </div>
+
+    </div>
+
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</body>
+</html>

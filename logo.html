@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CiteCoach Kinetic Identity</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bento:wght@400;700;900&family=Lexend:wght@300;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Lexend', sans-serif; background-color: #f0f4f8; color: #0f172a; }
+        .hero-gradient { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }
+        .card-shadow { box-shadow: 0 20px 50px -12px rgba(99, 102, 241, 0.15); }
+        .mesh-bg { 
+            background-color: #f8fafc;
+            background-image: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%), 
+                              radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.1) 0px, transparent 50%);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-12 mesh-bg">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Brand Narrative -->
+        <header class="text-center mb-16">
+            <span class="inline-block px-4 py-1 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold uppercase tracking-widest mb-4">Direction 04: The Kinetic Quote</span>
+            <h1 class="text-5xl font-extrabold tracking-tight text-slate-900">Active Intelligence</h1>
+            <p class="text-slate-500 mt-4 max-w-lg mx-auto">Moving away from static symbols to a mark that represents the "Live" nature of an AI coach that talks back to your documents.</p>
+        </header>
+
+        <!-- The Hero Mark -->
+        <section class="bg-white rounded-[48px] card-shadow p-12 md:p-20 flex flex-col items-center justify-center border border-indigo-50/50 mb-12">
+            
+            <div class="relative group cursor-pointer">
+                <!-- Decorative Glow -->
+                <div class="absolute inset-0 bg-indigo-500 blur-[60px] opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                
+                <!-- THE KINETIC SVG -->
+                <svg width="240" height="240" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="main-grad" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#6366f1" />
+                            <stop offset="1" stop-color="#a855f7" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- The Background "Bubble" -->
+                    <path d="M20 40C20 23.4315 33.4315 10 50 10H90C95.5228 10 100 14.4772 100 20V80C100 96.5685 86.5685 110 70 110H30C24.4772 110 20 105.523 20 100V40Z" fill="url(#main-grad)" />
+                    
+                    <!-- The "C" Cutout / Quote Inner -->
+                    <path d="M75 45C75 35 65 30 50 30C35 30 25 40 25 55C25 70 35 80 50 80C65 80 75 75 75 65" stroke="white" stroke-width="12" stroke-linecap="round" />
+                    
+                    <!-- The Kinetic Accent (The "Coach" Eye) -->
+                    <circle cx="75" cy="45" r="8" fill="white" />
+                    <circle cx="75" cy="45" r="4" fill="#6366f1" />
+
+                    <!-- Speed Lines -->
+                    <line x1="85" y1="90" x2="95" y2="90" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.6" />
+                    <line x1="88" y1="98" x2="93" y2="98" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.4" />
+                </svg>
+            </div>
+
+            <div class="mt-12 text-center">
+                <h2 class="text-6xl font-black text-slate-900 tracking-tighter">Cite<span class="text-indigo-600">Coach</span></h2>
+                <div class="h-1 w-24 bg-indigo-600 mx-auto mt-4 rounded-full"></div>
+            </div>
+        </section>
+
+        <!-- Component Breakdown -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-slate-900 text-white p-10 rounded-[40px] flex flex-col justify-between">
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">Modern Stack</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-8">This design is built for the "Neo-Skeuomorphic" era—combining flat geometric shapes with deep shadows and vibrant gradients.</p>
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-full h-2 bg-indigo-500 rounded-full"></div>
+                    <div class="w-full h-2 bg-purple-500 rounded-full"></div>
+                    <div class="w-full h-2 bg-pink-500 rounded-full"></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-10 rounded-[40px] border border-slate-200">
+                <h3 class="text-xl font-bold mb-6 text-slate-900">Why this works</h3>
+                <ul class="space-y-4">
+                    <li class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-1">
+                            <div class="w-2 h-2 rounded-full bg-indigo-600"></div>
+                        </div>
+                        <p class="text-sm text-slate-600"><span class="font-bold text-slate-900">The "Eye":</span> Represents the AI constantly watching and verifying your sources.</p>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-1">
+                            <div class="w-2 h-2 rounded-full bg-indigo-600"></div>
+                        </div>
+                        <p class="text-sm text-slate-600"><span class="font-bold text-slate-900">The Bubble:</span> Instantly communicates "Communication" and "Assistance."</p>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-1">
+                            <div class="w-2 h-2 rounded-full bg-indigo-600"></div>
+                        </div>
+                        <p class="text-sm text-slate-600"><span class="font-bold text-slate-900">Asymmetry:</span> Gives the logo a sense of forward motion and tech-agility.</p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- App Icon Preview -->
+        <section class="bg-indigo-600 rounded-[40px] p-12 text-center text-white">
+            <h3 class="text-sm font-bold uppercase tracking-[0.3em] mb-12 opacity-60">Icon System</h3>
+            <div class="flex flex-wrap justify-center gap-12 items-end">
+                <div class="bg-white p-4 rounded-[2rem] shadow-2xl">
+                    <svg width="64" height="64" viewBox="0 0 120 120">
+                         <path d="M20 40C20 23.4315 33.4315 10 50 10H90C95.5228 10 100 14.4772 100 20V80C100 96.5685 86.5685 110 70 110H30C24.4772 110 20 105.523 20 100V40Z" fill="#6366f1" />
+                         <path d="M75 45C75 35 65 30 50 30C35 30 25 40 25 55C25 70 35 80 50 80C65 80 75 75 75 65" stroke="white" stroke-width="12" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="bg-white/10 p-3 rounded-[1.5rem] backdrop-blur-md">
+                    <svg width="40" height="40" viewBox="0 0 120 120">
+                         <path d="M20 40C20 23.4315 33.4315 10 50 10H90C95.5228 10 100 14.4772 100 20V80C100 96.5685 86.5685 110 70 110H30C24.4772 110 20 105.523 20 100V40Z" fill="white" />
+                         <path d="M75 45C75 35 65 30 50 30C35 30 25 40 25 55C25 70 35 80 50 80C65 80 75 75 75 65" stroke="#6366f1" stroke-width="12" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="border-2 border-white/20 p-2 rounded-xl">
+                    <svg width="24" height="24" viewBox="0 0 120 120">
+                         <path d="M20 40C20 23.4315 33.4315 10 50 10H90C95.5228 10 100 14.4772 100 20V80C100 96.5685 86.5685 110 70 110H30C24.4772 110 20 105.523 20 100V40Z" fill="white" />
+                    </svg>
+                </div>
+            </div>
+            <p class="mt-8 text-xs font-medium text-indigo-200 uppercase tracking-widest">Multi-scale responsiveness</p>
+        </section>
+
+    </div>
+
+</body>
+</html>
