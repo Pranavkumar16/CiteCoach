@@ -1,0 +1,292 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+/// Route paths as constants for type-safe navigation.
+abstract final class AppRoutes {
+  // Setup flow
+  static const String splash = '/';
+  static const String privacy = '/setup/privacy';
+  static const String modelSetup = '/setup/model';
+  static const String downloadProgress = '/setup/download';
+  static const String setupComplete = '/setup/complete';
+
+  // Main app
+  static const String library = '/library';
+  static const String settings = '/settings';
+  static const String modelInfo = '/settings/model-info';
+
+  // Document specific
+  static const String processing = '/document/:id/processing';
+  static const String reader = '/document/:id/reader';
+  static const String chat = '/document/:id/chat';
+
+  // Voice overlay (shown as dialog/overlay)
+  static const String voice = '/voice';
+
+  // Download required (when user chose "Download Later")
+  static const String downloadRequired = '/download-required';
+
+  // Helper to build document routes
+  static String documentProcessing(String documentId) =>
+      '/document/$documentId/processing';
+  static String documentReader(String documentId) =>
+      '/document/$documentId/reader';
+  static String documentChat(String documentId) =>
+      '/document/$documentId/chat';
+}
+
+/// Provider for the GoRouter instance.
+/// This allows us to access the router from anywhere using Riverpod.
+final appRouterProvider = Provider<GoRouter>((ref) {
+  return createRouter(ref);
+});
+
+/// Creates the app router with all routes and guards.
+GoRouter createRouter(Ref ref) {
+  return GoRouter(
+    initialLocation: AppRoutes.splash,
+    debugLogDiagnostics: true,
+    routes: [
+      // Setup Flow
+      GoRoute(
+        path: AppRoutes.splash,
+        name: 'splash',
+        builder: (context, state) => const _PlaceholderScreen(name: 'Splash'),
+      ),
+      GoRoute(
+        path: AppRoutes.privacy,
+        name: 'privacy',
+        builder: (context, state) => const _PlaceholderScreen(name: 'Privacy'),
+      ),
+      GoRoute(
+        path: AppRoutes.modelSetup,
+        name: 'modelSetup',
+        builder: (context, state) =>
+            const _PlaceholderScreen(name: 'Model Setup'),
+      ),
+      GoRoute(
+        path: AppRoutes.downloadProgress,
+        name: 'downloadProgress',
+        builder: (context, state) =>
+            const _PlaceholderScreen(name: 'Download Progress'),
+      ),
+      GoRoute(
+        path: AppRoutes.setupComplete,
+        name: 'setupComplete',
+        builder: (context, state) =>
+            const _PlaceholderScreen(name: 'Setup Complete'),
+      ),
+
+      // Main App - Shell Route for bottom navigation
+      ShellRoute(
+        builder: (context, state, child) {
+          return _MainShell(child: child);
+        },
+        routes: [
+          GoRoute(
+            path: AppRoutes.library,
+            name: 'library',
+            builder: (context, state) =>
+                const _PlaceholderScreen(name: 'Library'),
+          ),
+          GoRoute(
+            path: AppRoutes.settings,
+            name: 'settings',
+            builder: (context, state) =>
+                const _PlaceholderScreen(name: 'Settings'),
+          ),
+        ],
+      ),
+
+      // Settings sub-routes
+      GoRoute(
+        path: AppRoutes.modelInfo,
+        name: 'modelInfo',
+        builder: (context, state) =>
+            const _PlaceholderScreen(name: 'Model Info'),
+      ),
+
+      // Document routes
+      GoRoute(
+        path: '/document/:id/processing',
+        name: 'processing',
+        builder: (context, state) {
+          final documentId = state.pathParameters['id']!;
+          return _PlaceholderScreen(
+              name: 'Processing', extra: 'Document: $documentId');
+        },
+      ),
+      GoRoute(
+        path: '/document/:id/reader',
+        name: 'reader',
+        builder: (context, state) {
+          final documentId = state.pathParameters['id']!;
+          final initialPage = state.uri.queryParameters['page'];
+          return _PlaceholderScreen(
+            name: 'Reader',
+            extra: 'Document: $documentId, Page: $initialPage',
+          );
+        },
+      ),
+      GoRoute(
+        path: '/document/:id/chat',
+        name: 'chat',
+        builder: (context, state) {
+          final documentId = state.pathParameters['id']!;
+          return _PlaceholderScreen(
+              name: 'Chat', extra: 'Document: $documentId');
+        },
+      ),
+
+      // Download Required
+      GoRoute(
+        path: AppRoutes.downloadRequired,
+        name: 'downloadRequired',
+        builder: (context, state) =>
+            const _PlaceholderScreen(name: 'Download Required'),
+      ),
+    ],
+    errorBuilder: (context, state) => _ErrorScreen(error: state.error),
+  );
+}
+
+/// Shell widget for main app screens with bottom navigation.
+class _MainShell extends StatelessWidget {
+  const _MainShell({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    // Determine current index based on location
+    final location = GoRouterState.of(context).uri.path;
+    final currentIndex = location.startsWith('/settings') ? 1 : 0;
+
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: (index) {
+          if (index == 0) {
+            context.go(AppRoutes.library);
+          } else {
+            context.go(AppRoutes.settings);
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.library_books_rounded),
+            label: 'Library',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_rounded),
+            label: 'Settings',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Temporary placeholder screen for routes not yet implemented.
+/// This will be removed as screens are implemented in subsequent commits.
+class _PlaceholderScreen extends StatelessWidget {
+  const _PlaceholderScreen({
+    required this.name,
+    this.extra,
+  });
+
+  final String name;
+  final String? extra;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(name)),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              name,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            if (extra != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                extra!,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+            const SizedBox(height: 16),
+            const Text(
+              'Screen implementation coming in next commit',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Error screen for unknown routes.
+class _ErrorScreen extends StatelessWidget {
+  const _ErrorScreen({this.error});
+
+  final Exception? error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Error')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              'Page not found',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            if (error != null)
+              Text(
+                error.toString(),
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go(AppRoutes.library),
+              child: const Text('Go to Library'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Extension methods for easier navigation.
+extension GoRouterExtension on BuildContext {
+  /// Navigate to document chat screen.
+  void goToChat(String documentId) {
+    go(AppRoutes.documentChat(documentId));
+  }
+
+  /// Navigate to document reader screen with optional page.
+  void goToReader(String documentId, {int? page}) {
+    final uri = page != null
+        ? '${AppRoutes.documentReader(documentId)}?page=$page'
+        : AppRoutes.documentReader(documentId);
+    go(uri);
+  }
+
+  /// Navigate to document processing screen.
+  void goToProcessing(String documentId) {
+    go(AppRoutes.documentProcessing(documentId));
+  }
+}

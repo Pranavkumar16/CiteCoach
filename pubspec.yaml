@@ -1,0 +1,81 @@
+name: citecoach
+description: "CiteCoach - Offline Document Intelligence with Evidence-Based Answers"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Icons
+  cupertino_icons: ^1.0.8
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Database & Storage
+  sqflite: ^2.3.3
+  path: ^1.9.0
+  path_provider: ^2.1.3
+  shared_preferences: ^2.2.3
+
+  # PDF
+  syncfusion_flutter_pdfviewer: ^26.1.41
+  syncfusion_flutter_pdf: ^26.1.41
+  
+  # File Handling
+  file_picker: ^8.0.3
+
+  # Voice
+  speech_to_text: ^6.6.2
+  flutter_tts: ^4.0.2
+
+  # Battery & System
+  battery_plus: ^6.0.1
+
+  # SVG
+  flutter_svg: ^2.0.10+1
+
+  # Math & Utilities
+  uuid: ^4.4.0
+  collection: ^1.18.0
+  equatable: ^2.0.5
+  intl: ^0.19.0
+
+  # HTTP for model download
+  dio: ^5.4.3+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  riverpod_generator: ^2.4.0
+  build_runner: ^2.4.9
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/
+    - assets/icons/
+
+  fonts:
+    - family: Lexend
+      fonts:
+        - asset: assets/fonts/Lexend-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Lexend-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Lexend-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Lexend-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Lexend-ExtraBold.ttf
+          weight: 800
