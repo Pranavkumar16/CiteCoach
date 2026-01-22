@@ -3,7 +3,6 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:citecoach/core/database/migrations.dart';
 import 'package:citecoach/core/database/tables/chat_messages_table.dart';
-import 'package:citecoach/core/database/tables/documents_table.dart';
 
 void main() {
   late Database db;

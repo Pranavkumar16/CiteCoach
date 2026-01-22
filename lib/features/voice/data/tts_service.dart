@@ -41,6 +41,7 @@ class TtsService {
   double _pitch = 1.0;
   double _speechRate = 0.5;
   String _language = 'en-US';
+  // ignore: unused_field
   String? _voice;
 
   /// Whether the service is initialized.
