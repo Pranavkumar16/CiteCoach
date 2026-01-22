@@ -56,6 +56,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
   final DocumentRepository _documentRepository;
 
   bool _isCancelled = false;
+  double _lastSavedProgress = 0.0;
 
   /// Start processing the document.
   Future<bool> startProcessing() async {
@@ -85,6 +86,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         overallProgress: 0.05,
         stepProgress: 0.0,
       );
+      _persistProgress(0.05);
 
       if (_isCancelled) return false;
 
@@ -94,6 +96,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         overallProgress: 0.1,
         stepProgress: 0.0,
       );
+      _persistProgress(0.1);
 
       final extractionResult = await _pdfProcessor.extractText(
         document.filePath,
@@ -107,6 +110,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
               pageCount: total,
               pagesProcessed: current,
             );
+            _persistProgress(overallProgress);
           }
         },
       );
@@ -130,6 +134,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         stepProgress: 0.0,
         pageCount: extractionResult.pageCount,
       );
+      _persistProgress(0.4);
 
       if (_isCancelled) return false;
 
@@ -143,6 +148,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
               stepProgress: stepProgress,
               overallProgress: overallProgress,
             );
+            _persistProgress(overallProgress);
           }
         },
       );
@@ -169,6 +175,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         overallProgress: 0.6,
         stepProgress: 0.0,
       );
+      _persistProgress(0.6);
 
       if (_isCancelled) return false;
 
@@ -182,6 +189,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
               stepProgress: stepProgress,
               overallProgress: overallProgress,
             );
+            _persistProgress(overallProgress);
           }
         },
       );
@@ -210,6 +218,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
               overallProgress: overallProgress,
               pagesProcessed: current,
             );
+            _persistProgress(overallProgress);
           }
         },
       );
@@ -220,6 +229,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         overallProgress: 0.9,
         stepProgress: 0.0,
       );
+      _persistProgress(0.9);
 
       if (_isCancelled) return false;
 
@@ -232,6 +242,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         extractionResult.pageCount,
         chunkingResult.chunks.length,
       );
+      _persistProgress(1.0);
 
       debugPrint('ProcessingNotifier: Processing complete!');
       return true;
@@ -345,6 +356,18 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
   Future<void> _setError(String message) async {
     await _documentRepository.setError(documentId, message);
     state = ProcessingState.error(documentId, message);
+  }
+
+  Future<void> _persistProgress(double progress) async {
+    if (_db == null) return;
+    if (progress <= 0) return;
+
+    final shouldPersist =
+        progress >= 1.0 || (progress - _lastSavedProgress).abs() >= 0.05;
+    if (!shouldPersist) return;
+
+    _lastSavedProgress = progress;
+    await _documentRepository.updateProgress(documentId, progress);
   }
 
   /// Cancel processing.
