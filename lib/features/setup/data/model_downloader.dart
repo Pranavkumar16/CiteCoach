@@ -125,11 +125,31 @@ class ModelDownloader {
     return _status == DownloadStatus.completed;
   }
 
+  /// Restore download progress from persisted state.
+  void restoreProgress(double progress, {bool isPaused = false}) {
+    _progress = progress.clamp(0.0, 1.0);
+
+    if (_progress >= 1.0) {
+      _status = DownloadStatus.completed;
+    } else if (_progress > 0.0 && isPaused) {
+      _status = DownloadStatus.paused;
+    } else if (_progress > 0.0) {
+      _status = DownloadStatus.idle;
+    } else {
+      _status = DownloadStatus.idle;
+    }
+  }
+
   /// Start or resume downloading the model.
   /// Returns a stream of progress updates.
   Stream<DownloadProgress> startDownload() {
     _progressController?.close();
     _progressController = StreamController<DownloadProgress>.broadcast();
+
+    if (_status == DownloadStatus.completed) {
+      _progressController!.add(DownloadProgress.completed());
+      return _progressController!.stream;
+    }
 
     if (_status == DownloadStatus.downloading) {
       // Already downloading, return existing stream

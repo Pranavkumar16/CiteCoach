@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_strings.dart';
+import '../../../core/services/network_service.dart';
 import '../data/model_downloader.dart';
 import '../data/setup_repository.dart';
 import '../domain/setup_state.dart';
@@ -11,7 +13,8 @@ import '../domain/setup_state.dart';
 final setupProvider = StateNotifierProvider<SetupNotifier, SetupState>((ref) {
   final repository = ref.watch(setupRepositoryProvider);
   final downloader = ref.watch(modelDownloaderProvider);
-  return SetupNotifier(repository, downloader);
+  final networkService = ref.watch(networkServiceProvider);
+  return SetupNotifier(repository, downloader, networkService);
 });
 
 /// Provider to check if setup is completed (for routing).
@@ -27,19 +30,31 @@ final currentSetupStepProvider = Provider<SetupStep>((ref) {
 
 /// State notifier for managing the setup flow.
 class SetupNotifier extends StateNotifier<SetupState> {
-  SetupNotifier(this._repository, this._downloader)
+  SetupNotifier(this._repository, this._downloader, this._networkService)
       : super(SetupState.initial()) {
     _initialize();
   }
 
   final SetupRepository _repository;
   final ModelDownloader _downloader;
+  final NetworkService _networkService;
   StreamSubscription<DownloadProgress>? _downloadSubscription;
 
   /// Initialize the setup state from persisted data.
   void _initialize() {
     final savedState = _repository.loadSetupState();
-    state = savedState;
+    final hasPartialDownload =
+        savedState.downloadProgress > 0 && savedState.downloadProgress < 1.0;
+    final shouldPause =
+        savedState.currentStep == SetupStep.downloading && hasPartialDownload;
+    state = savedState.copyWith(
+      isDownloading: false,
+      isPaused: shouldPause,
+    );
+    _downloader.restoreProgress(
+      savedState.downloadProgress,
+      isPaused: shouldPause,
+    );
     debugPrint('SetupNotifier: Initialized with step ${savedState.currentStep}');
   }
 
@@ -68,6 +83,15 @@ class SetupNotifier extends StateNotifier<SetupState> {
     if (state.isModelDownloaded) {
       // Model already downloaded, skip to complete
       state = state.copyWith(currentStep: SetupStep.complete);
+      return;
+    }
+
+    final onWifi = await _networkService.isWifiConnected();
+    if (!onWifi) {
+      state = state.copyWith(
+        downloadError: AppStrings.errorNoInternet,
+        isDownloading: false,
+      );
       return;
     }
 
@@ -155,7 +179,11 @@ class SetupNotifier extends StateNotifier<SetupState> {
   }
 
   /// Resume download.
-  void resumeDownload() {
+  Future<void> resumeDownload() async {
+    if (_downloadSubscription == null) {
+      await startDownload();
+      return;
+    }
     _downloader.resumeDownload();
   }
 
@@ -169,6 +197,7 @@ class SetupNotifier extends StateNotifier<SetupState> {
       downloadProgress: 0.0,
       clearError: true,
     );
+    _repository.saveDownloadProgress(0.0);
   }
 
   /// Retry download after error.
