@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../../core/database/tables/document_chunks_table.dart';
 import '../../../core/database/tables/chat_messages_table.dart';
 import '../../../core/database/tables/question_cache_table.dart';
+import '../../../core/services/storage_service.dart';
 import '../domain/chat_message.dart';
 
 /// Provider for the chat repository.
@@ -12,14 +14,18 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
         data: (db) => db,
         orElse: () => null,
       );
-  return ChatRepository(db);
+  final storage = ref.watch(storageServiceProvider);
+  return ChatRepository(db, storage);
 });
 
 /// Repository for managing chat messages and Q&A cache.
 class ChatRepository {
-  ChatRepository(this._db);
+  ChatRepository(this._db, this._storage);
 
   final Database? _db;
+  final StorageService _storage;
+
+  bool get _cacheEnabled => _storage.isReady && _storage.isCacheEnabled;
 
   /// Get all messages for a document.
   Future<List<ChatMessage>> getMessages(int documentId) async {
@@ -62,7 +68,7 @@ class ChatRepository {
     int documentId,
     String question,
   ) async {
-    if (_db == null) return null;
+    if (_db == null || !_cacheEnabled) return null;
 
     final table = QuestionCacheTable(_db);
     return table.lookup(documentId, question);
@@ -76,7 +82,7 @@ class ChatRepository {
     required String context,
     required List<Map<String, dynamic>> citations,
   }) async {
-    if (_db == null) return false;
+    if (_db == null || !_cacheEnabled) return false;
 
     final table = QuestionCacheTable(_db);
     // Extract page numbers from citation objects
@@ -93,6 +99,40 @@ class ChatRepository {
       citations: pageNumbers,
     );
     return id > 0;
+  }
+
+  /// Fetch short snippets for citation pages.
+  Future<Map<int, String>> getCitationSnippets(
+    int documentId,
+    List<int> pageNumbers, {
+    int maxLength = 160,
+  }) async {
+    if (_db == null || pageNumbers.isEmpty) return {};
+
+    final chunksTable = DocumentChunksTable(_db);
+    final snippets = <int, String>{};
+
+    for (final page in pageNumbers) {
+      final chunks = await chunksTable.getByPage(documentId, page);
+      if (chunks.isEmpty) continue;
+      final snippet = _trimSnippet(chunks.first.chunkText, maxLength);
+      snippets[page] = snippet;
+    }
+
+    return snippets;
+  }
+
+  String _trimSnippet(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    final cutoff = text.lastIndexOf('. ', maxLength - 3);
+    if (cutoff > maxLength / 2) {
+      return text.substring(0, cutoff + 1);
+    }
+    final spaceIndex = text.lastIndexOf(' ', maxLength - 3);
+    if (spaceIndex > maxLength / 2) {
+      return '${text.substring(0, spaceIndex)}...';
+    }
+    return '${text.substring(0, maxLength - 3)}...';
   }
 
   /// Get cache statistics for a document.
