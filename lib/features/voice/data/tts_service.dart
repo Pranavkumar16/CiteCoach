@@ -64,6 +64,9 @@ class TtsService {
   /// Current language.
   String get language => _language;
 
+  /// Currently selected voice (platform-dependent identifier).
+  String? get voice => _voice;
+
   /// Initialize the TTS service.
   Future<bool> initialize() async {
     if (_isInitialized) return true;

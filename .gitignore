@@ -31,6 +31,9 @@ migrate_working_dir/
 .pub/
 /build/
 
+# Local Flutter SDK (dev environment only)
+/flutter_sdk/
+
 # Symbolication related
 app.*.symbols
 
