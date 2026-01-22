@@ -4,11 +4,13 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/model_files.dart';
 import 'pdf_processor.dart';
 
 /// Provider for the embedding service.
 final embeddingServiceProvider = Provider<EmbeddingService>((ref) {
-  return EmbeddingService();
+  final modelFiles = ref.watch(modelFilesProvider);
+  return EmbeddingService(modelFiles);
 });
 
 /// Result of embedding generation.
@@ -38,7 +40,14 @@ typedef EmbeddingProgressCallback = void Function(int current, int total);
 /// 
 /// The embedding model produces 384-dimensional vectors (TinyBERT).
 class EmbeddingService {
-  EmbeddingService();
+  EmbeddingService(this._modelFiles);
+
+  final ModelFiles _modelFiles;
+
+  bool _isUsingStub = true;
+
+  /// Whether the service is using stub embeddings.
+  bool get isUsingStub => _isUsingStub;
 
   /// Embedding dimension (TinyBERT produces 384-dim vectors).
   static const int embeddingDimension = 384;
@@ -54,6 +63,17 @@ class EmbeddingService {
   /// In V1, this is a no-op stub.
   /// Real implementation will load TinyBERT model weights.
   Future<bool> initialize() async {
+    if (_isModelLoaded) return true;
+
+    final hasModel = await _modelFiles.hasEmbeddingModel();
+    if (!hasModel) {
+      debugPrint('EmbeddingService: Embedding model not found, using stub');
+      _isUsingStub = true;
+    } else {
+      debugPrint('EmbeddingService: Embedding model found (stub backend active)');
+      _isUsingStub = true;
+    }
+
     debugPrint('EmbeddingService: Initializing (stub)');
     
     // Simulate model loading time

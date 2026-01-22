@@ -47,15 +47,50 @@ class SetupNotifier extends StateNotifier<SetupState> {
         savedState.downloadProgress > 0 && savedState.downloadProgress < 1.0;
     final shouldPause =
         savedState.currentStep == SetupStep.downloading && hasPartialDownload;
+    final estimatedTotalBytes =
+        savedState.downloadProgress > 0 ? ModelDownloader.modelSizeBytes : 0;
+    final downloadedBytes =
+        (estimatedTotalBytes * savedState.downloadProgress).toInt();
     state = savedState.copyWith(
       isDownloading: false,
       isPaused: shouldPause,
+      downloadedBytes: downloadedBytes,
+      totalBytes: estimatedTotalBytes,
     );
     _downloader.restoreProgress(
       savedState.downloadProgress,
       isPaused: shouldPause,
     );
     debugPrint('SetupNotifier: Initialized with step ${savedState.currentStep}');
+    _syncModelFileStatus();
+  }
+
+  Future<void> _syncModelFileStatus() async {
+    final isDownloadedOnDisk = await _downloader.isModelDownloaded();
+    if (isDownloadedOnDisk) {
+      if (!state.isModelDownloaded || state.downloadProgress < 1.0) {
+        await _repository.saveModelDownloaded(true);
+        await _repository.saveDownloadProgress(1.0);
+        state = state.copyWith(
+          isModelDownloaded: true,
+          downloadProgress: 1.0,
+          downloadedBytes: _downloader.downloadedBytes,
+          totalBytes: _downloader.totalBytes,
+        );
+      }
+      return;
+    }
+
+    if (state.isModelDownloaded) {
+      await _repository.saveModelDownloaded(false);
+      await _repository.saveDownloadProgress(0.0);
+      state = state.copyWith(
+        isModelDownloaded: false,
+        downloadProgress: 0.0,
+        downloadedBytes: 0,
+        totalBytes: 0,
+      );
+    }
   }
 
   /// Complete the splash screen and advance to privacy.
@@ -113,12 +148,22 @@ class SetupNotifier extends StateNotifier<SetupState> {
 
   /// Handle download progress updates.
   void _onDownloadProgress(DownloadProgress progress) async {
+    final fallbackTotal = state.totalBytes > 0
+        ? state.totalBytes
+        : ModelDownloader.modelSizeBytes;
+    final totalBytes = progress.totalBytes > 0 ? progress.totalBytes : fallbackTotal;
+    final downloadedBytes = progress.downloadedBytes > 0
+        ? progress.downloadedBytes
+        : (totalBytes * progress.progress).toInt();
+
     switch (progress.status) {
       case DownloadStatus.downloading:
         state = state.copyWith(
           downloadProgress: progress.progress,
           isDownloading: true,
           isPaused: false,
+          downloadedBytes: downloadedBytes,
+          totalBytes: totalBytes,
         );
         // Persist progress periodically (every 5%)
         if ((progress.progress * 100).toInt() % 5 == 0) {
@@ -131,6 +176,8 @@ class SetupNotifier extends StateNotifier<SetupState> {
           downloadProgress: progress.progress,
           isDownloading: false,
           isPaused: true,
+          downloadedBytes: downloadedBytes,
+          totalBytes: totalBytes,
         );
         await _repository.saveDownloadProgress(progress.progress);
         break;
@@ -144,6 +191,8 @@ class SetupNotifier extends StateNotifier<SetupState> {
           downloadProgress: 1.0,
           isModelDownloaded: true,
           isDownloading: false,
+          downloadedBytes: downloadedBytes,
+          totalBytes: totalBytes,
         );
         debugPrint('SetupNotifier: Download completed, advanced to complete step');
         break;
@@ -152,6 +201,8 @@ class SetupNotifier extends StateNotifier<SetupState> {
         state = state.copyWith(
           downloadError: progress.error ?? 'Download failed',
           isDownloading: false,
+          downloadedBytes: downloadedBytes,
+          totalBytes: totalBytes,
         );
         break;
 
@@ -159,6 +210,8 @@ class SetupNotifier extends StateNotifier<SetupState> {
         state = state.copyWith(
           isDownloading: false,
           downloadProgress: 0.0,
+          downloadedBytes: 0,
+          totalBytes: 0,
         );
         break;
     }
@@ -195,6 +248,8 @@ class SetupNotifier extends StateNotifier<SetupState> {
       currentStep: SetupStep.modelSetup,
       isDownloading: false,
       downloadProgress: 0.0,
+      downloadedBytes: 0,
+      totalBytes: 0,
       clearError: true,
     );
     _repository.saveDownloadProgress(0.0);

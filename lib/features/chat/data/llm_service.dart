@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/model_files.dart';
 import '../domain/chat_message.dart';
 import 'rag_service.dart';
 
 /// Provider for the LLM service.
 final llmServiceProvider = Provider<LlmService>((ref) {
-  return LlmService();
+  final modelFiles = ref.watch(modelFilesProvider);
+  return LlmService(modelFiles);
 });
 
 /// Result of LLM generation.
@@ -53,7 +55,9 @@ typedef StreamCallback = void Function(String token);
 /// In V1, this is a stub that generates mock responses.
 /// Real implementation with Gemma 2B will be added in Commit 9.
 class LlmService {
-  LlmService();
+  LlmService(this._modelFiles);
+
+  final ModelFiles _modelFiles;
 
   /// Whether the model is loaded and ready.
   bool _isModelLoaded = false;
@@ -65,6 +69,14 @@ class LlmService {
   /// 
   /// In V1, this is a no-op stub.
   Future<bool> initialize() async {
+    if (_isModelLoaded) return true;
+
+    final hasModel = await _modelFiles.hasLlmModel();
+    if (!hasModel) {
+      debugPrint('LlmService: Model file missing, cannot initialize');
+      return false;
+    }
+
     debugPrint('LlmService: Initializing (stub)');
     await Future.delayed(const Duration(milliseconds: 300));
     _isModelLoaded = true;
@@ -82,7 +94,12 @@ class LlmService {
     StreamCallback? onToken,
   }) async {
     if (!_isModelLoaded) {
-      await initialize();
+      final initialized = await initialize();
+      if (!initialized) {
+        return GenerationResult.error(
+          'Model not available. Download the AI model to enable chat.',
+        );
+      }
     }
 
     try {
