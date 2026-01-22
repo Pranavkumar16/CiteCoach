@@ -7,6 +7,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../routing/app_router.dart';
 import '../../library/domain/document.dart';
 import '../../library/providers/library_provider.dart';
+import '../../voice/providers/voice_provider.dart';
 import '../domain/chat_message.dart';
 import '../providers/chat_provider.dart';
 import 'widgets/chat_input.dart';
@@ -139,6 +140,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
     final libraryState = ref.watch(libraryProvider);
+    final voiceState = ref.watch(voiceProvider);
+    final voiceNotifier = ref.read(voiceProvider.notifier);
     
     // Get the document
     final document = libraryState.documents.where((d) => d.id == widget.documentId).firstOrNull;
@@ -303,11 +306,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         }
 
         final message = state.messages[index];
+        final canSpeak = voiceState.isTtsAvailable;
+        final isSpeaking = voiceState.isSpeaking &&
+            voiceState.responseText == message.content;
+
+        final canSpeakMessage = message.isAssistant &&
+            !message.isStreaming &&
+            message.content.trim().isNotEmpty;
+
         return MessageBubble(
           message: message,
           onCitationTap: document != null
               ? (citation) => _handleCitationTap(citation, document)
               : null,
+          onSpeak: canSpeakMessage && canSpeak
+              ? () => voiceNotifier.speak(message.content)
+              : null,
+          onStopSpeaking: isSpeaking ? voiceNotifier.stopSpeaking : null,
+          isSpeaking: isSpeaking,
+          canSpeak: canSpeak,
         );
       },
     );

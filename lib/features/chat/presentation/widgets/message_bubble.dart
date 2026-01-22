@@ -11,6 +11,10 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     this.onCitationTap,
     this.streamingContent,
+    this.onSpeak,
+    this.onStopSpeaking,
+    this.isSpeaking = false,
+    this.canSpeak = false,
   });
 
   /// The message to display.
@@ -21,6 +25,18 @@ class MessageBubble extends StatelessWidget {
 
   /// Streaming content (for assistant messages being generated).
   final String? streamingContent;
+
+  /// Callback to speak the message aloud.
+  final VoidCallback? onSpeak;
+
+  /// Callback to stop speaking.
+  final VoidCallback? onStopSpeaking;
+
+  /// Whether this message is currently being spoken.
+  final bool isSpeaking;
+
+  /// Whether TTS is available.
+  final bool canSpeak;
 
   @override
   Widget build(BuildContext context) {
@@ -141,6 +157,8 @@ class MessageBubble extends StatelessWidget {
   Widget _buildMetadata(BuildContext context) {
     final time = _formatTime(message.createdAt);
     final showVoiceIcon = message.inputMethod == InputMethod.voice;
+    final showSpeakControl =
+        canSpeak && onSpeak != null && !message.isStreaming;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -160,6 +178,36 @@ class MessageBubble extends StatelessWidget {
             color: AppColors.textTertiary,
           ),
         ),
+        if (showSpeakControl) ...[
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: isSpeaking ? onStopSpeaking : onSpeak,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSpeaking
+                        ? Icons.stop_circle_outlined
+                        : Icons.volume_up_outlined,
+                    size: 14,
+                    color: AppColors.textTertiary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isSpeaking ? AppStrings.stop : AppStrings.readAloud,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
