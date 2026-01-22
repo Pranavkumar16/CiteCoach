@@ -6,6 +6,7 @@ import '../features/chat/presentation/chat_screen.dart';
 import '../features/library/presentation/library_screen.dart';
 import '../features/processing/presentation/document_ready_screen.dart';
 import '../features/processing/presentation/processing_screen.dart';
+import '../features/reader/presentation/pdf_reader_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
 import '../features/setup/presentation/download_required_screen.dart';
@@ -46,8 +47,28 @@ abstract final class AppRoutes {
   // Helper to build document routes
   static String documentProcessing(String documentId) =>
       '/document/$documentId/processing';
-  static String documentReader(String documentId) =>
-      '/document/$documentId/reader';
+  static String documentReader(
+    String documentId, {
+    int? page,
+    String? highlight,
+    bool fromChat = false,
+  }) {
+    final params = <String, String>{};
+    if (page != null) {
+      params['page'] = page.toString();
+    }
+    if (highlight != null && highlight.trim().isNotEmpty) {
+      params['highlight'] = highlight.trim();
+    }
+    if (fromChat) {
+      params['fromChat'] = '1';
+    }
+
+    return Uri(
+      path: '/document/$documentId/reader',
+      queryParameters: params.isEmpty ? null : params,
+    ).toString();
+  }
   static String documentChat(String documentId) =>
       '/document/$documentId/chat';
 }
@@ -187,9 +208,14 @@ GoRouter createRouter(Ref ref) {
           final documentId = int.parse(state.pathParameters['id']!);
           final pageStr = state.uri.queryParameters['page'];
           final initialPage = pageStr != null ? int.tryParse(pageStr) : null;
-          return _PlaceholderScreen(
-            name: 'Reader',
-            extra: 'Document: $documentId, Page: ${initialPage ?? 1}',
+          final highlight = state.uri.queryParameters['highlight'];
+          final fromChat = state.uri.queryParameters['fromChat'] == '1';
+
+          return PdfReaderScreen(
+            documentId: documentId,
+            initialPage: initialPage,
+            highlightText: highlight,
+            fromChat: fromChat,
           );
         },
       ),
@@ -353,11 +379,18 @@ extension GoRouterExtension on BuildContext {
   }
 
   /// Navigate to document reader screen with optional page.
-  void goToReader(String documentId, {int? page}) {
-    final uri = page != null
-        ? '${AppRoutes.documentReader(documentId)}?page=$page'
-        : AppRoutes.documentReader(documentId);
-    go(uri);
+  void goToReader(
+    String documentId, {
+    int? page,
+    String? highlight,
+    bool fromChat = false,
+  }) {
+    go(AppRoutes.documentReader(
+      documentId,
+      page: page,
+      highlight: highlight,
+      fromChat: fromChat,
+    ));
   }
 
   /// Navigate to document processing screen.
