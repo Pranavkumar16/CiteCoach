@@ -163,7 +163,7 @@ extension ProcessingPhaseExtension on ProcessingPhase {
       case ProcessingPhase.chunking:
         return 'Creating chunks...';
       case ProcessingPhase.embedding:
-        return 'Generating embeddings...';
+        return 'Generating embeddings & page index...';
       case ProcessingPhase.finalizing:
         return 'Finalizing...';
       case ProcessingPhase.complete:
