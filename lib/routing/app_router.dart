@@ -8,6 +8,7 @@ import '../features/processing/presentation/document_ready_screen.dart';
 import '../features/processing/presentation/processing_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
+import '../features/setup/presentation/download_required_screen.dart';
 import '../features/setup/presentation/model_setup_screen.dart';
 import '../features/setup/presentation/privacy_screen.dart';
 import '../features/setup/presentation/setup_complete_screen.dart';
@@ -59,11 +60,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
 /// Creates the app router with all routes and guards.
 GoRouter createRouter(Ref ref) {
+  final setupState = ref.watch(setupProvider);
+  final setupNotifier = ref.watch(setupProvider.notifier);
+
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
+    refreshListenable: GoRouterRefreshStream(setupNotifier.stream),
     redirect: (context, state) {
-      final setupState = ref.read(setupProvider);
       final currentPath = state.uri.path;
       
       // List of setup paths
@@ -77,6 +81,8 @@ GoRouter createRouter(Ref ref) {
       
       final isSetupPath = setupPaths.contains(currentPath);
       final isSetupCompleted = setupState.currentStep == SetupStep.done;
+      final isChatPath =
+          RegExp(r'^/document/\d+/chat$').hasMatch(currentPath);
       
       // If setup is completed and user tries to access setup screens,
       // redirect to library
@@ -88,6 +94,14 @@ GoRouter createRouter(Ref ref) {
       // redirect to current setup step
       if (!isSetupCompleted && !isSetupPath) {
         return setupState.currentStep.routePath;
+      }
+
+      // If chat is locked, redirect to download required screen
+      if (isSetupCompleted &&
+          !setupState.canUseChat &&
+          isChatPath &&
+          currentPath != AppRoutes.downloadRequired) {
+        return AppRoutes.downloadRequired;
       }
       
       // No redirect needed
@@ -205,8 +219,7 @@ GoRouter createRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.downloadRequired,
         name: 'downloadRequired',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Download Required'),
+        builder: (context, state) => const DownloadRequiredScreen(),
       ),
     ],
     errorBuilder: (context, state) => _ErrorScreen(error: state.error),
