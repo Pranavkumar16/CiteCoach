@@ -6,6 +6,9 @@ import '../features/chat/presentation/chat_screen.dart';
 import '../features/library/presentation/library_screen.dart';
 import '../features/processing/presentation/document_ready_screen.dart';
 import '../features/processing/presentation/processing_screen.dart';
+import '../features/reader/presentation/reader_screen.dart';
+import '../features/settings/presentation/model_info_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
 import '../features/setup/presentation/model_setup_screen.dart';
@@ -135,8 +138,7 @@ GoRouter createRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.settings,
             name: 'settings',
-            builder: (context, state) =>
-                const _PlaceholderScreen(name: 'Settings'),
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),
@@ -145,8 +147,7 @@ GoRouter createRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.modelInfo,
         name: 'modelInfo',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Model Info'),
+        builder: (context, state) => const ModelInfoScreen(),
       ),
 
       // Document routes
@@ -173,9 +174,9 @@ GoRouter createRouter(Ref ref) {
           final documentId = int.parse(state.pathParameters['id']!);
           final pageStr = state.uri.queryParameters['page'];
           final initialPage = pageStr != null ? int.tryParse(pageStr) : null;
-          return _PlaceholderScreen(
-            name: 'Reader',
-            extra: 'Document: $documentId, Page: ${initialPage ?? 1}',
+          return ReaderScreen(
+            documentId: documentId,
+            initialPage: initialPage ?? 1,
           );
         },
       ),
