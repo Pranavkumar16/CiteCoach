@@ -10,7 +10,10 @@ import 'package:path_provider/path_provider.dart';
 final modelDownloaderProvider = Provider<ModelDownloader>((ref) {
   const downloadUrl =
       String.fromEnvironment(ModelDownloader.modelDownloadUrlEnvKey);
-  return ModelDownloader(downloadUrl: downloadUrl);
+  return ModelDownloader(
+    downloadUrl: downloadUrl,
+    allowSimulatedFallback: kDebugMode,
+  );
 });
 
 /// Download status for the AI model.
@@ -104,6 +107,9 @@ class ModelDownloader {
   static const String modelVersion = '1.0.0';
   static const int modelSizeBytes = 1500 * 1024 * 1024; // 1.5 GB
   static const String modelDownloadUrlEnvKey = 'MODEL_DOWNLOAD_URL';
+  static const String modelFileEnvKey = 'LLM_MODEL_FILE';
+  static const String modelFileName =
+      String.fromEnvironment(modelFileEnvKey, defaultValue: modelName);
 
   final Dio _dio;
   final String _downloadUrl;
@@ -150,12 +156,12 @@ class ModelDownloader {
   /// Get the model storage path.
   Future<String> getModelPath() async {
     final modelsDir = await _getModelsDirectory();
-    return '${modelsDir.path}/$modelName';
+    return '${modelsDir.path}/$modelFileName';
   }
 
   Future<String> _getTempPath() async {
     final modelsDir = await _getModelsDirectory();
-    return '${modelsDir.path}/$modelName.part';
+    return '${modelsDir.path}/$modelFileName.part';
   }
 
   Future<Directory> _getModelsDirectory() async {

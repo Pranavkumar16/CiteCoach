@@ -1,4 +1,5 @@
 export 'data/model_downloader.dart';
+export 'data/model_import_service.dart';
 export 'data/setup_repository.dart';
 export 'domain/setup_state.dart';
 export 'presentation/download_progress_screen.dart';

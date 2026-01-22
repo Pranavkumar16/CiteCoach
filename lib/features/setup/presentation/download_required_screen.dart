@@ -164,6 +164,18 @@ class DownloadRequiredScreen extends ConsumerWidget {
         ),
         const SizedBox(height: AppDimensions.spacingMd),
         SecondaryButton(
+          text: AppStrings.importModelFile,
+          icon: Icons.upload_file_rounded,
+          onPressed: () async {
+            await notifier.importModelFile();
+            if (context.mounted &&
+                ref.read(setupProvider).currentStep == SetupStep.complete) {
+              context.go('/setup/complete');
+            }
+          },
+        ),
+        const SizedBox(height: AppDimensions.spacingMd),
+        SecondaryButton(
           text: AppStrings.backToLibrary,
           onPressed: () => context.go(AppRoutes.library),
         ),

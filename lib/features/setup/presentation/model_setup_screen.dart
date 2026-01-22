@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/constants.dart';
 import '../../../core/widgets/widgets.dart';
 import '../data/model_downloader.dart';
+import '../domain/setup_state.dart';
 import '../providers/setup_provider.dart';
 
 /// Model setup screen explaining the AI model download.
@@ -208,6 +209,18 @@ class ModelSetupScreen extends ConsumerWidget {
             await ref.read(setupProvider.notifier).startDownload();
             if (context.mounted) {
               context.go('/setup/download');
+            }
+          },
+        ),
+        const SizedBox(height: AppDimensions.spacingMd),
+        SecondaryButton(
+          text: AppStrings.importModelFile,
+          icon: Icons.upload_file_rounded,
+          onPressed: () async {
+            await ref.read(setupProvider.notifier).importModelFile();
+            if (context.mounted &&
+                ref.read(setupProvider).currentStep == SetupStep.complete) {
+              context.go('/setup/complete');
             }
           },
         ),

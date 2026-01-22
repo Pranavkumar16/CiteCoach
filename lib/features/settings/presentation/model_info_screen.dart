@@ -18,6 +18,8 @@ class ModelInfoScreen extends ConsumerWidget {
     final setupState = ref.watch(setupProvider);
     final storage = ref.watch(storageServiceProvider);
     final modelVersion = storage.modelVersion ?? ModelDownloader.modelVersion;
+    final downloader = ref.watch(modelDownloaderProvider);
+    final hasDownloadUrl = downloader.hasDownloadUrl;
 
     return Scaffold(
       appBar: AppBar(
@@ -43,10 +45,14 @@ class ModelInfoScreen extends ConsumerWidget {
                   value:
                       setupState.isModelDownloaded ? AppStrings.ready : 'Not downloaded',
                 ),
+                _InfoRow(
+                  label: 'Download source',
+                  value: hasDownloadUrl ? 'Configured' : 'Not configured',
+                ),
               ],
             ),
             const SizedBox(height: AppDimensions.spacingLg),
-            if (!setupState.isModelDownloaded)
+            if (hasDownloadUrl)
               GradientButton(
                 text: AppStrings.downloadNowButton,
                 icon: Icons.download_rounded,
@@ -56,14 +62,27 @@ class ModelInfoScreen extends ConsumerWidget {
                     context.go(AppRoutes.downloadProgress);
                   }
                 },
-              )
-            else
-              SecondaryButton(
-                text: 'Re-download model',
-                icon: Icons.refresh_rounded,
-                onPressed: () {
-                  context.go(AppRoutes.downloadProgress);
-                },
+              ),
+            if (hasDownloadUrl) const SizedBox(height: AppDimensions.spacingMd),
+            SecondaryButton(
+              text: setupState.isModelDownloaded
+                  ? AppStrings.replaceModelFile
+                  : AppStrings.importModelFile,
+              icon: Icons.upload_file_rounded,
+              onPressed: () async {
+                await ref.read(setupProvider.notifier).importModelFile();
+              },
+            ),
+            if (!hasDownloadUrl)
+              Padding(
+                padding: const EdgeInsets.only(top: AppDimensions.spacingMd),
+                child: Text(
+                  'Set MODEL_DOWNLOAD_URL to enable downloads, or import a model file.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
               ),
             const Spacer(),
             Text(

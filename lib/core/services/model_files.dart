@@ -29,7 +29,7 @@ class ModelFiles {
 
   Future<String> getLlmModelPath() async {
     final dir = await _getModelsDirectory();
-    return '${dir.path}/${ModelDownloader.modelName}';
+    return '${dir.path}/${ModelDownloader.modelFileName}';
   }
 
   Future<String?> getEmbeddingModelPath({String? fileName}) async {

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/services/network_service.dart';
 import '../data/model_downloader.dart';
+import '../data/model_import_service.dart';
 import '../data/setup_repository.dart';
 import '../domain/setup_state.dart';
 
@@ -14,7 +15,8 @@ final setupProvider = StateNotifierProvider<SetupNotifier, SetupState>((ref) {
   final repository = ref.watch(setupRepositoryProvider);
   final downloader = ref.watch(modelDownloaderProvider);
   final networkService = ref.watch(networkServiceProvider);
-  return SetupNotifier(repository, downloader, networkService);
+  final importService = ref.watch(modelImportServiceProvider);
+  return SetupNotifier(repository, downloader, networkService, importService);
 });
 
 /// Provider to check if setup is completed (for routing).
@@ -30,7 +32,12 @@ final currentSetupStepProvider = Provider<SetupStep>((ref) {
 
 /// State notifier for managing the setup flow.
 class SetupNotifier extends StateNotifier<SetupState> {
-  SetupNotifier(this._repository, this._downloader, this._networkService)
+  SetupNotifier(
+    this._repository,
+    this._downloader,
+    this._networkService,
+    this._importService,
+  )
       : super(SetupState.initial()) {
     _initialize();
   }
@@ -38,6 +45,7 @@ class SetupNotifier extends StateNotifier<SetupState> {
   final SetupRepository _repository;
   final ModelDownloader _downloader;
   final NetworkService _networkService;
+  final ModelImportService _importService;
   StreamSubscription<DownloadProgress>? _downloadSubscription;
 
   /// Initialize the setup state from persisted data.
@@ -143,6 +151,42 @@ class SetupNotifier extends StateNotifier<SetupState> {
     _downloadSubscription = progressStream.listen(
       _onDownloadProgress,
       onError: _onDownloadError,
+    );
+  }
+
+  /// Import a local model file instead of downloading.
+  Future<void> importModelFile() async {
+    state = state.copyWith(isDownloading: true, clearError: true);
+
+    final result = await _importService.pickAndImportLlmModel();
+    if (result.cancelled) {
+      state = state.copyWith(isDownloading: false);
+      return;
+    }
+
+    if (result.isError) {
+      state = state.copyWith(
+        downloadError: result.error ?? 'Failed to import model',
+        isDownloading: false,
+      );
+      return;
+    }
+
+    await _repository.saveModelDownloaded(true);
+    await _repository.saveDownloadProgress(1.0);
+    await _repository.saveModelVersion(
+      result.fileName ?? ModelDownloader.modelVersion,
+    );
+
+    final nextStep =
+        state.currentStep == SetupStep.done ? SetupStep.done : SetupStep.complete;
+    state = state.copyWith(
+      currentStep: nextStep,
+      downloadProgress: 1.0,
+      isModelDownloaded: true,
+      isDownloading: false,
+      downloadedBytes: result.fileSize,
+      totalBytes: result.fileSize,
     );
   }
 
