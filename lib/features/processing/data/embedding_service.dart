@@ -101,14 +101,13 @@ class EmbeddingService {
       debugPrint('EmbeddingService: Generating embeddings for ${chunks.length} chunks');
 
       final embeddings = <int, Float32List>{};
-      final random = Random(42); // Fixed seed for reproducibility in testing
 
       for (int i = 0; i < chunks.length; i++) {
         onProgress?.call(i + 1, chunks.length);
 
         // Generate random embedding (stub)
         // Real implementation will call TinyBERT model
-        final embedding = _generateStubEmbedding(chunks[i].text, random);
+        final embedding = _generateStubEmbedding(chunks[i].text);
         embeddings[i] = embedding;
 
         // Simulate processing time
@@ -134,8 +133,7 @@ class EmbeddingService {
     }
 
     try {
-      final random = Random(text.hashCode); // Deterministic based on text
-      return _generateStubEmbedding(text, random);
+      return _generateStubEmbedding(text);
     } catch (e) {
       debugPrint('EmbeddingService: Error generating query embedding: $e');
       return null;
@@ -143,30 +141,57 @@ class EmbeddingService {
   }
 
   /// Generate a stub embedding vector.
-  /// 
+  ///
   /// In real implementation, this will be replaced with TinyBERT inference.
-  /// For now, generates normalized random vectors.
-  Float32List _generateStubEmbedding(String text, Random random) {
+  /// For now, uses a deterministic hashing trick for text similarity.
+  Float32List _generateStubEmbedding(String text) {
     final embedding = Float32List(embeddingDimension);
-    
-    // Generate random values
+
+    final tokens = _tokenize(text);
+    if (tokens.isEmpty) {
+      return embedding;
+    }
+
+    for (final token in tokens) {
+      final hash = _stableHash(token);
+      final index = hash.abs() % embeddingDimension;
+      final sign = (hash & 1) == 0 ? 1.0 : -1.0;
+      final weight = token.length < 4 ? 0.8 : 1.0;
+      embedding[index] += sign * weight;
+    }
+
+    // L2 normalize
     double sumSquares = 0;
     for (int i = 0; i < embeddingDimension; i++) {
-      // Use text hash to add some text-dependent variation
-      final textFactor = (text.hashCode + i) % 100 / 100.0;
-      embedding[i] = (random.nextDouble() * 2 - 1) + textFactor * 0.1;
       sumSquares += embedding[i] * embedding[i];
     }
-    
-    // L2 normalize
     final norm = sqrt(sumSquares);
     if (norm > 0) {
       for (int i = 0; i < embeddingDimension; i++) {
         embedding[i] /= norm;
       }
     }
-    
+
     return embedding;
+  }
+
+  List<String> _tokenize(String text) {
+    final matches = RegExp(r"[A-Za-z0-9']+")
+        .allMatches(text.toLowerCase())
+        .map((match) => match.group(0)!)
+        .where((token) => token.length > 1)
+        .toList();
+    return matches;
+  }
+
+  int _stableHash(String input) {
+    const int fnvPrime = 0x01000193;
+    int hash = 0x811c9dc5;
+    for (final codeUnit in input.codeUnits) {
+      hash ^= codeUnit;
+      hash = (hash * fnvPrime) & 0xffffffff;
+    }
+    return hash;
   }
 
   /// Compute cosine similarity between two embeddings.

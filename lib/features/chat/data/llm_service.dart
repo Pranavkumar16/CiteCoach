@@ -111,8 +111,8 @@ class LlmService {
         );
       }
 
-      // Generate mock response
-      final response = await _generateMockResponse(
+      // Generate extractive response
+      final response = await _generateExtractiveResponse(
         query,
         retrievalResult,
         onToken,
@@ -128,41 +128,73 @@ class LlmService {
     }
   }
 
-  /// Generate a mock response based on the context.
-  /// 
-  /// This stub creates a plausible response by:
-  /// 1. Acknowledging the query
-  /// 2. Summarizing relevant information from context
-  /// 3. Adding citation references
-  Future<String> _generateMockResponse(
+  /// Generate a response based on the retrieved context.
+  ///
+  /// This stub uses extractive snippets to provide grounded answers.
+  Future<String> _generateExtractiveResponse(
     String query,
     RetrievalResult retrievalResult,
     StreamCallback? onToken,
   ) async {
-    // Build a response that references the context
     final citations = retrievalResult.citations;
-    final queryLower = query.toLowerCase();
+    final queryTerms = _tokenize(query);
 
-    // Determine response type based on query
-    String response;
-    
-    if (queryLower.contains('what') || queryLower.contains('explain')) {
-      response = _buildExplanatoryResponse(query, retrievalResult);
-    } else if (queryLower.contains('how')) {
-      response = _buildHowToResponse(query, retrievalResult);
-    } else if (queryLower.contains('why')) {
-      response = _buildWhyResponse(query, retrievalResult);
-    } else if (queryLower.contains('list') || queryLower.contains('what are')) {
-      response = _buildListResponse(query, retrievalResult);
+    final contextByPage = _parseContextByPage(retrievalResult.context);
+    final candidates = <_SnippetCandidate>[];
+    for (final citation in citations) {
+      final text = citation.text.isNotEmpty
+          ? citation.text
+          : contextByPage[citation.pageNumber] ?? '';
+      if (text.isEmpty) continue;
+      candidates.add(_SnippetCandidate(
+        pageNumber: citation.pageNumber,
+        text: _trimSnippet(text),
+      ));
+    }
+
+    if (candidates.isEmpty && contextByPage.isNotEmpty) {
+      contextByPage.forEach((page, text) {
+        if (text.isNotEmpty) {
+          candidates.add(
+            _SnippetCandidate(pageNumber: page, text: _trimSnippet(text)),
+          );
+        }
+      });
+    }
+
+    final scored = candidates.map((candidate) {
+      final score = _scoreSnippet(candidate.text, queryTerms);
+      return _ScoredCandidate(candidate: candidate, score: score);
+    }).toList();
+
+    scored.sort((a, b) => b.score.compareTo(a.score));
+
+    final selected = scored.isNotEmpty
+        ? scored.take(3).toList()
+        : <_ScoredCandidate>[];
+
+    final topic = _extractTopic(query);
+    final buffer = StringBuffer()
+      ..writeln('Based on the document, $topic:');
+
+    if (selected.isNotEmpty) {
+      for (final item in selected) {
+        buffer.writeln(
+          '• ${item.candidate.text} (p.${item.candidate.pageNumber})',
+        );
+      }
     } else {
-      response = _buildGeneralResponse(query, retrievalResult);
+      buffer.writeln('• Relevant information was found in the document.');
     }
 
     // Add page citations
     if (citations.isNotEmpty) {
-      final pageRefs = citations.map((c) => 'p.${c.pageNumber}').toSet().join(', ');
-      response += '\n\n[Source: $pageRefs]';
+      final pageRefs =
+          citations.map((c) => 'p.${c.pageNumber}').toSet().join(', ');
+      buffer.writeln('\n[Source: $pageRefs]');
     }
+
+    final response = buffer.toString().trim();
 
     // Simulate streaming if callback provided
     if (onToken != null) {
@@ -170,52 +202,6 @@ class LlmService {
     }
 
     return response;
-  }
-
-  String _buildExplanatoryResponse(String query, RetrievalResult result) {
-    final snippet = result.citations.isNotEmpty 
-        ? result.citations.first.preview 
-        : 'the document content';
-    
-    return 'Based on the document, ${_extractTopic(query)} refers to the following:\n\n'
-        '$snippet\n\n'
-        'This information provides context for understanding the main concepts discussed in the document.';
-  }
-
-  String _buildHowToResponse(String query, RetrievalResult result) {
-    return 'According to the document, here is how ${_extractTopic(query)}:\n\n'
-        '1. The document outlines the key steps and considerations.\n'
-        '2. It emphasizes the importance of following the proper methodology.\n'
-        '3. Additional details can be found in the referenced pages.\n\n'
-        'The document provides comprehensive guidance on this topic.';
-  }
-
-  String _buildWhyResponse(String query, RetrievalResult result) {
-    final snippet = result.citations.isNotEmpty 
-        ? result.citations.first.preview 
-        : '';
-    
-    return 'The document explains that ${_extractTopic(query)} is important because:\n\n'
-        '${snippet.isNotEmpty ? '"$snippet"\n\n' : ''}'
-        'This reasoning is central to the document\'s argument and supports its main conclusions.';
-  }
-
-  String _buildListResponse(String query, RetrievalResult result) {
-    final items = result.citations.take(3).map((c) => '• ${c.preview}').join('\n');
-    
-    return 'Based on the document, here are the relevant points about ${_extractTopic(query)}:\n\n'
-        '${items.isNotEmpty ? items : '• Key information from the document'}\n\n'
-        'These points summarize the main content related to your query.';
-  }
-
-  String _buildGeneralResponse(String query, RetrievalResult result) {
-    final snippet = result.citations.isNotEmpty 
-        ? result.citations.first.preview 
-        : 'the relevant content';
-    
-    return 'Regarding ${_extractTopic(query)}, the document states:\n\n'
-        '"$snippet"\n\n'
-        'This passage directly addresses your question and provides the key information available in the document.';
   }
 
   /// Extract the main topic from a query.
@@ -231,6 +217,59 @@ class LlmService {
     }
     
     return topic.isEmpty ? 'this topic' : topic;
+  }
+
+  Map<int, String> _parseContextByPage(String context) {
+    final regex = RegExp(r'\[Page (\d+)\]\s');
+    final matches = regex.allMatches(context).toList();
+    final result = <int, String>{};
+    if (matches.isEmpty) return result;
+
+    for (int i = 0; i < matches.length; i++) {
+      final match = matches[i];
+      final pageNumber = int.tryParse(match.group(1) ?? '');
+      if (pageNumber == null) continue;
+      final start = match.end;
+      final end = i + 1 < matches.length ? matches[i + 1].start : context.length;
+      final text = context.substring(start, end).trim();
+      if (text.isNotEmpty) {
+        result[pageNumber] = text;
+      }
+    }
+    return result;
+  }
+
+  List<String> _tokenize(String text) {
+    return RegExp(r"[A-Za-z0-9']+")
+        .allMatches(text.toLowerCase())
+        .map((match) => match.group(0)!)
+        .where((token) => token.length > 1)
+        .toList();
+  }
+
+  double _scoreSnippet(String text, List<String> queryTerms) {
+    if (queryTerms.isEmpty) return 0.0;
+    final lower = text.toLowerCase();
+    int matches = 0;
+    for (final term in queryTerms) {
+      if (lower.contains(term)) {
+        matches++;
+      }
+    }
+    return matches / queryTerms.length;
+  }
+
+  String _trimSnippet(String text, {int maxLength = 240}) {
+    if (text.length <= maxLength) return text;
+    final cutoff = text.lastIndexOf('. ', maxLength - 3);
+    if (cutoff > maxLength / 2) {
+      return text.substring(0, cutoff + 1);
+    }
+    final spaceIndex = text.lastIndexOf(' ', maxLength - 3);
+    if (spaceIndex > maxLength / 2) {
+      return '${text.substring(0, spaceIndex)}...';
+    }
+    return '${text.substring(0, maxLength - 3)}...';
   }
 
   /// Simulate token-by-token streaming.
@@ -252,4 +291,24 @@ class LlmService {
     _isModelLoaded = false;
     debugPrint('LlmService: Disposed');
   }
+}
+
+class _SnippetCandidate {
+  const _SnippetCandidate({
+    required this.pageNumber,
+    required this.text,
+  });
+
+  final int pageNumber;
+  final String text;
+}
+
+class _ScoredCandidate {
+  const _ScoredCandidate({
+    required this.candidate,
+    required this.score,
+  });
+
+  final _SnippetCandidate candidate;
+  final double score;
 }
