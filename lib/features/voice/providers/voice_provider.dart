@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/storage_service.dart';
 import '../data/stt_service.dart';
 import '../data/tts_service.dart';
 import '../domain/voice_state.dart';
@@ -10,10 +11,12 @@ final voiceProvider =
     StateNotifierProvider.autoDispose<VoiceNotifier, VoiceState>((ref) {
   final sttService = ref.watch(sttServiceProvider);
   final ttsService = ref.watch(ttsServiceProvider);
+  final storage = ref.watch(storageServiceProvider);
 
   final notifier = VoiceNotifier(
     sttService: sttService,
     ttsService: ttsService,
+    storage: storage,
   );
 
   ref.onDispose(() {
@@ -31,14 +34,17 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   VoiceNotifier({
     required SttService sttService,
     required TtsService ttsService,
+    required StorageService storage,
   })  : _sttService = sttService,
         _ttsService = ttsService,
+        _storage = storage,
         super(const VoiceState()) {
     _initialize();
   }
 
   final SttService _sttService;
   final TtsService _ttsService;
+  final StorageService _storage;
 
   VoiceInputCallback? _onInputComplete;
 
@@ -49,12 +55,20 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     final sttAvailable = await _sttService.initialize();
     final ttsAvailable = await _ttsService.initialize();
 
+    if (_storage.isReady) {
+      await _ttsService.setSpeechRate(_mapSpeedToRate(_storage.speechSpeed));
+    }
+
     state = state.copyWith(
       isSttAvailable: sttAvailable,
       isTtsAvailable: ttsAvailable,
     );
 
     debugPrint('VoiceNotifier: STT available: $sttAvailable, TTS available: $ttsAvailable');
+  }
+
+  double _mapSpeedToRate(double speed) {
+    return (speed / 2.0).clamp(0.0, 1.0);
   }
 
   /// Start listening for voice input.

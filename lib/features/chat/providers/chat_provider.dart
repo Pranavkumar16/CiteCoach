@@ -179,13 +179,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       if (cachedAnswer != null) {
         debugPrint('ChatNotifier: Cache hit!');
-        
+
+        final snippets = await _repository.getCitationSnippets(
+          documentId,
+          cachedAnswer.citations,
+        );
+
         // Convert page numbers to Citation objects
         final citations = cachedAnswer.citations
             .map((pageNum) => Citation(
                   pageNumber: pageNum,
                   chunkIndex: 0,
-                  text: '',
+                  text: snippets[pageNum] ?? '',
                 ))
             .toList();
 

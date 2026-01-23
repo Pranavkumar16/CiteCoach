@@ -56,6 +56,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
   final DocumentRepository _documentRepository;
 
   bool _isCancelled = false;
+  double _lastSavedProgress = 0.0;
 
   /// Start processing the document.
   Future<bool> startProcessing() async {
@@ -85,6 +86,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         overallProgress: 0.05,
         stepProgress: 0.0,
       );
+      _persistProgress(0.05);
 
       if (_isCancelled) return false;
 
@@ -94,6 +96,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         overallProgress: 0.1,
         stepProgress: 0.0,
       );
+      _persistProgress(0.1);
 
       final extractionResult = await _pdfProcessor.extractText(
         document.filePath,
@@ -107,6 +110,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
               pageCount: total,
               pagesProcessed: current,
             );
+            _persistProgress(overallProgress);
           }
         },
       );
@@ -130,6 +134,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         stepProgress: 0.0,
         pageCount: extractionResult.pageCount,
       );
+      _persistProgress(0.4);
 
       if (_isCancelled) return false;
 
@@ -143,6 +148,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
               stepProgress: stepProgress,
               overallProgress: overallProgress,
             );
+            _persistProgress(overallProgress);
           }
         },
       );
@@ -169,6 +175,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         overallProgress: 0.6,
         stepProgress: 0.0,
       );
+      _persistProgress(0.6);
 
       if (_isCancelled) return false;
 
@@ -177,11 +184,12 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         onProgress: (current, total) {
           if (!_isCancelled) {
             final stepProgress = current / total;
-            final overallProgress = 0.6 + (stepProgress * 0.3); // 60-90%
+            final overallProgress = 0.6 + (stepProgress * 0.2); // 60-80%
             state = state.copyWith(
               stepProgress: stepProgress,
               overallProgress: overallProgress,
             );
+            _persistProgress(overallProgress);
           }
         },
       );
@@ -198,12 +206,30 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       // Save embeddings to database
       await _saveEmbeddings(chunkingResult.chunks, embeddingResult.embeddings);
 
+      // Build page-level embeddings for hierarchical retrieval
+      await _generatePageEmbeddings(
+        extractionResult.pages,
+        onProgress: (current, total) {
+          if (!_isCancelled) {
+            final stepProgress = current / total;
+            final overallProgress = 0.8 + (stepProgress * 0.1); // 80-90%
+            state = state.copyWith(
+              stepProgress: stepProgress,
+              overallProgress: overallProgress,
+              pagesProcessed: current,
+            );
+            _persistProgress(overallProgress);
+          }
+        },
+      );
+
       // Step 5: Finalize
       state = state.copyWith(
         currentPhase: ProcessingPhase.finalizing,
-        overallProgress: 0.95,
+        overallProgress: 0.9,
         stepProgress: 0.0,
       );
+      _persistProgress(0.9);
 
       if (_isCancelled) return false;
 
@@ -216,6 +242,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         extractionResult.pageCount,
         chunkingResult.chunks.length,
       );
+      _persistProgress(1.0);
 
       debugPrint('ProcessingNotifier: Processing complete!');
       return true;
@@ -238,6 +265,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         documentId: documentId,
         pageNumber: entry.key,
         pageText: entry.value,
+        charCount: entry.value.length,
       ));
     }
 
@@ -250,10 +278,14 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
     if (_db == null) return;
 
     final chunksTable = DocumentChunksTable(_db);
+    final pagesTable = DocumentPagesTable(_db);
     final chunkRecords = <ChunkRecord>[];
+    final chunkCounts = <int, int>{};
 
     for (int i = 0; i < chunks.length; i++) {
       final chunk = chunks[i];
+      chunkCounts[chunk.pageNumber] =
+          (chunkCounts[chunk.pageNumber] ?? 0) + 1;
       chunkRecords.add(ChunkRecord(
         documentId: documentId,
         pageNumber: chunk.pageNumber,
@@ -266,7 +298,35 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
     }
 
     await chunksTable.insertBatch(chunkRecords);
+    for (final entry in chunkCounts.entries) {
+      await pagesTable.updateChunkCount(documentId, entry.key, entry.value);
+    }
     debugPrint('ProcessingNotifier: Saved ${chunkRecords.length} chunks');
+  }
+
+  /// Generate and store page-level embeddings for hierarchical retrieval.
+  Future<void> _generatePageEmbeddings(
+    Map<int, String> pages, {
+    EmbeddingProgressCallback? onProgress,
+  }) async {
+    if (_db == null) return;
+
+    final pagesTable = DocumentPagesTable(_db);
+    final pageNumbers = pages.keys.toList()..sort();
+
+    for (int i = 0; i < pageNumbers.length; i++) {
+      final pageNumber = pageNumbers[i];
+      final text = pages[pageNumber] ?? '';
+
+      final embedding = await _embeddingService.generateQueryEmbedding(text);
+      if (embedding != null) {
+        await pagesTable.updateEmbedding(documentId, pageNumber, embedding);
+      }
+
+      onProgress?.call(i + 1, pageNumbers.length);
+
+      if (_isCancelled) return;
+    }
   }
 
   /// Save embeddings to the database.
@@ -296,6 +356,18 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
   Future<void> _setError(String message) async {
     await _documentRepository.setError(documentId, message);
     state = ProcessingState.error(documentId, message);
+  }
+
+  Future<void> _persistProgress(double progress) async {
+    if (_db == null) return;
+    if (progress <= 0) return;
+
+    final shouldPersist =
+        progress >= 1.0 || (progress - _lastSavedProgress).abs() >= 0.05;
+    if (!shouldPersist) return;
+
+    _lastSavedProgress = progress;
+    await _documentRepository.updateProgress(documentId, progress);
   }
 
   /// Cancel processing.

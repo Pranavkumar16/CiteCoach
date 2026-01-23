@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_strings.dart';
+import '../../../core/services/network_service.dart';
 import '../data/model_downloader.dart';
+import '../data/model_import_service.dart';
 import '../data/setup_repository.dart';
 import '../domain/setup_state.dart';
 
@@ -11,7 +14,9 @@ import '../domain/setup_state.dart';
 final setupProvider = StateNotifierProvider<SetupNotifier, SetupState>((ref) {
   final repository = ref.watch(setupRepositoryProvider);
   final downloader = ref.watch(modelDownloaderProvider);
-  return SetupNotifier(repository, downloader);
+  final networkService = ref.watch(networkServiceProvider);
+  final importService = ref.watch(modelImportServiceProvider);
+  return SetupNotifier(repository, downloader, networkService, importService);
 });
 
 /// Provider to check if setup is completed (for routing).
@@ -27,20 +32,73 @@ final currentSetupStepProvider = Provider<SetupStep>((ref) {
 
 /// State notifier for managing the setup flow.
 class SetupNotifier extends StateNotifier<SetupState> {
-  SetupNotifier(this._repository, this._downloader)
+  SetupNotifier(
+    this._repository,
+    this._downloader,
+    this._networkService,
+    this._importService,
+  )
       : super(SetupState.initial()) {
     _initialize();
   }
 
   final SetupRepository _repository;
   final ModelDownloader _downloader;
+  final NetworkService _networkService;
+  final ModelImportService _importService;
   StreamSubscription<DownloadProgress>? _downloadSubscription;
 
   /// Initialize the setup state from persisted data.
   void _initialize() {
     final savedState = _repository.loadSetupState();
-    state = savedState;
+    final hasPartialDownload =
+        savedState.downloadProgress > 0 && savedState.downloadProgress < 1.0;
+    final shouldPause =
+        savedState.currentStep == SetupStep.downloading && hasPartialDownload;
+    final estimatedTotalBytes =
+        savedState.downloadProgress > 0 ? ModelDownloader.modelSizeBytes : 0;
+    final downloadedBytes =
+        (estimatedTotalBytes * savedState.downloadProgress).toInt();
+    state = savedState.copyWith(
+      isDownloading: false,
+      isPaused: shouldPause,
+      downloadedBytes: downloadedBytes,
+      totalBytes: estimatedTotalBytes,
+    );
+    _downloader.restoreProgress(
+      savedState.downloadProgress,
+      isPaused: shouldPause,
+    );
     debugPrint('SetupNotifier: Initialized with step ${savedState.currentStep}');
+    _syncModelFileStatus();
+  }
+
+  Future<void> _syncModelFileStatus() async {
+    final isDownloadedOnDisk = await _downloader.isModelDownloaded();
+    if (isDownloadedOnDisk) {
+      if (!state.isModelDownloaded || state.downloadProgress < 1.0) {
+        await _repository.saveModelDownloaded(true);
+        await _repository.saveDownloadProgress(1.0);
+        state = state.copyWith(
+          isModelDownloaded: true,
+          downloadProgress: 1.0,
+          downloadedBytes: _downloader.downloadedBytes,
+          totalBytes: _downloader.totalBytes,
+        );
+      }
+      return;
+    }
+
+    if (state.isModelDownloaded) {
+      await _repository.saveModelDownloaded(false);
+      await _repository.saveDownloadProgress(0.0);
+      state = state.copyWith(
+        isModelDownloaded: false,
+        downloadProgress: 0.0,
+        downloadedBytes: 0,
+        totalBytes: 0,
+      );
+    }
   }
 
   /// Complete the splash screen and advance to privacy.
@@ -71,6 +129,15 @@ class SetupNotifier extends StateNotifier<SetupState> {
       return;
     }
 
+    final onWifi = await _networkService.isWifiConnected();
+    if (!onWifi) {
+      state = state.copyWith(
+        downloadError: AppStrings.errorNoInternet,
+        isDownloading: false,
+      );
+      return;
+    }
+
     state = state.copyWith(
       currentStep: SetupStep.downloading,
       isDownloading: true,
@@ -87,14 +154,60 @@ class SetupNotifier extends StateNotifier<SetupState> {
     );
   }
 
+  /// Import a local model file instead of downloading.
+  Future<void> importModelFile() async {
+    state = state.copyWith(isDownloading: true, clearError: true);
+
+    final result = await _importService.pickAndImportLlmModel();
+    if (result.cancelled) {
+      state = state.copyWith(isDownloading: false);
+      return;
+    }
+
+    if (result.isError) {
+      state = state.copyWith(
+        downloadError: result.error ?? 'Failed to import model',
+        isDownloading: false,
+      );
+      return;
+    }
+
+    await _repository.saveModelDownloaded(true);
+    await _repository.saveDownloadProgress(1.0);
+    await _repository.saveModelVersion(
+      result.fileName ?? ModelDownloader.modelVersion,
+    );
+
+    final nextStep =
+        state.currentStep == SetupStep.done ? SetupStep.done : SetupStep.complete;
+    state = state.copyWith(
+      currentStep: nextStep,
+      downloadProgress: 1.0,
+      isModelDownloaded: true,
+      isDownloading: false,
+      downloadedBytes: result.fileSize,
+      totalBytes: result.fileSize,
+    );
+  }
+
   /// Handle download progress updates.
   void _onDownloadProgress(DownloadProgress progress) async {
+    final fallbackTotal = state.totalBytes > 0
+        ? state.totalBytes
+        : ModelDownloader.modelSizeBytes;
+    final totalBytes = progress.totalBytes > 0 ? progress.totalBytes : fallbackTotal;
+    final downloadedBytes = progress.downloadedBytes > 0
+        ? progress.downloadedBytes
+        : (totalBytes * progress.progress).toInt();
+
     switch (progress.status) {
       case DownloadStatus.downloading:
         state = state.copyWith(
           downloadProgress: progress.progress,
           isDownloading: true,
           isPaused: false,
+          downloadedBytes: downloadedBytes,
+          totalBytes: totalBytes,
         );
         // Persist progress periodically (every 5%)
         if ((progress.progress * 100).toInt() % 5 == 0) {
@@ -107,6 +220,8 @@ class SetupNotifier extends StateNotifier<SetupState> {
           downloadProgress: progress.progress,
           isDownloading: false,
           isPaused: true,
+          downloadedBytes: downloadedBytes,
+          totalBytes: totalBytes,
         );
         await _repository.saveDownloadProgress(progress.progress);
         break;
@@ -120,6 +235,8 @@ class SetupNotifier extends StateNotifier<SetupState> {
           downloadProgress: 1.0,
           isModelDownloaded: true,
           isDownloading: false,
+          downloadedBytes: downloadedBytes,
+          totalBytes: totalBytes,
         );
         debugPrint('SetupNotifier: Download completed, advanced to complete step');
         break;
@@ -128,6 +245,8 @@ class SetupNotifier extends StateNotifier<SetupState> {
         state = state.copyWith(
           downloadError: progress.error ?? 'Download failed',
           isDownloading: false,
+          downloadedBytes: downloadedBytes,
+          totalBytes: totalBytes,
         );
         break;
 
@@ -135,6 +254,8 @@ class SetupNotifier extends StateNotifier<SetupState> {
         state = state.copyWith(
           isDownloading: false,
           downloadProgress: 0.0,
+          downloadedBytes: 0,
+          totalBytes: 0,
         );
         break;
     }
@@ -155,7 +276,11 @@ class SetupNotifier extends StateNotifier<SetupState> {
   }
 
   /// Resume download.
-  void resumeDownload() {
+  Future<void> resumeDownload() async {
+    if (_downloadSubscription == null) {
+      await startDownload();
+      return;
+    }
     _downloader.resumeDownload();
   }
 
@@ -167,8 +292,11 @@ class SetupNotifier extends StateNotifier<SetupState> {
       currentStep: SetupStep.modelSetup,
       isDownloading: false,
       downloadProgress: 0.0,
+      downloadedBytes: 0,
+      totalBytes: 0,
       clearError: true,
     );
+    _repository.saveDownloadProgress(0.0);
   }
 
   /// Retry download after error.

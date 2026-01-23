@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/constants.dart';
 import '../../../core/widgets/widgets.dart';
-import '../data/model_downloader.dart';
 import '../domain/setup_state.dart';
 import '../providers/setup_provider.dart';
 
@@ -170,13 +169,13 @@ class _DownloadProgressScreenState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                setupState.downloadedSizeMb,
+                setupState.downloadedSizeFormatted,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondary,
                     ),
               ),
               Text(
-                '${(ModelDownloader.modelSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB',
+                setupState.totalSizeFormatted,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -247,7 +246,7 @@ class _DownloadProgressScreenState
         _StatusItem(
           icon: Icons.storage_rounded,
           label: AppStrings.storageUsed,
-          status: setupState.downloadedSizeMb,
+          status: setupState.downloadedSizeFormatted,
         ),
       ],
     );

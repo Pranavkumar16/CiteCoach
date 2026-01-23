@@ -7,6 +7,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../routing/app_router.dart';
 import '../../library/domain/document.dart';
 import '../../library/providers/library_provider.dart';
+import '../../voice/providers/voice_provider.dart';
 import '../domain/chat_message.dart';
 import '../providers/chat_provider.dart';
 import 'widgets/chat_input.dart';
@@ -78,9 +79,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onNavigate: () {
             Navigator.pop(context);
             // Navigate to reader at specific page
-            context.push(
-              '${AppRoutes.reader}?id=${document.id}&page=${citation.pageNumber}',
-            );
+            context.push(AppRoutes.documentReader(
+              document.id.toString(),
+              page: citation.pageNumber,
+              highlight: citation.text.isNotEmpty ? citation.text : null,
+              fromChat: true,
+            ));
           },
         ),
       ),
@@ -136,6 +140,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
     final libraryState = ref.watch(libraryProvider);
+    final voiceState = ref.watch(voiceProvider);
+    final voiceNotifier = ref.read(voiceProvider.notifier);
     
     // Get the document
     final document = libraryState.documents.where((d) => d.id == widget.documentId).firstOrNull;
@@ -214,7 +220,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           icon: const Icon(Icons.menu_book_rounded),
           tooltip: 'Open in Reader',
           onPressed: document != null
-              ? () => context.push('${AppRoutes.reader}?id=${document.id}')
+              ? () => context.push(AppRoutes.documentReader(
+                    document.id.toString(),
+                    fromChat: true,
+                  ))
               : null,
         ),
         // Clear chat
@@ -297,11 +306,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         }
 
         final message = state.messages[index];
+        final canSpeak = voiceState.isTtsAvailable;
+        final isSpeaking = voiceState.isSpeaking &&
+            voiceState.responseText == message.content;
+
+        final canSpeakMessage = message.isAssistant &&
+            !message.isStreaming &&
+            message.content.trim().isNotEmpty;
+
         return MessageBubble(
           message: message,
           onCitationTap: document != null
               ? (citation) => _handleCitationTap(citation, document)
               : null,
+          onSpeak: canSpeakMessage && canSpeak
+              ? () => voiceNotifier.speak(message.content)
+              : null,
+          onStopSpeaking: isSpeaking ? voiceNotifier.stopSpeaking : null,
+          isSpeaking: isSpeaking,
+          canSpeak: canSpeak,
         );
       },
     );

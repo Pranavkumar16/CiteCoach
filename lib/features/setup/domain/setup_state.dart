@@ -8,6 +8,8 @@ class SetupState extends Equatable {
     this.isModelDownloaded = false,
     this.isSetupCompleted = false,
     this.downloadProgress = 0.0,
+    this.downloadedBytes = 0,
+    this.totalBytes = 0,
     this.downloadError,
     this.isDownloading = false,
     this.isPaused = false,
@@ -27,6 +29,12 @@ class SetupState extends Equatable {
 
   /// Download progress (0.0 to 1.0).
   final double downloadProgress;
+
+  /// Downloaded bytes (if known).
+  final int downloadedBytes;
+
+  /// Total bytes (if known).
+  final int totalBytes;
 
   /// Error message if download failed.
   final String? downloadError;
@@ -67,10 +75,21 @@ class SetupState extends Equatable {
   /// Get download progress as percentage string.
   String get downloadProgressPercent => '${(downloadProgress * 100).toInt()}%';
 
-  /// Get downloaded size in MB (assuming 1.5GB total).
-  String get downloadedSizeMb {
-    final downloadedMb = (downloadProgress * 1500).toInt();
-    return '$downloadedMb MB';
+  /// Get formatted downloaded size.
+  String get downloadedSizeFormatted => _formatBytes(downloadedBytes);
+
+  /// Get formatted total size.
+  String get totalSizeFormatted =>
+      totalBytes > 0 ? _formatBytes(totalBytes) : 'Unknown';
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
   /// Copy with updated fields.
@@ -80,6 +99,8 @@ class SetupState extends Equatable {
     bool? isModelDownloaded,
     bool? isSetupCompleted,
     double? downloadProgress,
+    int? downloadedBytes,
+    int? totalBytes,
     String? downloadError,
     bool clearError = false,
     bool? isDownloading,
@@ -91,6 +112,8 @@ class SetupState extends Equatable {
       isModelDownloaded: isModelDownloaded ?? this.isModelDownloaded,
       isSetupCompleted: isSetupCompleted ?? this.isSetupCompleted,
       downloadProgress: downloadProgress ?? this.downloadProgress,
+      downloadedBytes: downloadedBytes ?? this.downloadedBytes,
+      totalBytes: totalBytes ?? this.totalBytes,
       downloadError: clearError ? null : (downloadError ?? this.downloadError),
       isDownloading: isDownloading ?? this.isDownloading,
       isPaused: isPaused ?? this.isPaused,
@@ -104,6 +127,8 @@ class SetupState extends Equatable {
         isModelDownloaded,
         isSetupCompleted,
         downloadProgress,
+        downloadedBytes,
+        totalBytes,
         downloadError,
         isDownloading,
         isPaused,

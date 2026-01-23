@@ -6,8 +6,12 @@ import '../features/chat/presentation/chat_screen.dart';
 import '../features/library/presentation/library_screen.dart';
 import '../features/processing/presentation/document_ready_screen.dart';
 import '../features/processing/presentation/processing_screen.dart';
+import '../features/reader/presentation/pdf_reader_screen.dart';
+import '../features/settings/presentation/model_info_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
+import '../features/setup/presentation/download_required_screen.dart';
 import '../features/setup/presentation/model_setup_screen.dart';
 import '../features/setup/presentation/privacy_screen.dart';
 import '../features/setup/presentation/setup_complete_screen.dart';
@@ -45,8 +49,28 @@ abstract final class AppRoutes {
   // Helper to build document routes
   static String documentProcessing(String documentId) =>
       '/document/$documentId/processing';
-  static String documentReader(String documentId) =>
-      '/document/$documentId/reader';
+  static String documentReader(
+    String documentId, {
+    int? page,
+    String? highlight,
+    bool fromChat = false,
+  }) {
+    final params = <String, String>{};
+    if (page != null) {
+      params['page'] = page.toString();
+    }
+    if (highlight != null && highlight.trim().isNotEmpty) {
+      params['highlight'] = highlight.trim();
+    }
+    if (fromChat) {
+      params['fromChat'] = '1';
+    }
+
+    return Uri(
+      path: '/document/$documentId/reader',
+      queryParameters: params.isEmpty ? null : params,
+    ).toString();
+  }
   static String documentChat(String documentId) =>
       '/document/$documentId/chat';
 }
@@ -59,11 +83,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
 /// Creates the app router with all routes and guards.
 GoRouter createRouter(Ref ref) {
+  final setupState = ref.watch(setupProvider);
+  final setupNotifier = ref.watch(setupProvider.notifier);
+
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
+    refreshListenable: GoRouterRefreshStream(setupNotifier.stream),
     redirect: (context, state) {
-      final setupState = ref.read(setupProvider);
       final currentPath = state.uri.path;
       
       // List of setup paths
@@ -77,6 +104,8 @@ GoRouter createRouter(Ref ref) {
       
       final isSetupPath = setupPaths.contains(currentPath);
       final isSetupCompleted = setupState.currentStep == SetupStep.done;
+      final isChatPath =
+          RegExp(r'^/document/\d+/chat$').hasMatch(currentPath);
       
       // If setup is completed and user tries to access setup screens,
       // redirect to library
@@ -88,6 +117,14 @@ GoRouter createRouter(Ref ref) {
       // redirect to current setup step
       if (!isSetupCompleted && !isSetupPath) {
         return setupState.currentStep.routePath;
+      }
+
+      // If chat is locked, redirect to download required screen
+      if (isSetupCompleted &&
+          !setupState.canUseChat &&
+          isChatPath &&
+          currentPath != AppRoutes.downloadRequired) {
+        return AppRoutes.downloadRequired;
       }
       
       // No redirect needed
@@ -135,8 +172,7 @@ GoRouter createRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.settings,
             name: 'settings',
-            builder: (context, state) =>
-                const _PlaceholderScreen(name: 'Settings'),
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),
@@ -145,8 +181,7 @@ GoRouter createRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.modelInfo,
         name: 'modelInfo',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Model Info'),
+        builder: (context, state) => const ModelInfoScreen(),
       ),
 
       // Document routes
@@ -173,9 +208,14 @@ GoRouter createRouter(Ref ref) {
           final documentId = int.parse(state.pathParameters['id']!);
           final pageStr = state.uri.queryParameters['page'];
           final initialPage = pageStr != null ? int.tryParse(pageStr) : null;
-          return _PlaceholderScreen(
-            name: 'Reader',
-            extra: 'Document: $documentId, Page: ${initialPage ?? 1}',
+          final highlight = state.uri.queryParameters['highlight'];
+          final fromChat = state.uri.queryParameters['fromChat'] == '1';
+
+          return PdfReaderScreen(
+            documentId: documentId,
+            initialPage: initialPage,
+            highlightText: highlight,
+            fromChat: fromChat,
           );
         },
       ),
@@ -205,8 +245,7 @@ GoRouter createRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.downloadRequired,
         name: 'downloadRequired',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Download Required'),
+        builder: (context, state) => const DownloadRequiredScreen(),
       ),
     ],
     errorBuilder: (context, state) => _ErrorScreen(error: state.error),
@@ -340,11 +379,18 @@ extension GoRouterExtension on BuildContext {
   }
 
   /// Navigate to document reader screen with optional page.
-  void goToReader(String documentId, {int? page}) {
-    final uri = page != null
-        ? '${AppRoutes.documentReader(documentId)}?page=$page'
-        : AppRoutes.documentReader(documentId);
-    go(uri);
+  void goToReader(
+    String documentId, {
+    int? page,
+    String? highlight,
+    bool fromChat = false,
+  }) {
+    go(AppRoutes.documentReader(
+      documentId,
+      page: page,
+      highlight: highlight,
+      fromChat: fromChat,
+    ));
   }
 
   /// Navigate to document processing screen.

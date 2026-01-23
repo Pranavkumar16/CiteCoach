@@ -58,6 +58,8 @@ abstract final class AppStrings {
   static const String paused = 'Paused';
   static const String ready = 'Ready';
   static const String retryButton = 'Retry Download';
+  static const String importModelFile = 'Import Model File';
+  static const String replaceModelFile = 'Replace Model File';
   
   // Setup Flow - Complete Screen
   static const String setupCompleteTitle = 'All Set!';
