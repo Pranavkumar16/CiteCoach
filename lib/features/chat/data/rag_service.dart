@@ -114,6 +114,7 @@ class RagService {
         documentId,
         relevantPages,
         queryEmbedding,
+        query,
       );
 
       if (rankedChunks.isEmpty) {
@@ -166,6 +167,7 @@ class RagService {
     int documentId,
     List<int> pageNumbers,
     Float32List queryEmbedding,
+    String query,
   ) async {
     final chunksTable = DocumentChunksTable(_db!);
     
@@ -198,7 +200,7 @@ class RagService {
         score = EmbeddingService.cosineSimilarity(queryEmbedding, embedding);
       } else {
         // Fall back to keyword matching if no embedding
-        score = _keywordScore(chunk.chunkText, queryEmbedding.toString());
+        score = _keywordScore(chunk.chunkText, query);
       }
 
       if (score >= minSimilarityThreshold) {
