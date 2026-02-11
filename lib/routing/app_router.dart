@@ -6,6 +6,10 @@ import '../features/chat/presentation/chat_screen.dart';
 import '../features/library/presentation/library_screen.dart';
 import '../features/processing/presentation/document_ready_screen.dart';
 import '../features/processing/presentation/processing_screen.dart';
+import '../features/reader/presentation/reader_screen.dart';
+import '../features/settings/presentation/download_required_screen.dart';
+import '../features/settings/presentation/model_info_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
 import '../features/setup/presentation/model_setup_screen.dart';
@@ -135,18 +139,16 @@ GoRouter createRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.settings,
             name: 'settings',
-            builder: (context, state) =>
-                const _PlaceholderScreen(name: 'Settings'),
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),
 
       // Settings sub-routes
       GoRoute(
-        path: AppRoutes.modelInfo,
+        path: '/model-info',
         name: 'modelInfo',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Model Info'),
+        builder: (context, state) => const ModelInfoScreen(),
       ),
 
       // Document routes
@@ -173,9 +175,11 @@ GoRouter createRouter(Ref ref) {
           final documentId = int.parse(state.pathParameters['id']!);
           final pageStr = state.uri.queryParameters['page'];
           final initialPage = pageStr != null ? int.tryParse(pageStr) : null;
-          return _PlaceholderScreen(
-            name: 'Reader',
-            extra: 'Document: $documentId, Page: ${initialPage ?? 1}',
+          final highlightText = state.uri.queryParameters['highlight'];
+          return ReaderScreen(
+            documentId: documentId,
+            initialPage: initialPage,
+            highlightText: highlightText,
           );
         },
       ),
@@ -205,8 +209,7 @@ GoRouter createRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.downloadRequired,
         name: 'downloadRequired',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Download Required'),
+        builder: (context, state) => const DownloadRequiredScreen(),
       ),
     ],
     errorBuilder: (context, state) => _ErrorScreen(error: state.error),

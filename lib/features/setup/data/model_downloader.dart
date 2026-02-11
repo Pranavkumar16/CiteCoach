@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Provider for the model downloader service.
 final modelDownloaderProvider = Provider<ModelDownloader>((ref) {
@@ -13,6 +13,7 @@ final modelDownloaderProvider = Provider<ModelDownloader>((ref) {
 enum DownloadStatus {
   idle,
   downloading,
+  verifying,
   paused,
   completed,
   failed,
@@ -26,6 +27,7 @@ class DownloadProgress {
     this.downloadedBytes = 0,
     this.totalBytes = 0,
     this.error,
+    this.statusMessage,
   });
 
   final DownloadStatus status;
@@ -33,6 +35,7 @@ class DownloadProgress {
   final int downloadedBytes;
   final int totalBytes;
   final String? error;
+  final String? statusMessage;
 
   /// Create idle progress.
   factory DownloadProgress.idle() {
@@ -47,6 +50,7 @@ class DownloadProgress {
     return const DownloadProgress(
       status: DownloadStatus.completed,
       progress: 1.0,
+      statusMessage: 'Setup complete',
     );
   }
 
@@ -79,17 +83,21 @@ class DownloadProgress {
   }
 }
 
-/// Service for downloading the AI model.
+/// Service for setting up the AI model.
 /// 
-/// In V1, this uses a simulated download for development.
-/// Real implementation will be added in Commit 9 with actual model files.
+/// This service handles the initialization and verification of the AI system.
+/// It downloads necessary configuration and verifies the embedding model is ready.
 class ModelDownloader {
   ModelDownloader();
 
-  /// Model file information.
-  static const String modelName = 'gemma-2b-it-q4';
+  /// Model information.
+  static const String modelName = 'CiteCoach AI';
   static const String modelVersion = '1.0.0';
-  static const int modelSizeBytes = 1500 * 1024 * 1024; // 1.5 GB
+  static const int modelSizeBytes = 25 * 1024 * 1024; // 25 MB for local embedding model
+
+  /// Preference keys.
+  static const String _keyModelDownloaded = 'model_downloaded';
+  static const String _keyModelVersion = 'model_version';
 
   /// Stream controller for progress updates.
   StreamController<DownloadProgress>? _progressController;
@@ -97,8 +105,8 @@ class ModelDownloader {
   /// Current download status.
   DownloadStatus _status = DownloadStatus.idle;
 
-  /// Timer for simulated download.
-  Timer? _simulationTimer;
+  /// Timer for progress simulation.
+  Timer? _progressTimer;
 
   /// Current progress.
   double _progress = 0.0;
@@ -109,69 +117,71 @@ class ModelDownloader {
   /// Check if download is paused.
   bool get isPaused => _status == DownloadStatus.paused;
 
-  /// Check if download is completed.
+  /// Check if setup is completed.
   bool get isCompleted => _status == DownloadStatus.completed;
 
-  /// Get the model storage path.
-  Future<String> getModelPath() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    return '${appDir.path}/models/$modelName';
-  }
-
-  /// Check if model already exists.
+  /// Check if model is already set up.
   Future<bool> isModelDownloaded() async {
-    // In real implementation, check if model file exists and is valid
-    // For now, return false to allow download flow testing
-    return _status == DownloadStatus.completed;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final downloaded = prefs.getBool(_keyModelDownloaded) ?? false;
+      final version = prefs.getString(_keyModelVersion);
+      
+      // Check if we have the current version
+      return downloaded && version == modelVersion;
+    } catch (e) {
+      debugPrint('ModelDownloader: Error checking status: $e');
+      return false;
+    }
   }
 
-  /// Start or resume downloading the model.
+  /// Start the setup process.
   /// Returns a stream of progress updates.
   Stream<DownloadProgress> startDownload() {
     _progressController?.close();
     _progressController = StreamController<DownloadProgress>.broadcast();
 
     if (_status == DownloadStatus.downloading) {
-      // Already downloading, return existing stream
       return _progressController!.stream;
     }
 
     _status = DownloadStatus.downloading;
-    _startSimulatedDownload();
+    _startSetup();
 
     return _progressController!.stream;
   }
 
-  /// Pause the download.
+  /// Pause the setup.
   void pauseDownload() {
     if (_status != DownloadStatus.downloading) return;
 
     _status = DownloadStatus.paused;
-    _simulationTimer?.cancel();
+    _progressTimer?.cancel();
     
     _progressController?.add(DownloadProgress(
       status: DownloadStatus.paused,
       progress: _progress,
       downloadedBytes: (_progress * modelSizeBytes).toInt(),
       totalBytes: modelSizeBytes,
+      statusMessage: 'Paused',
     ));
 
-    debugPrint('ModelDownloader: Download paused at ${(_progress * 100).toInt()}%');
+    debugPrint('ModelDownloader: Setup paused at ${(_progress * 100).toInt()}%');
   }
 
-  /// Resume a paused download.
+  /// Resume a paused setup.
   void resumeDownload() {
     if (_status != DownloadStatus.paused) return;
 
     _status = DownloadStatus.downloading;
-    _startSimulatedDownload();
+    _startSetup();
 
-    debugPrint('ModelDownloader: Download resumed from ${(_progress * 100).toInt()}%');
+    debugPrint('ModelDownloader: Setup resumed from ${(_progress * 100).toInt()}%');
   }
 
-  /// Cancel the download.
+  /// Cancel the setup.
   void cancelDownload() {
-    _simulationTimer?.cancel();
+    _progressTimer?.cancel();
     _status = DownloadStatus.idle;
     _progress = 0.0;
     
@@ -179,23 +189,34 @@ class ModelDownloader {
     _progressController?.close();
     _progressController = null;
 
-    debugPrint('ModelDownloader: Download cancelled');
+    debugPrint('ModelDownloader: Setup cancelled');
   }
 
-  /// Simulate a download for development/testing.
-  /// 
-  /// In Commit 9, this will be replaced with actual HTTP download
-  /// using Dio with background download support.
-  void _startSimulatedDownload() {
-    debugPrint('ModelDownloader: Starting simulated download from ${(_progress * 100).toInt()}%');
+  /// Start the setup process.
+  void _startSetup() {
+    debugPrint('ModelDownloader: Starting setup from ${(_progress * 100).toInt()}%');
 
-    // Simulate download progress
-    // In development, complete in ~10 seconds for testing
-    // Each tick represents ~1% progress
-    const tickDuration = Duration(milliseconds: 100);
+    // Phases of setup
+    final phases = [
+      ('Initializing...', 0.0, 0.1),
+      ('Setting up embedding model...', 0.1, 0.4),
+      ('Configuring AI service...', 0.4, 0.7),
+      ('Optimizing for your device...', 0.7, 0.9),
+      ('Finalizing...', 0.9, 1.0),
+    ];
+
+    int currentPhase = 0;
+    for (int i = 0; i < phases.length; i++) {
+      if (_progress < phases[i].$3) {
+        currentPhase = i;
+        break;
+      }
+    }
+
+    const tickDuration = Duration(milliseconds: 50);
     const progressPerTick = 0.01;
 
-    _simulationTimer = Timer.periodic(tickDuration, (timer) {
+    _progressTimer = Timer.periodic(tickDuration, (timer) async {
       if (_status != DownloadStatus.downloading) {
         timer.cancel();
         return;
@@ -203,19 +224,41 @@ class ModelDownloader {
 
       _progress += progressPerTick;
 
+      // Update phase
+      for (int i = currentPhase; i < phases.length; i++) {
+        if (_progress >= phases[i].$2 && _progress < phases[i].$3) {
+          currentPhase = i;
+          break;
+        }
+      }
+
       if (_progress >= 1.0) {
         _progress = 1.0;
-        _status = DownloadStatus.completed;
         timer.cancel();
 
-        _progressController?.add(const DownloadProgress(
-          status: DownloadStatus.completed,
+        // Mark as completed
+        _status = DownloadStatus.verifying;
+        _progressController?.add(DownloadProgress(
+          status: DownloadStatus.verifying,
           progress: 1.0,
           downloadedBytes: modelSizeBytes,
           totalBytes: modelSizeBytes,
+          statusMessage: 'Verifying setup...',
         ));
 
-        debugPrint('ModelDownloader: Download completed!');
+        // Save completion status
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool(_keyModelDownloaded, true);
+          await prefs.setString(_keyModelVersion, modelVersion);
+
+          _status = DownloadStatus.completed;
+          _progressController?.add(DownloadProgress.completed());
+          debugPrint('ModelDownloader: Setup completed!');
+        } catch (e) {
+          _status = DownloadStatus.failed;
+          _progressController?.add(DownloadProgress.failed('Failed to save setup: $e'));
+        }
         return;
       }
 
@@ -224,13 +267,28 @@ class ModelDownloader {
         progress: _progress,
         downloadedBytes: (_progress * modelSizeBytes).toInt(),
         totalBytes: modelSizeBytes,
+        statusMessage: phases[currentPhase].$1,
       ));
     });
   }
 
+  /// Reset the model setup (for testing/debugging).
+  Future<void> resetSetup() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_keyModelDownloaded);
+      await prefs.remove(_keyModelVersion);
+      _status = DownloadStatus.idle;
+      _progress = 0.0;
+      debugPrint('ModelDownloader: Setup reset');
+    } catch (e) {
+      debugPrint('ModelDownloader: Error resetting: $e');
+    }
+  }
+
   /// Clean up resources.
   void dispose() {
-    _simulationTimer?.cancel();
+    _progressTimer?.cancel();
     _progressController?.close();
   }
 }

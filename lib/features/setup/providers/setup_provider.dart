@@ -137,6 +137,13 @@ class SetupNotifier extends StateNotifier<SetupState> {
           downloadProgress: 0.0,
         );
         break;
+
+      case DownloadStatus.verifying:
+        state = state.copyWith(
+          downloadProgress: 1.0,
+          isDownloading: true,
+        );
+        break;
     }
   }
 

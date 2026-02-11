@@ -51,6 +51,7 @@ dependencies:
 
   # HTTP for model download
   dio: ^5.4.3+1
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:

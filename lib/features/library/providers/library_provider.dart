@@ -216,6 +216,16 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
     }
   }
 
+  /// Get a single document by ID.
+  Future<Document?> getDocument(int documentId) async {
+    try {
+      return await _repository.getDocument(documentId);
+    } catch (e) {
+      debugPrint('LibraryNotifier: Error getting document: $e');
+      return null;
+    }
+  }
+
   /// Delete a document.
   Future<bool> deleteDocument(int documentId) async {
     try {
