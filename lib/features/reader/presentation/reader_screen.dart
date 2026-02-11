@@ -6,7 +6,7 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../../../core/widgets/loading_indicator.dart';
 import '../../library/providers/library_provider.dart';
 
-class ReaderScreen extends ConsumerWidget {
+class ReaderScreen extends ConsumerStatefulWidget {
   const ReaderScreen({
     super.key,
     required this.documentId,
@@ -17,9 +17,23 @@ class ReaderScreen extends ConsumerWidget {
   final int initialPage;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ReaderScreen> createState() => _ReaderScreenState();
+}
+
+class _ReaderScreenState extends ConsumerState<ReaderScreen> {
+  late final PdfViewerController _pdfViewerController;
+  final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _pdfViewerController = PdfViewerController();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // We need to fetch the document path first
-    final documentAsync = ref.watch(documentByIdProvider(documentId));
+    final documentAsync = ref.watch(documentByIdProvider(widget.documentId));
 
     return Scaffold(
       appBar: AppBar(
@@ -28,6 +42,14 @@ class ReaderScreen extends ConsumerWidget {
           loading: () => const Text('Reader'),
           error: (_, __) => const Text('Reader'),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmark_border),
+            onPressed: () {
+              _pdfViewerKey.currentState?.openBookmarkView();
+            },
+          ),
+        ],
       ),
       body: documentAsync.when(
         data: (document) {
@@ -36,13 +58,20 @@ class ReaderScreen extends ConsumerWidget {
           }
           return SfPdfViewer.file(
             File(document.filePath),
-            controller: PdfViewerController(),
-            // note: syncfusion_flutter_pdfviewer might not support initialPage in this version
-            // or it might be done via controller.jumpToPage in onDocumentLoaded
+            key: _pdfViewerKey,
+            controller: _pdfViewerController,
             onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-               if (initialPage > 1) {
-                  // TODO: Implement jump to page if needed
-               }
+              if (widget.initialPage > 1) {
+                // Jump to the initial page if specified
+                // Note: jumpToPage is 1-based index in the UI but API might expect 1-based too.
+                // Syncfusion PdfViewerController.jumpToPage takes a 1-based page number.
+                _pdfViewerController.jumpToPage(widget.initialPage);
+              }
+            },
+            onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+               ScaffoldMessenger.of(context).showSnackBar(
+                 SnackBar(content: Text('Failed to load PDF: ${details.error}')),
+               );
             },
           );
         },
