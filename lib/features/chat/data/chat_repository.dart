@@ -74,17 +74,13 @@ class ChatRepository {
     required String question,
     required String answer,
     required String context,
-    required List<Map<String, dynamic>> citations,
+    required List<Citation> citations,
   }) async {
     if (_db == null) return false;
 
     final table = QuestionCacheTable(_db);
-    // Extract page numbers from citation objects
-    final pageNumbers = citations
-        .map((c) => c['page'] as int?)
-        .where((p) => p != null)
-        .cast<int>()
-        .toList();
+    // Use page numbers for storage
+    final pageNumbers = citations.map((c) => c.pageNumber).toList();
 
     final id = await table.cacheAnswer(
       documentId: documentId,

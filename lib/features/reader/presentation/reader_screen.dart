@@ -44,9 +44,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.bookmark_border),
+            icon: const Icon(Icons.more_vert),
             onPressed: () {
-              _pdfViewerKey.currentState?.openBookmarkView();
+              // TODO: Implement menu
             },
           ),
         ],

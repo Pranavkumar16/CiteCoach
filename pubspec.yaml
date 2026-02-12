@@ -70,17 +70,3 @@ flutter:
   assets:
     - assets/
     - assets/icons/
-
-  fonts:
-    - family: Lexend
-      fonts:
-        - asset: assets/fonts/Lexend-Light.ttf
-          weight: 300
-        - asset: assets/fonts/Lexend-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/Lexend-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Lexend-Bold.ttf
-          weight: 700
-        - asset: assets/fonts/Lexend-ExtraBold.ttf
-          weight: 800

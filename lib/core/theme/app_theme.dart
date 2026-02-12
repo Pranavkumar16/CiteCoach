@@ -11,7 +11,7 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      fontFamily: 'Lexend',
+      //       fontFamily: null,
 
       // Color scheme
       colorScheme: const ColorScheme.light(
@@ -36,7 +36,7 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 20,
           fontWeight: FontWeight.w800,
           color: AppColors.textPrimary,
@@ -78,7 +78,7 @@ abstract final class AppTheme {
             borderRadius: BorderRadius.circular(AppDimensions.buttonRadiusPrimary),
           ),
           textStyle: const TextStyle(
-            fontFamily: 'Lexend',
+            // fontFamily: 'Lexend',
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -99,7 +99,7 @@ abstract final class AppTheme {
             borderRadius: BorderRadius.circular(AppDimensions.buttonRadiusPrimary),
           ),
           textStyle: const TextStyle(
-            fontFamily: 'Lexend',
+            // fontFamily: 'Lexend',
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -111,7 +111,7 @@ abstract final class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryIndigo,
           textStyle: const TextStyle(
-            fontFamily: 'Lexend',
+            // fontFamily: 'Lexend',
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -143,7 +143,7 @@ abstract final class AppTheme {
           borderSide: BorderSide(color: AppColors.error, width: 2),
         ),
         hintStyle: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           color: AppColors.textTertiary,
           fontSize: 15,
           fontWeight: FontWeight.w400,
@@ -158,12 +158,12 @@ abstract final class AppTheme {
         type: BottomNavigationBarType.fixed,
         elevation: 0,
         selectedLabelStyle: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
         unselectedLabelStyle: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
@@ -201,7 +201,7 @@ abstract final class AppTheme {
         overlayColor: AppColors.primaryIndigo.withOpacity(0.2),
         valueIndicatorColor: AppColors.primaryIndigo,
         valueIndicatorTextStyle: const TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           color: Colors.white,
           fontSize: 14,
           fontWeight: FontWeight.w600,
@@ -212,21 +212,21 @@ abstract final class AppTheme {
       textTheme: const TextTheme(
         // Display styles
         displayLarge: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 48,
           fontWeight: FontWeight.w800,
           letterSpacing: -1.5,
           color: AppColors.textPrimary,
         ),
         displayMedium: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 36,
           fontWeight: FontWeight.w800,
           letterSpacing: -1,
           color: AppColors.textPrimary,
         ),
         displaySmall: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 28,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.5,
@@ -235,21 +235,21 @@ abstract final class AppTheme {
 
         // Headline styles
         headlineLarge: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 24,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.3,
           color: AppColors.textPrimary,
         ),
         headlineMedium: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 20,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.2,
           color: AppColors.textPrimary,
         ),
         headlineSmall: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 18,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
@@ -257,19 +257,19 @@ abstract final class AppTheme {
 
         // Title styles
         titleLarge: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
         titleMedium: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 16,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
         titleSmall: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
@@ -277,21 +277,21 @@ abstract final class AppTheme {
 
         // Body styles
         bodyLarge: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 16,
           fontWeight: FontWeight.w400,
           color: AppColors.textPrimary,
           height: 1.6,
         ),
         bodyMedium: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: AppColors.textPrimary,
           height: 1.6,
         ),
         bodySmall: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 12,
           fontWeight: FontWeight.w400,
           color: AppColors.textSecondary,
@@ -300,21 +300,21 @@ abstract final class AppTheme {
 
         // Label styles
         labelLarge: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.1,
           color: AppColors.textPrimary,
         ),
         labelMedium: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.2,
           color: AppColors.textSecondary,
         ),
         labelSmall: TextStyle(
-          fontFamily: 'Lexend',
+          // fontFamily: 'Lexend',
           fontSize: 10,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.3,

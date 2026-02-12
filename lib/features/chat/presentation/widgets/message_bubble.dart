@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../../../core/constants/constants.dart';
+import '../../../../features/voice/data/tts_service.dart';
 import '../../domain/chat_message.dart';
 import 'citation_badge.dart';
 
 /// A chat message bubble.
-class MessageBubble extends StatelessWidget {
+class MessageBubble extends ConsumerWidget {
   const MessageBubble({
     super.key,
     required this.message,
@@ -23,7 +26,7 @@ class MessageBubble extends StatelessWidget {
   final String? streamingContent;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isUser = message.isUser;
     final content = streamingContent ?? message.content;
 
@@ -88,6 +91,8 @@ class MessageBubble extends StatelessWidget {
                           citations: message.citations,
                           onCitationTap: onCitationTap!,
                         ),
+                      if (!isUser && !message.isStreaming && content.isNotEmpty)
+                        _buildReadAloudButton(context, ref, content),
                     ],
                   ),
                 ),
@@ -101,6 +106,42 @@ class MessageBubble extends StatelessWidget {
             _buildAvatar(isUser),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildReadAloudButton(BuildContext context, WidgetRef ref, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: GestureDetector(
+        onTap: () {
+          final tts = ref.read(ttsServiceProvider);
+          // Strip citation markers for cleaner TTS
+          final cleanText = text.replaceAll(RegExp(r'\(p\.\d+(?:,\s*p\.\d+)*\)'), '');
+          tts.speak(cleanText);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.slate100,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.volume_up_rounded, size: 16, color: AppColors.primaryIndigo),
+              const SizedBox(width: 4),
+              Text(
+                'Read aloud',
+                style: TextStyle(
+                  color: AppColors.primaryIndigo,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

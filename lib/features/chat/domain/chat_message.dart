@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:equatable/equatable.dart';
 
 import '../../../core/database/tables/chat_messages_table.dart';
@@ -96,15 +97,15 @@ class ChatMessage extends Equatable {
   }
 
   /// Create from database record.
-  /// Note: Database stores citations as page numbers (List<int>).
-  /// Full Citation objects need to be populated separately.
   factory ChatMessage.fromRecord(ChatMessageRecord record) {
-    // Convert page numbers to basic Citation objects
+    // Note: Database stores citations as List<int> (page numbers) in V1.
+    // Full persistence of text snippets requires schema migration or JSON storage.
+    // For V1 MVP, we rely on page numbers which are sufficient for navigation.
     final citationObjects = record.citations.map((pageNum) {
       return Citation(
         pageNumber: pageNum,
         chunkIndex: 0,
-        text: '',
+        text: '', 
       );
     }).toList();
 
@@ -120,13 +121,13 @@ class ChatMessage extends Equatable {
   }
 
   /// Convert to database record.
-  /// Note: Only page numbers are stored in the database.
   ChatMessageRecord toRecord() {
     return ChatMessageRecord(
       id: id,
       documentId: documentId,
       role: role,
       content: content,
+      // Store just page numbers for now as per schema
       citations: citations.map((c) => c.pageNumber).toList(),
       createdAt: createdAt,
       inputMethod: inputMethod,
