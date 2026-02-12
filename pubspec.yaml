@@ -52,6 +52,9 @@ dependencies:
   # HTTP for model download
   dio: ^5.4.3+1
 
+  # Machine Learning
+  onnxruntime: ^1.17.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
