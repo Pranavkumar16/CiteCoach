@@ -11,6 +11,7 @@ import '../features/settings/presentation/model_info_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
+import '../features/setup/presentation/download_required_screen.dart';
 import '../features/setup/presentation/model_setup_screen.dart';
 import '../features/setup/presentation/privacy_screen.dart';
 import '../features/setup/presentation/setup_complete_screen.dart';
@@ -206,8 +207,7 @@ GoRouter createRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.downloadRequired,
         name: 'downloadRequired',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Download Required'),
+        builder: (context, state) => const DownloadRequiredScreen(),
       ),
     ],
     errorBuilder: (context, state) => _ErrorScreen(error: state.error),
@@ -247,48 +247,6 @@ class _MainShell extends StatelessWidget {
             label: 'Settings',
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Temporary placeholder screen for routes not yet implemented.
-/// This will be removed as screens are implemented in subsequent commits.
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({
-    required this.name,
-    this.extra,
-  });
-
-  final String name;
-  final String? extra;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(name)),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              name,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            if (extra != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                extra!,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-            const SizedBox(height: 16),
-            const Text(
-              'Screen implementation coming in next commit',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
       ),
     );
   }
