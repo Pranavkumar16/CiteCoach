@@ -6,6 +6,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+/// Check network connectivity before attempting download.
+Future<bool> _checkNetworkConnectivity() async {
+  try {
+    final result = await InternetAddress.lookup('google.com')
+        .timeout(const Duration(seconds: 5));
+    return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+  } on SocketException catch (_) {
+    return false;
+  } on TimeoutException catch (_) {
+    return false;
+  }
+}
+
 final modelDownloaderProvider = Provider<ModelDownloader>((ref) {
   return ModelDownloader();
 });
@@ -159,7 +172,7 @@ class ModelDownloader {
 
     _dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(minutes: 10),
+      receiveTimeout: const Duration(minutes: 60),
       sendTimeout: const Duration(seconds: 30),
     ));
 
@@ -173,6 +186,17 @@ class ModelDownloader {
   /// Sequential download: LLM model first, then embedding model.
   Future<void> _startDownloadSequence() async {
     try {
+      // Check network connectivity first
+      final hasNetwork = await _checkNetworkConnectivity();
+      if (!hasNetwork) {
+        _status = DownloadStatus.failed;
+        _progressController?.add(DownloadProgress.failed(
+          'No internet connection. Please check your network settings and try again.',
+        ));
+        debugPrint('ModelDownloader: No network connectivity');
+        return;
+      }
+
       // Phase 1: Download LLM model (95% of progress)
       final modelPath = await getModelPath();
       await _ensureDirectoryExists(modelPath);
@@ -210,7 +234,8 @@ class ModelDownloader {
         return;
       }
       _status = DownloadStatus.failed;
-      _progressController?.add(DownloadProgress.failed(e.toString()));
+      final errorMessage = _getUserFriendlyError(e);
+      _progressController?.add(DownloadProgress.failed(errorMessage));
       debugPrint('ModelDownloader: Download failed: $e');
     }
   }
@@ -294,8 +319,8 @@ class ModelDownloader {
 
           if (attempt == _maxRetries - 1 && url == urls.last) {
             _status = DownloadStatus.failed;
-            _progressController?.add(
-                DownloadProgress.failed('Download failed after $_maxRetries attempts'));
+            final errorMsg = _getUserFriendlyError(e);
+            _progressController?.add(DownloadProgress.failed(errorMsg));
             return false;
           }
 
@@ -314,6 +339,38 @@ class ModelDownloader {
     }
   }
 
+  /// Convert exceptions to user-friendly error messages.
+  String _getUserFriendlyError(Object e) {
+    if (e is DioException) {
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+          return 'Connection timed out. Please check your internet and try again.';
+        case DioExceptionType.receiveTimeout:
+          return 'Download timed out. Please try again on a faster connection.';
+        case DioExceptionType.connectionError:
+          return 'Could not connect to the server. Please check your internet connection.';
+        case DioExceptionType.badResponse:
+          final statusCode = e.response?.statusCode;
+          if (statusCode == 404) {
+            return 'Model file not found on server. Please try again later.';
+          }
+          if (statusCode != null && statusCode >= 500) {
+            return 'Server error ($statusCode). Please try again later.';
+          }
+          return 'Download failed (HTTP $statusCode). Please try again.';
+        default:
+          return 'Download failed. Please check your connection and try again.';
+      }
+    }
+    if (e is SocketException) {
+      return 'Network error. Please check your internet connection.';
+    }
+    if (e is FileSystemException) {
+      return 'Storage error. Please ensure you have enough free space.';
+    }
+    return 'Download failed. Please try again.';
+  }
+
   void pauseDownload() {
     if (_status != DownloadStatus.downloading) return;
     _status = DownloadStatus.paused;
@@ -327,8 +384,17 @@ class ModelDownloader {
     debugPrint('ModelDownloader: Paused at ${(_progress * 100).toInt()}%');
   }
 
-  void resumeDownload() {
+  Future<void> resumeDownload() async {
     if (_status != DownloadStatus.paused) return;
+
+    final hasNetwork = await _checkNetworkConnectivity();
+    if (!hasNetwork) {
+      _progressController?.add(DownloadProgress.failed(
+        'No internet connection. Please check your network settings and try again.',
+      ));
+      return;
+    }
+
     _status = DownloadStatus.downloading;
     _cancelToken = CancelToken();
     _startDownloadSequence();
