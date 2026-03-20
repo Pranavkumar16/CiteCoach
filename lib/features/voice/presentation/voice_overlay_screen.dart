@@ -226,8 +226,8 @@ class _VoiceOverlayScreenState extends ConsumerState<VoiceOverlayScreen> {
             icon: const Icon(Icons.send),
             label: const Text('Send'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: AppColors.primaryIndigo,
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.textOnPrimary,
               padding: EdgeInsets.symmetric(
                 horizontal: AppDimensions.spacingXl,
                 vertical: AppDimensions.spacingMd,

@@ -11,10 +11,7 @@ class EmptyChatView extends StatelessWidget {
     this.onSampleQuestion,
   });
 
-  /// The title of the document.
   final String documentTitle;
-
-  /// Callback when a sample question is tapped.
   final void Function(String question)? onSampleQuestion;
 
   static const _sampleQuestions = [
@@ -104,12 +101,12 @@ class EmptyChatView extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: AppColors.primaryIndigo.withOpacity(0.1),
+            color: AppColors.accent.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
-            color: AppColors.primaryIndigo,
+            color: AppColors.accent,
             size: 24,
           ),
         ),
@@ -153,26 +150,19 @@ class _SampleQuestionChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: AppDimensions.spacingMd,
           vertical: AppDimensions.spacingSm,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+          color: AppColors.zinc800,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           border: Border.all(
-            color: AppColors.slate200,
+            color: AppColors.zinc600,
             width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Text(
           question,

@@ -7,7 +7,6 @@ import '../../../core/widgets/widgets.dart';
 import '../providers/setup_provider.dart';
 
 /// Splash screen shown on app launch.
-/// Displays the logo and tagline, then auto-advances to privacy screen.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -47,7 +46,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Auto-advance after animation completes
     Future.delayed(const Duration(milliseconds: 2500), () {
       if (mounted) {
         _advanceToPrivacy();
@@ -71,7 +69,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: AppColors.primaryGradient,
+          color: AppColors.zinc950,
         ),
         child: SafeArea(
           child: AnimatedBuilder(
@@ -91,13 +89,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 children: [
                   const KineticLogoAnimated(
                     size: AppDimensions.logoSizeLg,
-                    variant: KineticLogoVariant.white,
+                    variant: KineticLogoVariant.gradient,
                   ),
                   const SizedBox(height: AppDimensions.spacingXl),
                   Text(
                     AppStrings.appName,
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: AppColors.white,
+                          color: AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
                         ),
                   ),
@@ -105,7 +103,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   Text(
                     AppStrings.appTagline,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.white.withOpacity(0.8),
+                          color: AppColors.textSecondary,
                         ),
                   ),
                 ],

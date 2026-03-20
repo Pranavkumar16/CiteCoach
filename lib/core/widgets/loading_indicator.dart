@@ -32,7 +32,7 @@ class LoadingIndicator extends StatelessWidget {
       child: CircularProgressIndicator(
         strokeWidth: strokeWidth,
         valueColor: AlwaysStoppedAnimation<Color>(
-          color ?? AppColors.primaryIndigo,
+          color ?? AppColors.accent,
         ),
       ),
     );
@@ -101,9 +101,9 @@ class _GradientCirclePainter extends CustomPainter {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
     final gradient = SweepGradient(
       colors: [
-        AppColors.primaryIndigo.withOpacity(0),
-        AppColors.primaryIndigo,
-        AppColors.primaryPurple,
+        AppColors.accent.withOpacity(0),
+        AppColors.accent,
+        AppColors.accentLight,
       ],
       stops: const <double>[0.0, 0.5, 1.0],
     );
@@ -144,12 +144,12 @@ class LoadingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withOpacity(0.5),
       child: Center(
         child: Container(
           padding: AppDimensions.paddingAllXl,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.zinc800,
             borderRadius: AppDimensions.borderRadiusXl,
             boxShadow: [
               BoxShadow(
@@ -187,7 +187,7 @@ class LoadingOverlay extends StatelessWidget {
   }
 }
 
-/// Progress bar with gradient fill.
+/// Progress bar with accent fill.
 class GradientProgressBar extends StatelessWidget {
   const GradientProgressBar({
     super.key,
@@ -197,9 +197,7 @@ class GradientProgressBar extends StatelessWidget {
     this.showLabel = false,
   });
 
-  /// Progress value between 0.0 and 1.0.
   final double progress;
-
   final double height;
   final Color? backgroundColor;
   final bool showLabel;
@@ -213,7 +211,7 @@ class GradientProgressBar extends StatelessWidget {
         Container(
           height: height,
           decoration: BoxDecoration(
-            color: backgroundColor ?? AppColors.slate200,
+            color: backgroundColor ?? AppColors.zinc700,
             borderRadius: BorderRadius.circular(height / 2),
           ),
           child: ClipRRect(
@@ -226,7 +224,7 @@ class GradientProgressBar extends StatelessWidget {
                       duration: AppDimensions.animationNormal,
                       width: constraints.maxWidth * progress.clamp(0.0, 1.0),
                       decoration: const BoxDecoration(
-                        gradient: AppColors.primaryGradientHorizontal,
+                        color: AppColors.accent,
                       ),
                     ),
                   ],
@@ -305,12 +303,12 @@ class ProcessingStep extends StatelessWidget {
         return const LoadingIndicator(
           size: 22,
           strokeWidth: 2.5,
-          color: AppColors.primaryIndigo,
+          color: AppColors.accent,
         );
       case ProcessingStepStatus.pending:
         return Icon(
           Icons.circle_outlined,
-          color: AppColors.slate300,
+          color: AppColors.zinc600,
           size: 22,
         );
     }
@@ -321,7 +319,7 @@ class ProcessingStep extends StatelessWidget {
       case ProcessingStepStatus.completed:
         return AppColors.textPrimary;
       case ProcessingStepStatus.inProgress:
-        return AppColors.primaryIndigo;
+        return AppColors.accent;
       case ProcessingStepStatus.pending:
         return AppColors.textTertiary;
     }
@@ -389,9 +387,9 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
               begin: Alignment(_animation.value - 1, 0),
               end: Alignment(_animation.value, 0),
               colors: const <Color>[
-                AppColors.slate200,
-                AppColors.slate100,
-                AppColors.slate200,
+                AppColors.zinc800,
+                AppColors.zinc700,
+                AppColors.zinc800,
               ],
             ),
           ),

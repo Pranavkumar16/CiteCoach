@@ -90,7 +90,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     final file = File(document.filePath);
 
     return Scaffold(
-      backgroundColor: AppColors.slate100,
+      backgroundColor: AppColors.zinc900,
       body: SafeArea(
         child: Stack(
           children: [
@@ -169,7 +169,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   Widget _buildTopBar(BuildContext context, Document document) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.95),
+        color: AppColors.zinc900.withOpacity(0.95),
         boxShadow: [
           BoxShadow(
             color: AppColors.shadowDark,
@@ -231,7 +231,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   Widget _buildSearchBar() {
     return Container(
-      color: AppColors.surface,
+      color: AppColors.zinc800,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
@@ -281,7 +281,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   Widget _buildBottomBar(BuildContext context, Document document) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.95),
+        color: AppColors.zinc900.withOpacity(0.95),
         boxShadow: [
           BoxShadow(
             color: AppColors.shadowDark,

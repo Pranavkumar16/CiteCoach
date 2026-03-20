@@ -219,7 +219,7 @@ class _VoicePulseState extends State<VoicePulse>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.color ?? AppColors.primaryIndigo;
+    final color = widget.color ?? AppColors.accent;
 
     return SizedBox(
       width: widget.size,
@@ -307,7 +307,7 @@ class VoiceMicButton extends StatelessWidget {
             child: Icon(
               isListening ? Icons.stop_rounded : Icons.mic_rounded,
               size: size * 0.4,
-              color: isListening ? Colors.white : AppColors.primaryIndigo,
+              color: isListening ? Colors.white : AppColors.accent,
             ),
           ),
         ),

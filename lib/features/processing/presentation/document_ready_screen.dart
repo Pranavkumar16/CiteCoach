@@ -100,11 +100,11 @@ class _DocumentReadyScreenState extends ConsumerState<DocumentReadyScreen>
             width: AppDimensions.iconSizeSetup,
             height: AppDimensions.iconSizeSetup,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              color: AppColors.accent,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primaryIndigo.withOpacity(0.3),
+                  color: AppColors.accent.withOpacity(0.3),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
@@ -113,7 +113,7 @@ class _DocumentReadyScreenState extends ConsumerState<DocumentReadyScreen>
             child: const Icon(
               Icons.check_rounded,
               size: AppDimensions.iconSizeLg,
-              color: AppColors.white,
+              color: AppColors.textOnPrimary,
             ),
           ),
         ),
@@ -146,10 +146,10 @@ class _DocumentReadyScreenState extends ConsumerState<DocumentReadyScreen>
         return Container(
           padding: const EdgeInsets.all(AppDimensions.spacingMd),
           decoration: BoxDecoration(
-            color: AppColors.surfacePrimary,
+            color: AppColors.zinc800,
             borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
             border: Border.all(
-              color: AppColors.borderLight,
+              color: AppColors.zinc700,
               width: 1,
             ),
           ),
@@ -159,12 +159,12 @@ class _DocumentReadyScreenState extends ConsumerState<DocumentReadyScreen>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
+                  color: AppColors.accent,
                   borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
                 ),
                 child: const Icon(
                   Icons.picture_as_pdf_rounded,
-                  color: AppColors.white,
+                  color: AppColors.textOnPrimary,
                   size: 24,
                 ),
               ),

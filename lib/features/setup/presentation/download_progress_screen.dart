@@ -49,14 +49,7 @@ class _DownloadProgressScreenState
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.backgroundPrimary,
-              AppColors.backgroundSecondary,
-            ],
-          ),
+          color: AppColors.background,
         ),
         child: SafeArea(
           child: Padding(
@@ -128,10 +121,10 @@ class _DownloadProgressScreenState
     return Container(
       padding: const EdgeInsets.all(AppDimensions.spacingLg),
       decoration: BoxDecoration(
-        color: AppColors.surfacePrimary,
+        color: AppColors.zinc800,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
         border: Border.all(
-          color: AppColors.borderLight,
+          color: AppColors.zinc700,
           width: 1,
         ),
       ),
@@ -155,7 +148,7 @@ class _DownloadProgressScreenState
                 setupState.downloadProgressPercent,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.primaryIndigo,
+                      color: AppColors.accent,
                     ),
               ),
             ],
@@ -353,13 +346,13 @@ class _AnimatedDownloadIconState extends State<_AnimatedDownloadIcon>
         width: AppDimensions.iconSizeSetup,
         height: AppDimensions.iconSizeSetup,
         decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
+          color: AppColors.accent.withOpacity(0.15),
           borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
         ),
         child: const Icon(
           Icons.download_rounded,
           size: AppDimensions.iconSizeLg,
-          color: AppColors.white,
+          color: AppColors.accent,
         ),
       ),
     );

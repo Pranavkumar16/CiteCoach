@@ -59,14 +59,7 @@ class _SetupCompleteScreenState extends ConsumerState<SetupCompleteScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.backgroundPrimary,
-              AppColors.backgroundSecondary,
-            ],
-          ),
+          color: AppColors.background,
         ),
         child: SafeArea(
           child: Padding(
@@ -104,11 +97,11 @@ class _SetupCompleteScreenState extends ConsumerState<SetupCompleteScreen>
             width: AppDimensions.iconSizeSetup,
             height: AppDimensions.iconSizeSetup,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              color: AppColors.accent,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primaryIndigo.withOpacity(0.3),
+                  color: AppColors.accent.withOpacity(0.3),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
@@ -117,7 +110,7 @@ class _SetupCompleteScreenState extends ConsumerState<SetupCompleteScreen>
             child: const Icon(
               Icons.check_rounded,
               size: AppDimensions.iconSizeLg,
-              color: AppColors.white,
+              color: AppColors.textOnPrimary,
             ),
           ),
         ),
@@ -201,10 +194,10 @@ class _CapabilityItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.spacingMd),
       decoration: BoxDecoration(
-        color: AppColors.surfacePrimary,
+        color: AppColors.zinc800,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
         border: Border.all(
-          color: AppColors.borderLight,
+          color: AppColors.zinc700,
           width: 1,
         ),
       ),
@@ -214,13 +207,13 @@ class _CapabilityItem extends StatelessWidget {
             width: AppDimensions.iconContainerSm,
             height: AppDimensions.iconContainerSm,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              color: AppColors.accent.withOpacity(0.15),
               borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
             ),
             child: Icon(
               icon,
               size: AppDimensions.iconSizeMd,
-              color: AppColors.white,
+              color: AppColors.accent,
             ),
           ),
           const SizedBox(width: AppDimensions.spacingMd),

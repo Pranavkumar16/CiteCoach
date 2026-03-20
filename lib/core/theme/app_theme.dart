@@ -3,24 +3,23 @@ import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
 
-/// CiteCoach app theme configuration.
-/// Based on the Kinetic Identity design system.
+/// CiteCoach app theme configuration — Dark & Modern.
 abstract final class AppTheme {
-  /// The light theme (only theme for V1).
+  /// The dark theme.
   static ThemeData get light {
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
+      brightness: Brightness.dark,
       fontFamily: 'Lexend',
 
       // Color scheme
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primaryIndigo,
-        secondary: AppColors.primaryPurple,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.accent,
+        secondary: AppColors.accentLight,
         surface: AppColors.surface,
         error: AppColors.error,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
+        onPrimary: AppColors.textOnPrimary,
+        onSecondary: AppColors.textOnPrimary,
         onSurface: AppColors.textPrimary,
         onError: Colors.white,
       ),
@@ -30,7 +29,7 @@ abstract final class AppTheme {
 
       // App Bar
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.zinc900,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -43,23 +42,23 @@ abstract final class AppTheme {
           letterSpacing: -0.3,
         ),
         iconTheme: IconThemeData(
-          color: AppColors.primaryIndigo,
+          color: AppColors.textSecondary,
           size: 24,
         ),
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
         ),
       ),
 
       // Card
-      cardTheme: const CardThemeData(
-        color: AppColors.surface,
+      cardTheme: CardThemeData(
+        color: AppColors.surfacePrimary,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: AppDimensions.borderRadiusXl,
-          side: BorderSide(color: AppColors.border),
+          side: const BorderSide(color: AppColors.border, width: 1),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -67,8 +66,8 @@ abstract final class AppTheme {
       // Elevated Button
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryIndigo,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.textOnPrimary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(
             horizontal: AppDimensions.spacingXl,
@@ -88,13 +87,13 @@ abstract final class AppTheme {
       // Outlined Button
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primaryIndigo,
+          foregroundColor: AppColors.accent,
           elevation: 0,
           padding: const EdgeInsets.symmetric(
             horizontal: AppDimensions.spacingXl,
             vertical: AppDimensions.spacingMd,
           ),
-          side: const BorderSide(color: AppColors.primaryIndigo, width: 2),
+          side: const BorderSide(color: AppColors.zinc600, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimensions.buttonRadiusPrimary),
           ),
@@ -109,7 +108,7 @@ abstract final class AppTheme {
       // Text Button
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primaryIndigo,
+          foregroundColor: AppColors.accent,
           textStyle: const TextStyle(
             fontFamily: 'Lexend',
             fontSize: 14,
@@ -121,26 +120,26 @@ abstract final class AppTheme {
       // Input Decoration
       inputDecorationTheme: const InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceVariant,
+        fillColor: AppColors.zinc800,
         contentPadding: EdgeInsets.symmetric(
           horizontal: AppDimensions.spacingMd,
           vertical: AppDimensions.spacingSm,
         ),
         border: OutlineInputBorder(
           borderRadius: AppDimensions.borderRadiusXxl,
-          borderSide: BorderSide(color: AppColors.border, width: 2),
+          borderSide: BorderSide(color: AppColors.zinc600, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: AppDimensions.borderRadiusXxl,
-          borderSide: BorderSide(color: AppColors.border, width: 2),
+          borderSide: BorderSide(color: AppColors.zinc600, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppDimensions.borderRadiusXxl,
-          borderSide: BorderSide(color: AppColors.primaryIndigo, width: 2),
+          borderSide: BorderSide(color: AppColors.accent, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppDimensions.borderRadiusXxl,
-          borderSide: BorderSide(color: AppColors.error, width: 2),
+          borderSide: BorderSide(color: AppColors.error, width: 1),
         ),
         hintStyle: TextStyle(
           fontFamily: 'Lexend',
@@ -150,10 +149,10 @@ abstract final class AppTheme {
         ),
       ),
 
-      // Bottom Navigation Bar (using custom widget, but setting defaults)
+      // Bottom Navigation Bar
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Colors.white,
-        selectedItemColor: AppColors.primaryIndigo,
+        backgroundColor: AppColors.zinc900,
+        selectedItemColor: AppColors.accent,
         unselectedItemColor: AppColors.textTertiary,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
@@ -171,7 +170,7 @@ abstract final class AppTheme {
 
       // Divider
       dividerTheme: const DividerThemeData(
-        color: AppColors.border,
+        color: AppColors.zinc700,
         thickness: 1,
         space: 0,
       ),
@@ -180,37 +179,91 @@ abstract final class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return Colors.white;
+            return AppColors.textOnPrimary;
           }
-          return Colors.white;
+          return AppColors.zinc400;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.primaryIndigo;
+            return AppColors.accent;
           }
-          return AppColors.slate300;
+          return AppColors.zinc700;
         }),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
 
       // Slider
       sliderTheme: SliderThemeData(
-        activeTrackColor: AppColors.primaryIndigo,
-        inactiveTrackColor: AppColors.slate200,
-        thumbColor: AppColors.primaryIndigo,
-        overlayColor: AppColors.primaryIndigo.withOpacity(0.2),
-        valueIndicatorColor: AppColors.primaryIndigo,
+        activeTrackColor: AppColors.accent,
+        inactiveTrackColor: AppColors.zinc700,
+        thumbColor: AppColors.accent,
+        overlayColor: AppColors.accent.withOpacity(0.2),
+        valueIndicatorColor: AppColors.accent,
         valueIndicatorTextStyle: const TextStyle(
           fontFamily: 'Lexend',
-          color: Colors.white,
+          color: AppColors.textOnPrimary,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
       ),
 
+      // Dialog
+      dialogTheme: const DialogThemeData(
+        backgroundColor: AppColors.zinc800,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Lexend',
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+        ),
+        contentTextStyle: TextStyle(
+          fontFamily: 'Lexend',
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textSecondary,
+        ),
+      ),
+
+      // PopupMenu
+      popupMenuTheme: const PopupMenuThemeData(
+        color: AppColors.zinc800,
+        surfaceTintColor: Colors.transparent,
+        textStyle: TextStyle(
+          fontFamily: 'Lexend',
+          fontSize: 14,
+          color: AppColors.textPrimary,
+        ),
+      ),
+
+      // Bottom Sheet
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.zinc800,
+        surfaceTintColor: Colors.transparent,
+      ),
+
+      // SnackBar
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: AppColors.zinc700,
+        contentTextStyle: TextStyle(
+          fontFamily: 'Lexend',
+          color: AppColors.textPrimary,
+        ),
+      ),
+
+      // ListTile
+      listTileTheme: const ListTileThemeData(
+        iconColor: AppColors.textSecondary,
+        textColor: AppColors.textPrimary,
+        subtitleTextStyle: TextStyle(
+          fontFamily: 'Lexend',
+          fontSize: 13,
+          color: AppColors.textSecondary,
+        ),
+      ),
+
       // Text Theme
       textTheme: const TextTheme(
-        // Display styles
         displayLarge: TextStyle(
           fontFamily: 'Lexend',
           fontSize: 48,
@@ -232,8 +285,6 @@ abstract final class AppTheme {
           letterSpacing: -0.5,
           color: AppColors.textPrimary,
         ),
-
-        // Headline styles
         headlineLarge: TextStyle(
           fontFamily: 'Lexend',
           fontSize: 24,
@@ -254,8 +305,6 @@ abstract final class AppTheme {
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
         ),
-
-        // Title styles
         titleLarge: TextStyle(
           fontFamily: 'Lexend',
           fontSize: 18,
@@ -274,8 +323,6 @@ abstract final class AppTheme {
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
-
-        // Body styles
         bodyLarge: TextStyle(
           fontFamily: 'Lexend',
           fontSize: 16,
@@ -297,8 +344,6 @@ abstract final class AppTheme {
           color: AppColors.textSecondary,
           height: 1.5,
         ),
-
-        // Label styles
         labelLarge: TextStyle(
           fontFamily: 'Lexend',
           fontSize: 14,
@@ -324,21 +369,21 @@ abstract final class AppTheme {
     );
   }
 
-  /// System UI overlay style for light screens.
+  /// System UI overlay style for dark screens.
   static const SystemUiOverlayStyle lightSystemUI = SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    statusBarBrightness: Brightness.light,
-    systemNavigationBarColor: Colors.white,
-    systemNavigationBarIconBrightness: Brightness.dark,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.zinc950,
+    systemNavigationBarIconBrightness: Brightness.light,
   );
 
-  /// System UI overlay style for dark/gradient screens (e.g., splash, voice).
+  /// System UI overlay style for accent/gradient screens.
   static const SystemUiOverlayStyle darkSystemUI = SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
     statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.primaryPurple,
+    systemNavigationBarColor: AppColors.zinc950,
     systemNavigationBarIconBrightness: Brightness.light,
   );
 }

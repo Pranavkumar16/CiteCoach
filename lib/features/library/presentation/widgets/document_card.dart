@@ -32,19 +32,12 @@ class DocumentCard extends StatelessWidget {
           vertical: AppDimensions.spacingSm,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surfacePrimary,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+          color: AppColors.zinc800,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           border: Border.all(
-            color: AppColors.borderLight,
+            color: AppColors.zinc700,
             width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadowDark,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -80,11 +73,13 @@ class DocumentCard extends StatelessWidget {
       width: AppDimensions.docThumbnailWidth,
       height: AppDimensions.docThumbnailHeight,
       decoration: BoxDecoration(
-        gradient: document.isReady
-            ? AppColors.primaryGradient
-            : null,
-        color: document.isReady ? null : AppColors.slate200,
+        color: document.isReady
+            ? AppColors.accent.withOpacity(0.15)
+            : AppColors.zinc700,
         borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
+        border: document.isReady
+            ? Border.all(color: AppColors.accent.withOpacity(0.3), width: 1)
+            : null,
       ),
       child: Stack(
         children: [
@@ -93,8 +88,8 @@ class DocumentCard extends StatelessWidget {
               Icons.picture_as_pdf_rounded,
               size: AppDimensions.iconSizeXxl,
               color: document.isReady
-                  ? AppColors.white
-                  : AppColors.slate400,
+                  ? AppColors.accent
+                  : AppColors.zinc500,
             ),
           ),
           if (document.pageCount > 0)
@@ -107,13 +102,13 @@ class DocumentCard extends StatelessWidget {
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
+                  color: AppColors.zinc900.withOpacity(0.8),
                   borderRadius: BorderRadius.circular(AppDimensions.radiusXs),
                 ),
                 child: Text(
                   '${document.pageCount}p',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.white,
+                        color: AppColors.textSecondary,
                         fontSize: 10,
                       ),
                 ),
@@ -175,7 +170,7 @@ class DocumentCard extends StatelessWidget {
         badgeIcon = Icons.check_circle_rounded;
         break;
       case DocumentStatus.processing:
-        badgeColor = AppColors.primaryIndigo;
+        badgeColor = AppColors.accent;
         badgeText = 'Processing';
         badgeIcon = Icons.hourglass_top_rounded;
         break;
@@ -197,7 +192,7 @@ class DocumentCard extends StatelessWidget {
         vertical: 2,
       ),
       decoration: BoxDecoration(
-        color: badgeColor.withOpacity(0.1),
+        color: badgeColor.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
       ),
       child: Row(
