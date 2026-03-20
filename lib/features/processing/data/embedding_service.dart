@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'pdf_processor.dart';
 
@@ -17,163 +21,226 @@ class EmbeddingResult {
     required this.embeddings,
     this.error,
   });
-
-  /// Map of chunk index to embedding vector.
   final Map<int, Float32List> embeddings;
-
-  /// Error message if generation failed.
   final String? error;
-
-  /// Check if generation was successful.
   bool get isSuccess => error == null;
 }
 
-/// Progress callback for embedding generation.
 typedef EmbeddingProgressCallback = void Function(int current, int total);
 
-/// Service for generating text embeddings.
-/// 
-/// In V1, this is a stub that generates random embeddings.
-/// Real implementation with TinyBERT will be added in Commit 9.
-/// 
-/// The embedding model produces 384-dimensional vectors (TinyBERT).
+/// Platform channel bridge to native TFLite/CoreML inference.
+/// Uses MiniLM-L6-v2 (22MB) for 384-dim sentence embeddings.
+/// Falls back to TF-IDF projection when native model unavailable.
 class EmbeddingService {
   EmbeddingService();
 
-  /// Embedding dimension (TinyBERT produces 384-dim vectors).
   static const int embeddingDimension = 384;
+  static const _channel = MethodChannel('com.citecoach.citecoach/embedding');
 
-  /// Whether the model is loaded and ready.
   bool _isModelLoaded = false;
+  bool _usingNativeInference = false;
+  Map<String, int> _vocabulary = {};
+  Map<String, double> _idfScores = {};
 
-  /// Check if model is ready.
   bool get isModelLoaded => _isModelLoaded;
+  bool get isNativeInference => _usingNativeInference;
 
-  /// Initialize the embedding model.
-  /// 
-  /// In V1, this is a no-op stub.
-  /// Real implementation will load TinyBERT model weights.
   Future<bool> initialize() async {
-    debugPrint('EmbeddingService: Initializing (stub)');
-    
-    // Simulate model loading time
-    await Future.delayed(const Duration(milliseconds: 500));
-    
+    if (_isModelLoaded) return true;
+    debugPrint('EmbeddingService: Initializing...');
+
+    try {
+      final modelPath = await _getModelPath();
+      final modelFile = File(modelPath);
+
+      if (await modelFile.exists()) {
+        final result = await _channel.invokeMethod<bool>('loadModel', {
+          'modelPath': modelPath,
+          'numThreads': 2,
+          'useGpuDelegate': false,
+        });
+        if (result == true) {
+          _usingNativeInference = true;
+          _isModelLoaded = true;
+          debugPrint('EmbeddingService: Native TFLite model loaded');
+          return true;
+        }
+      }
+    } on PlatformException catch (e) {
+      debugPrint('EmbeddingService: Platform error: $e');
+    } catch (e) {
+      debugPrint('EmbeddingService: Init error: $e');
+    }
+
+    // Fallback to TF-IDF projection
+    _usingNativeInference = false;
     _isModelLoaded = true;
-    debugPrint('EmbeddingService: Model ready (stub)');
-    
+    debugPrint('EmbeddingService: Using TF-IDF fallback');
     return true;
   }
 
-  /// Generate embeddings for a list of text chunks.
-  /// 
-  /// In V1, this generates random embeddings for testing.
-  /// Real implementation will use TinyBERT inference.
+  Future<String> _getModelPath() async {
+    final appDir = await getApplicationDocumentsDirectory();
+    return '${appDir.path}/models/embedding_model.tflite';
+  }
+
   Future<EmbeddingResult> generateEmbeddings(
     List<TextChunk> chunks, {
     EmbeddingProgressCallback? onProgress,
   }) async {
-    if (!_isModelLoaded) {
-      await initialize();
-    }
+    if (!_isModelLoaded) await initialize();
 
     try {
-      debugPrint('EmbeddingService: Generating embeddings for ${chunks.length} chunks');
+      debugPrint('EmbeddingService: Generating ${chunks.length} embeddings');
+
+      if (!_usingNativeInference) {
+        _buildVocabulary(chunks.map((c) => c.text).toList());
+      }
 
       final embeddings = <int, Float32List>{};
-      final random = Random(42); // Fixed seed for reproducibility in testing
+      const batchSize = 8;
 
-      for (int i = 0; i < chunks.length; i++) {
-        onProgress?.call(i + 1, chunks.length);
-
-        // Generate random embedding (stub)
-        // Real implementation will call TinyBERT model
-        final embedding = _generateStubEmbedding(chunks[i].text, random);
-        embeddings[i] = embedding;
-
-        // Simulate processing time
-        await Future.delayed(const Duration(milliseconds: 20));
+      for (int i = 0; i < chunks.length; i += batchSize) {
+        final end = (i + batchSize).clamp(0, chunks.length);
+        for (int j = i; j < end; j++) {
+          onProgress?.call(j + 1, chunks.length);
+          final emb = await _generateSingleEmbedding(chunks[j].text);
+          if (emb != null) embeddings[j] = emb;
+        }
+        await Future.delayed(const Duration(milliseconds: 5));
       }
 
       debugPrint('EmbeddingService: Generated ${embeddings.length} embeddings');
-
       return EmbeddingResult(embeddings: embeddings);
     } catch (e) {
-      debugPrint('EmbeddingService: Error generating embeddings: $e');
-      return EmbeddingResult(
-        embeddings: {},
-        error: 'Failed to generate embeddings: ${e.toString()}',
-      );
+      debugPrint('EmbeddingService: Error: $e');
+      return EmbeddingResult(embeddings: {}, error: e.toString());
     }
   }
 
-  /// Generate embedding for a single text (for query embedding).
   Future<Float32List?> generateQueryEmbedding(String text) async {
-    if (!_isModelLoaded) {
-      await initialize();
-    }
-
+    if (!_isModelLoaded) await initialize();
     try {
-      final random = Random(text.hashCode); // Deterministic based on text
-      return _generateStubEmbedding(text, random);
+      return await _generateSingleEmbedding(text);
     } catch (e) {
-      debugPrint('EmbeddingService: Error generating query embedding: $e');
+      debugPrint('EmbeddingService: Query embedding error: $e');
       return null;
     }
   }
 
-  /// Generate a stub embedding vector.
-  /// 
-  /// In real implementation, this will be replaced with TinyBERT inference.
-  /// For now, generates normalized random vectors.
-  Float32List _generateStubEmbedding(String text, Random random) {
-    final embedding = Float32List(embeddingDimension);
-    
-    // Generate random values
-    double sumSquares = 0;
-    for (int i = 0; i < embeddingDimension; i++) {
-      // Use text hash to add some text-dependent variation
-      final textFactor = (text.hashCode + i) % 100 / 100.0;
-      embedding[i] = (random.nextDouble() * 2 - 1) + textFactor * 0.1;
-      sumSquares += embedding[i] * embedding[i];
+  Future<Float32List?> _generateSingleEmbedding(String text) async {
+    if (_usingNativeInference) return _nativeInference(text);
+    return _tfidfEmbedding(text);
+  }
+
+  Future<Float32List?> _nativeInference(String text) async {
+    try {
+      final result = await _channel.invokeMethod<List<dynamic>>('embed', {
+        'text': _preprocessText(text),
+      });
+      if (result != null && result.length == embeddingDimension) {
+        final emb = Float32List(embeddingDimension);
+        for (int i = 0; i < embeddingDimension; i++) {
+          emb[i] = (result[i] as num).toDouble();
+        }
+        return _l2Normalize(emb);
+      }
+      return null;
+    } on PlatformException {
+      return _tfidfEmbedding(text);
     }
-    
-    // L2 normalize
-    final norm = sqrt(sumSquares);
-    if (norm > 0) {
-      for (int i = 0; i < embeddingDimension; i++) {
-        embedding[i] /= norm;
+  }
+
+  String _preprocessText(String text) {
+    var p = text.trim();
+    if (p.length > 1024) p = p.substring(0, 1024);
+    return p.replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  void _buildVocabulary(List<String> texts) {
+    _vocabulary.clear();
+    _idfScores.clear();
+    final df = <String, int>{};
+    int idx = 0;
+    for (final text in texts) {
+      final unique = _tokenize(text).toSet();
+      for (final w in unique) {
+        if (!_vocabulary.containsKey(w)) _vocabulary[w] = idx++;
+        df[w] = (df[w] ?? 0) + 1;
       }
     }
-    
-    return embedding;
+    final n = texts.length;
+    for (final e in df.entries) {
+      _idfScores[e.key] = log((n + 1) / (e.value + 1)) + 1.0;
+    }
   }
 
-  /// Compute cosine similarity between two embeddings.
+  List<String> _tokenize(String text) {
+    return text
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\w\s]'), '')
+        .split(RegExp(r'\s+'))
+        .where((w) => w.length > 2)
+        .toList();
+  }
+
+  /// TF-IDF with random projection fallback for semantic similarity.
+  Float32List _tfidfEmbedding(String text) {
+    final words = _tokenize(text);
+    if (words.isEmpty) return Float32List(embeddingDimension);
+
+    final tf = <String, double>{};
+    for (final w in words) tf[w] = (tf[w] ?? 0) + 1.0;
+    for (final k in tf.keys.toList()) tf[k] = tf[k]! / words.length;
+
+    final emb = Float32List(embeddingDimension);
+    for (final e in tf.entries) {
+      final idf = _idfScores[e.key] ?? 1.0;
+      final tfidf = e.value * idf;
+      final h = e.key.hashCode;
+      for (int p = 0; p < 3; p++) {
+        final dim = ((h + p * 7919) % embeddingDimension).abs();
+        final sign = ((h + p * 6271) % 2 == 0) ? 1.0 : -1.0;
+        emb[dim] += tfidf * sign;
+      }
+    }
+    // Bigram features
+    for (int i = 0; i < words.length - 1; i++) {
+      final bg = '${words[i]}_${words[i + 1]}';
+      emb[(bg.hashCode % embeddingDimension).abs()] += 0.5;
+    }
+    return _l2Normalize(emb);
+  }
+
+  static Float32List _l2Normalize(Float32List v) {
+    double ss = 0;
+    for (int i = 0; i < v.length; i++) ss += v[i] * v[i];
+    final norm = sqrt(ss);
+    if (norm > 0) {
+      for (int i = 0; i < v.length; i++) v[i] /= norm;
+    }
+    return v;
+  }
+
   static double cosineSimilarity(Float32List a, Float32List b) {
-    if (a.length != b.length) {
-      throw ArgumentError('Embeddings must have same dimension');
-    }
-
-    double dotProduct = 0;
-    double normA = 0;
-    double normB = 0;
-
+    if (a.length != b.length) throw ArgumentError('Dimension mismatch');
+    double dot = 0, na = 0, nb = 0;
     for (int i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+      dot += a[i] * b[i];
+      na += a[i] * a[i];
+      nb += b[i] * b[i];
     }
-
-    final denominator = sqrt(normA) * sqrt(normB);
-    if (denominator == 0) return 0;
-
-    return dotProduct / denominator;
+    final d = sqrt(na) * sqrt(nb);
+    return d == 0 ? 0 : dot / d;
   }
 
-  /// Dispose of model resources.
   void dispose() {
+    if (_usingNativeInference) {
+      try { _channel.invokeMethod('dispose'); } catch (_) {}
+    }
     _isModelLoaded = false;
+    _vocabulary.clear();
+    _idfScores.clear();
     debugPrint('EmbeddingService: Disposed');
   }
 }

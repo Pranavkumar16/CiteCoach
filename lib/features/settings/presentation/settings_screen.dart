@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/constants.dart';
+import '../../../core/services/storage_service.dart';
+import '../../../routing/app_router.dart';
 import '../../setup/data/model_downloader.dart';
 import '../../setup/providers/setup_provider.dart';
 
-/// Settings screen with model management and app info.
+/// Full settings screen with model management, storage, and app info.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -15,138 +17,168 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _lowPowerMode = false;
+  double _speechSpeed = 1.0;
+  bool _hapticFeedback = true;
+  bool _cacheEnabled = true;
   int _modelSizeBytes = 0;
-  bool _isModelDownloaded = false;
-  bool _isCheckingModel = true;
 
   @override
   void initState() {
     super.initState();
-    _checkModelStatus();
+    _loadSettings();
   }
 
-  Future<void> _checkModelStatus() async {
+  Future<void> _loadSettings() async {
+    final storage = ref.read(storageServiceProvider);
     final downloader = ref.read(modelDownloaderProvider);
-    final downloaded = await downloader.isModelDownloaded();
-    final size = await downloader.getDownloadedModelSize();
-    if (mounted) {
-      setState(() {
-        _isModelDownloaded = downloaded;
-        _modelSizeBytes = size;
-        _isCheckingModel = false;
-      });
-    }
+    final size = await downloader.getDownloadedSize();
+    setState(() {
+      _lowPowerMode = storage.getBool(StorageKeys.lowPowerMode) ?? false;
+      _speechSpeed = storage.getDouble(StorageKeys.speechSpeed) ?? 1.0;
+      _hapticFeedback = storage.getBool(StorageKeys.hapticFeedback) ?? true;
+      _cacheEnabled = storage.getBool(StorageKeys.cacheEnabled) ?? true;
+      _modelSizeBytes = size;
+    });
   }
 
-  String _formatBytes(int bytes) {
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
-
-  void _showDeleteModelDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete AI Model'),
-        content: const Text(
-          'This will remove the downloaded AI model. You will need to '
-          'download it again to use the chat feature. Your documents '
-          'and chat history will be preserved.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final downloader = ref.read(modelDownloaderProvider);
-              await downloader.deleteModel();
-              await _checkModelStatus();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('AI model deleted')),
-                );
-              }
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.errorRed,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showResetDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset App'),
-        content: const Text(
-          'This will reset the app to its initial state. All documents, '
-          'chat history, and the AI model will be deleted. This action '
-          'cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(setupProvider.notifier).resetSetup();
-              if (mounted) {
-                context.go('/');
-              }
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.errorRed,
-            ),
-            child: const Text('Reset Everything'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _saveSetting(String key, dynamic value) async {
+    final storage = ref.read(storageServiceProvider);
+    if (value is bool) await storage.setBool(key, value);
+    if (value is double) await storage.setDouble(key, value);
   }
 
   @override
   Widget build(BuildContext context) {
+    final setupState = ref.watch(setupProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Settings'),
+        centerTitle: false,
       ),
       body: ListView(
-        padding: EdgeInsets.symmetric(vertical: AppDimensions.spacingMd),
         children: [
-          // AI Model section
+          // AI Model Section
           _buildSectionHeader('AI Model'),
-          _buildModelCard(),
-          SizedBox(height: AppDimensions.spacingLg),
+          _buildTile(
+            icon: Icons.smart_toy_outlined,
+            title: 'Model Status',
+            subtitle: setupState.isModelDownloaded
+                ? 'Gemma 2B — Ready'
+                : 'Not downloaded',
+            trailing: setupState.isModelDownloaded
+                ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
+                : TextButton(
+                    onPressed: () => context.push(AppRoutes.downloadRequired),
+                    child: const Text('Download'),
+                  ),
+            onTap: () => context.push(AppRoutes.modelInfo),
+          ),
+          _buildTile(
+            icon: Icons.storage_outlined,
+            title: 'Model Storage',
+            subtitle: _modelSizeBytes > 0
+                ? '${(_modelSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB'
+                : 'No models downloaded',
+          ),
 
-          // Privacy section
-          _buildSectionHeader('Privacy'),
-          _buildPrivacyCard(),
-          SizedBox(height: AppDimensions.spacingLg),
+          const Divider(height: 1),
 
-          // About section
+          // Performance Section
+          _buildSectionHeader('Performance'),
+          SwitchListTile(
+            secondary: const Icon(Icons.battery_saver),
+            title: const Text('Low Power Mode'),
+            subtitle: const Text('Reduce model quality for longer battery life'),
+            value: _lowPowerMode,
+            onChanged: (v) {
+              setState(() => _lowPowerMode = v);
+              _saveSetting(StorageKeys.lowPowerMode, v);
+            },
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.cached),
+            title: const Text('Response Cache'),
+            subtitle: const Text('Cache answers for instant repeat queries'),
+            value: _cacheEnabled,
+            onChanged: (v) {
+              setState(() => _cacheEnabled = v);
+              _saveSetting(StorageKeys.cacheEnabled, v);
+            },
+          ),
+
+          const Divider(height: 1),
+
+          // Voice Section
+          _buildSectionHeader('Voice'),
+          ListTile(
+            leading: const Icon(Icons.speed),
+            title: const Text('Speech Speed'),
+            subtitle: Slider(
+              value: _speechSpeed,
+              min: 0.5,
+              max: 2.0,
+              divisions: 6,
+              label: '${_speechSpeed.toStringAsFixed(1)}x',
+              onChanged: (v) {
+                setState(() => _speechSpeed = v);
+                _saveSetting(StorageKeys.speechSpeed, v);
+              },
+            ),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.vibration),
+            title: const Text('Haptic Feedback'),
+            subtitle: const Text('Vibrate on voice recording events'),
+            value: _hapticFeedback,
+            onChanged: (v) {
+              setState(() => _hapticFeedback = v);
+              _saveSetting(StorageKeys.hapticFeedback, v);
+            },
+          ),
+
+          const Divider(height: 1),
+
+          // About Section
           _buildSectionHeader('About'),
-          _buildAboutCard(),
-          SizedBox(height: AppDimensions.spacingLg),
+          _buildTile(
+            icon: Icons.info_outline,
+            title: 'CiteCoach',
+            subtitle: 'Version ${AppStrings.appVersion}',
+          ),
+          _buildTile(
+            icon: Icons.privacy_tip_outlined,
+            title: 'Privacy Policy',
+            subtitle: '100% offline — your data never leaves your device',
+            onTap: () => _showPrivacyInfo(context),
+          ),
+          _buildTile(
+            icon: Icons.description_outlined,
+            title: 'Licenses',
+            onTap: () => showLicensePage(
+              context: context,
+              applicationName: AppStrings.appName,
+              applicationVersion: AppStrings.appVersion,
+            ),
+          ),
 
-          // Danger zone
-          _buildSectionHeader('Advanced'),
-          _buildDangerCard(),
-          SizedBox(height: AppDimensions.spacingXxl),
+          const SizedBox(height: 32),
+
+          // Reset option
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.restart_alt, color: AppColors.errorRed),
+              label: const Text('Reset App',
+                  style: TextStyle(color: AppColors.errorRed)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.errorRed),
+              ),
+              onPressed: () => _confirmReset(context),
+            ),
+          ),
+          const SizedBox(height: 48),
         ],
       ),
     );
@@ -154,163 +186,97 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppDimensions.spacingLg,
-        vertical: AppDimensions.spacingXs,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: AppColors.textSecondary,
-          letterSpacing: 1.0,
+          letterSpacing: 0.8,
         ),
       ),
     );
   }
 
-  Widget _buildModelCard() {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: AppDimensions.spacingMd),
-      child: Column(
-        children: [
-          ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-              ),
-              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 22),
-            ),
-            title: const Text(
-              'Phi-3.5 Mini',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              _isCheckingModel
-                  ? 'Checking...'
-                  : _isModelDownloaded
-                      ? 'Downloaded (${_formatBytes(_modelSizeBytes)})'
-                      : 'Not downloaded',
-              style: TextStyle(
-                color: _isModelDownloaded
-                    ? AppColors.successGreen
-                    : AppColors.warningOrange,
-              ),
-            ),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const SizedBox(width: 40),
-            title: const Text('Model Version'),
-            trailing: Text(
-              ModelDownloader.modelVersion,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          ListTile(
-            leading: const SizedBox(width: 40),
-            title: const Text('Quantization'),
-            trailing: const Text(
-              'Q4_K_M (4-bit)',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          if (_isModelDownloaded)
-            ListTile(
-              leading: const Icon(Icons.delete_outline,
-                  color: AppColors.errorRed, size: 20),
-              title: const Text(
-                'Delete Model',
-                style: TextStyle(color: AppColors.errorRed),
-              ),
-              onTap: _showDeleteModelDialog,
-            )
-          else
-            ListTile(
-              leading: const Icon(Icons.download_rounded,
-                  color: AppColors.primaryIndigo, size: 20),
-              title: const Text(
-                'Download Model',
-                style: TextStyle(color: AppColors.primaryIndigo),
-              ),
-              onTap: () => context.go('/setup/download'),
-            ),
-        ],
-      ),
+  Widget _buildTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: subtitle != null ? Text(subtitle) : null,
+      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
+      onTap: onTap,
     );
   }
 
-  Widget _buildPrivacyCard() {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: AppDimensions.spacingMd),
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.shield_outlined,
-                color: AppColors.successGreen),
-            title: const Text('100% Offline'),
-            subtitle: const Text(
-                'All processing happens on your device. No data leaves your phone.'),
+  void _showPrivacyInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Privacy & Data'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('CiteCoach is designed with privacy as the foundation.',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              SizedBox(height: 12),
+              Text('• All AI processing happens on your device'),
+              SizedBox(height: 4),
+              Text('• No documents are uploaded to any server'),
+              SizedBox(height: 4),
+              Text('• No internet required after model download'),
+              SizedBox(height: 4),
+              Text('• No analytics or tracking'),
+              SizedBox(height: 4),
+              Text('• Your conversations stay on your device'),
+              SizedBox(height: 12),
+              Text('The only network request CiteCoach makes is the '
+                  'initial one-time AI model download.'),
+            ],
           ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.cloud_off_outlined,
-                color: AppColors.primaryIndigo),
-            title: const Text('No Cloud Upload'),
-            subtitle: const Text(
-                'Your documents are stored locally and never uploaded.'),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.lock_outline,
-                color: AppColors.primaryIndigo),
-            title: const Text('Private by Design'),
-            subtitle: const Text(
-                'No analytics, no tracking, no user accounts required.'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAboutCard() {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: AppDimensions.spacingMd),
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('CiteCoach'),
-            subtitle: const Text('Version 1.0.0'),
-          ),
-          const Divider(height: 1),
-          const ListTile(
-            leading: Icon(Icons.description_outlined),
-            title: Text('Offline Document Intelligence'),
-            subtitle: Text(
-                'Upload textbooks, ask questions, get answers with citations '
-                'that link back to the source.'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDangerCard() {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: AppDimensions.spacingMd),
-      child: ListTile(
-        leading: const Icon(Icons.restart_alt, color: AppColors.errorRed),
-        title: const Text(
-          'Reset App',
-          style: TextStyle(color: AppColors.errorRed),
         ),
-        subtitle: const Text('Delete all data and start fresh'),
-        onTap: _showResetDialog,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmReset(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset CiteCoach?'),
+        content: const Text(
+          'This will delete all documents, conversations, cached responses, '
+          'and downloaded models. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.errorRed),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref.read(setupProvider.notifier).resetSetup();
+              if (mounted) context.go(AppRoutes.splash);
+            },
+            child: const Text('Reset Everything'),
+          ),
+        ],
       ),
     );
   }

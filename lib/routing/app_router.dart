@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/constants/constants.dart';
+import '../core/widgets/widgets.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/library/presentation/library_screen.dart';
 import '../features/processing/presentation/document_ready_screen.dart';
 import '../features/processing/presentation/processing_screen.dart';
 import '../features/reader/presentation/reader_screen.dart';
+import '../features/settings/presentation/download_required_screen.dart';
+import '../features/settings/presentation/model_info_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
@@ -29,6 +33,7 @@ abstract final class AppRoutes {
   // Main app
   static const String library = '/library';
   static const String settings = '/settings';
+  static const String modelInfo = '/settings/model-info';
 
   // Document specific
   static const String processing = '/document/:id/processing';
@@ -36,7 +41,8 @@ abstract final class AppRoutes {
   static const String reader = '/document/:id/reader';
   static const String chat = '/document/:id/chat';
 
-  // Voice overlay (shown as dialog/overlay)
+  // Voice overlay
+  static const String voice = '/voice';
   static const String voiceInput = '/voice-input';
 
   // Download required (when user chose "Download Later")
@@ -45,17 +51,13 @@ abstract final class AppRoutes {
   // Helper to build document routes
   static String documentProcessing(String documentId) =>
       '/document/$documentId/processing';
-  static String documentReader(String documentId, {int? page}) {
-    final base = '/document/$documentId/reader';
-    return page != null ? '$base?page=$page' : base;
-  }
-
+  static String documentReader(String documentId) =>
+      '/document/$documentId/reader';
   static String documentChat(String documentId) =>
       '/document/$documentId/chat';
 }
 
 /// Provider for the GoRouter instance.
-/// This allows us to access the router from anywhere using Riverpod.
 final appRouterProvider = Provider<GoRouter>((ref) {
   return createRouter(ref);
 });
@@ -64,12 +66,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 GoRouter createRouter(Ref ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: false,
     redirect: (context, state) {
       final setupState = ref.read(setupProvider);
       final currentPath = state.uri.path;
 
-      // List of setup paths
       final setupPaths = [
         AppRoutes.splash,
         AppRoutes.privacy,
@@ -81,19 +82,9 @@ GoRouter createRouter(Ref ref) {
       final isSetupPath = setupPaths.contains(currentPath);
       final isSetupCompleted = setupState.currentStep == SetupStep.done;
 
-      // If setup is completed and user tries to access setup screens,
-      // redirect to library
-      if (isSetupCompleted && isSetupPath) {
-        return AppRoutes.library;
-      }
+      if (isSetupCompleted && isSetupPath) return AppRoutes.library;
+      if (!isSetupCompleted && !isSetupPath) return setupState.currentStep.routePath;
 
-      // If setup is not completed and user tries to access main app,
-      // redirect to current setup step
-      if (!isSetupCompleted && !isSetupPath) {
-        return setupState.currentStep.routePath;
-      }
-
-      // No redirect needed
       return null;
     },
     routes: [
@@ -143,6 +134,13 @@ GoRouter createRouter(Ref ref) {
         ],
       ),
 
+      // Settings sub-routes
+      GoRoute(
+        path: AppRoutes.modelInfo,
+        name: 'modelInfo',
+        builder: (context, state) => const ModelInfoScreen(),
+      ),
+
       // Document routes
       GoRoute(
         path: '/document/:id/processing',
@@ -178,6 +176,11 @@ GoRouter createRouter(Ref ref) {
         name: 'chat',
         builder: (context, state) {
           final documentId = int.parse(state.pathParameters['id']!);
+          // Guard: require model for chat
+          final setupState = ref.read(setupProvider);
+          if (!setupState.isModelDownloaded) {
+            return const DownloadRequiredScreen();
+          }
           return ChatScreen(documentId: documentId);
         },
       ),
@@ -194,11 +197,11 @@ GoRouter createRouter(Ref ref) {
         },
       ),
 
-      // Download Required - redirect to setup download
+      // Download Required
       GoRoute(
         path: AppRoutes.downloadRequired,
         name: 'downloadRequired',
-        builder: (context, state) => const DownloadProgressScreen(),
+        builder: (context, state) => const DownloadRequiredScreen(),
       ),
     ],
     errorBuilder: (context, state) => _ErrorScreen(error: state.error),
@@ -208,12 +211,10 @@ GoRouter createRouter(Ref ref) {
 /// Shell widget for main app screens with bottom navigation.
 class _MainShell extends StatelessWidget {
   const _MainShell({required this.child});
-
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    // Determine current index based on location
     final location = GoRouterState.of(context).uri.path;
     final currentIndex = location.startsWith('/settings') ? 1 : 0;
 
@@ -228,6 +229,7 @@ class _MainShell extends StatelessWidget {
             context.go(AppRoutes.settings);
           }
         },
+        selectedItemColor: AppColors.primaryIndigo,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.library_books_rounded),
@@ -246,7 +248,6 @@ class _MainShell extends StatelessWidget {
 /// Error screen for unknown routes.
 class _ErrorScreen extends StatelessWidget {
   const _ErrorScreen({this.error});
-
   final Exception? error;
 
   @override
@@ -259,17 +260,13 @@ class _ErrorScreen extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text(
-              'Page not found',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
+            Text('Page not found',
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 8),
             if (error != null)
-              Text(
-                error.toString(),
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
+              Text(error.toString(),
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => context.go(AppRoutes.library),
@@ -284,18 +281,15 @@ class _ErrorScreen extends StatelessWidget {
 
 /// Extension methods for easier navigation.
 extension GoRouterExtension on BuildContext {
-  /// Navigate to document chat screen.
-  void goToChat(String documentId) {
-    go(AppRoutes.documentChat(documentId));
-  }
+  void goToChat(String documentId) => go(AppRoutes.documentChat(documentId));
 
-  /// Navigate to document reader screen with optional page.
   void goToReader(String documentId, {int? page}) {
-    go(AppRoutes.documentReader(documentId, page: page));
+    final uri = page != null
+        ? '${AppRoutes.documentReader(documentId)}?page=$page'
+        : AppRoutes.documentReader(documentId);
+    go(uri);
   }
 
-  /// Navigate to document processing screen.
-  void goToProcessing(String documentId) {
-    go(AppRoutes.documentProcessing(documentId));
-  }
+  void goToProcessing(String documentId) =>
+      go(AppRoutes.documentProcessing(documentId));
 }

@@ -41,11 +41,11 @@ class DocumentRepository {
     return docsDir;
   }
 
-  /// Import a PDF file into the library.
+  /// Import any supported document into the library.
   /// 
   /// Copies the file to app storage and creates a database record.
-  /// Returns the created Document or null if import failed.
-  Future<Document?> importPdf(String sourcePath) async {
+  /// Supports: PDF, DOCX, DOC, TXT, MD, EPUB, and image files.
+  Future<Document?> importDocument(String sourcePath) async {
     try {
       final sourceFile = File(sourcePath);
       if (!await sourceFile.exists()) {
@@ -58,7 +58,6 @@ class DocumentRepository {
       final existingDoc = await _table.existsByPath(sourcePath);
       if (existingDoc) {
         debugPrint('DocumentRepository: File already imported: $fileName');
-        // Return the existing document
         final docs = await _table.getAll();
         final existing = docs.firstWhere(
           (d) => d.filePath.endsWith(fileName),
@@ -86,7 +85,7 @@ class DocumentRepository {
       }
 
       await sourceFile.copy(finalPath);
-      debugPrint('DocumentRepository: Copied PDF to $finalPath');
+      debugPrint('DocumentRepository: Copied document to $finalPath');
 
       // Create database record
       final record = DocumentRecord(
@@ -100,17 +99,19 @@ class DocumentRepository {
       final id = await _table.insert(record);
       debugPrint('DocumentRepository: Created document record with id $id');
 
-      // Fetch and return the created document
       final created = await _table.getById(id);
       if (created != null) {
         return Document.fromRecord(created);
       }
       return null;
     } catch (e) {
-      debugPrint('DocumentRepository: Error importing PDF: $e');
+      debugPrint('DocumentRepository: Error importing document: $e');
       return null;
     }
   }
+
+  /// Import a PDF file into the library (legacy — calls importDocument).
+  Future<Document?> importPdf(String sourcePath) => importDocument(sourcePath);
 
   /// Extract a clean title from the filename.
   String _extractTitle(String fileName) {

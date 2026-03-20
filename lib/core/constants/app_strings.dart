@@ -3,6 +3,7 @@
 abstract final class AppStrings {
   // App Info
   static const String appName = 'CiteCoach';
+  static const String appVersion = '1.0.0';
   static const String appTagline = 'Offline document intelligence';
   
   // Setup Flow - Privacy Screen
@@ -78,9 +79,10 @@ abstract final class AppStrings {
   static const String libraryTitle = 'Library';
   static const String noDocumentsTitle = 'No Documents Yet';
   static const String noDocumentsDescription = 
-      'Import a PDF to start asking questions and getting evidence-based answers';
-  static const String importPdf = '+ Import PDF';
-  static const String importAnotherPdf = '+ Import Another PDF';
+      'Import a document to start asking questions and getting evidence-based answers with citations';
+  static const String importPdf = '+ Import Document';
+  static const String importAnotherPdf = '+ Import Document';
+  static const String supportedFormats = 'PDF, Word, EPUB, TXT, Images';
   static const String chat = 'Chat';
   static const String read = 'Read';
   

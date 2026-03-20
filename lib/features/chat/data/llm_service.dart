@@ -1,18 +1,18 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../domain/chat_message.dart';
 import 'rag_service.dart';
 
-/// Provider for the LLM service.
 final llmServiceProvider = Provider<LlmService>((ref) {
   return LlmService();
 });
 
-/// Result of LLM generation.
 class GenerationResult {
   const GenerationResult({
     required this.response,
@@ -20,299 +20,258 @@ class GenerationResult {
     this.error,
     this.fromCache = false,
   });
-
-  /// The generated response text.
   final String response;
-
-  /// Citations from the RAG retrieval.
   final List<Citation> citations;
-
-  /// Error message if generation failed.
   final String? error;
-
-  /// Whether this response came from cache.
   final bool fromCache;
-
-  /// Check if generation was successful.
   bool get isSuccess => error == null && response.isNotEmpty;
 
-  /// Create an error result.
   factory GenerationResult.error(String message) {
-    return GenerationResult(
-      response: '',
-      citations: [],
-      error: message,
-    );
+    return GenerationResult(response: '', citations: [], error: message);
   }
 }
 
-/// Callback for streaming response tokens.
 typedef StreamCallback = void Function(String token);
 
-/// Service for on-device LLM inference using llama.cpp via platform channels.
-///
-/// Communicates with native Android (Kotlin) and iOS (Swift) code that
-/// runs llama.cpp for local model inference. All processing happens
-/// on-device with zero network calls.
+/// On-device LLM inference via platform channels.
 ///
 /// Architecture:
-/// - Dart ↔ MethodChannel → Native llama.cpp
-/// - Token streaming via EventChannel
-/// - Model lifecycle managed natively for memory efficiency
+/// - Android: MediaPipe LLM Inference API (Gemma 2B Q4)
+/// - iOS: MLX Swift / CoreML (Gemma 2B Q4)
+/// - Prompt engineering: citation-grounded Q&A with context injection
+///
+/// The service constructs prompts that force the model to ground answers
+/// in provided context with page-level citations.
 class LlmService {
   LlmService();
 
-  static const _methodChannel = MethodChannel('com.citecoach/llm');
-  static const _streamChannel = EventChannel('com.citecoach/llm_stream');
+  static const _channel = MethodChannel('com.citecoach.citecoach/llm');
+  static const String modelName = 'gemma-2b-it-q4';
+  static const int maxOutputTokens = 512;
+  static const double temperature = 0.3;
+  static const double topP = 0.9;
 
-  /// Whether the model is loaded and ready for inference.
   bool _isModelLoaded = false;
-
-  /// Check if model is ready.
   bool get isModelLoaded => _isModelLoaded;
 
-  /// Stream subscription for token streaming.
-  StreamSubscription<dynamic>? _streamSubscription;
-
-  /// Initialize the LLM model from the given path.
-  ///
-  /// Loads the GGUF model file into memory on the native side.
-  /// This is a heavy operation (~2-5 seconds) and should be called
-  /// once during app startup after model download.
-  Future<bool> initialize({String? modelPath}) async {
+  /// Initialize the LLM model via platform channel.
+  Future<bool> initialize() async {
     if (_isModelLoaded) return true;
+    debugPrint('LlmService: Initializing...');
 
     try {
-      debugPrint('LlmService: Loading model...');
-      final result = await _methodChannel.invokeMethod<bool>(
-        'loadModel',
-        {'modelPath': modelPath},
-      );
-      _isModelLoaded = result ?? false;
+      final modelPath = await _getModelPath();
+      final modelFile = File(modelPath);
+
+      if (!await modelFile.exists()) {
+        debugPrint('LlmService: Model file not found at $modelPath');
+        return false;
+      }
+
+      final result = await _channel.invokeMethod<bool>('loadModel', {
+        'modelPath': modelPath,
+        'maxTokens': maxOutputTokens,
+        'temperature': temperature,
+        'topP': topP,
+      });
+
+      _isModelLoaded = result == true;
       debugPrint('LlmService: Model loaded: $_isModelLoaded');
       return _isModelLoaded;
     } on PlatformException catch (e) {
-      debugPrint('LlmService: Failed to load model: ${e.message}');
+      debugPrint('LlmService: Platform error: $e');
       return false;
-    } on MissingPluginException {
-      debugPrint('LlmService: Native plugin not available');
+    } catch (e) {
+      debugPrint('LlmService: Init error: $e');
       return false;
     }
   }
 
-  /// Generate a response to a query given retrieved context.
-  ///
-  /// Builds a prompt from the context and query, sends it to the
-  /// native LLM, and streams tokens back via EventChannel.
+  Future<String> _getModelPath() async {
+    final appDir = await getApplicationDocumentsDirectory();
+    return '${appDir.path}/models/$modelName';
+  }
+
+  /// Check if the model file exists on disk.
+  Future<bool> isModelAvailable() async {
+    final modelPath = await _getModelPath();
+    return File(modelPath).exists();
+  }
+
+  /// Generate a response grounded in retrieved context.
   Future<GenerationResult> generate({
     required String query,
     required RetrievalResult retrievalResult,
     List<ChatMessage> conversationHistory = const [],
     StreamCallback? onToken,
   }) async {
+    if (!retrievalResult.isSuccess || retrievalResult.context.isEmpty) {
+      return GenerationResult.error(
+        'No relevant information found in the document.',
+      );
+    }
+
+    // Build the grounded prompt
+    final prompt = _buildPrompt(
+      query: query,
+      context: retrievalResult.context,
+      citations: retrievalResult.citations,
+      history: conversationHistory,
+    );
+
     if (!_isModelLoaded) {
-      final loaded = await initialize();
-      if (!loaded) {
+      final initialized = await initialize();
+      if (!initialized) {
         return GenerationResult.error(
-          'AI model not loaded. Please download the model in Settings.',
+          'AI model is not available. Please download the model first.',
         );
       }
     }
 
     try {
-      if (!retrievalResult.isSuccess || retrievalResult.context.isEmpty) {
-        return GenerationResult.error(
-          'No relevant information found in the document.',
-        );
+      debugPrint('LlmService: Generating response...');
+
+      String fullResponse = '';
+
+      // Set up streaming listener
+      _channel.setMethodCallHandler((call) async {
+        if (call.method == 'onToken') {
+          final token = call.arguments as String;
+          fullResponse += token;
+          onToken?.call(token);
+        }
+      });
+
+      // Invoke generation
+      final result = await _channel.invokeMethod<String>('generate', {
+        'prompt': prompt,
+        'maxTokens': maxOutputTokens,
+        'temperature': temperature,
+        'topP': topP,
+        'stream': onToken != null,
+      });
+
+      // Clear handler
+      _channel.setMethodCallHandler(null);
+
+      // Use streamed response or direct result
+      final responseText = fullResponse.isNotEmpty
+          ? fullResponse
+          : (result ?? '');
+
+      if (responseText.isEmpty) {
+        return GenerationResult.error('Model returned empty response');
       }
 
-      // Build the prompt
-      final prompt = _buildPrompt(
-        query: query,
-        context: retrievalResult.context,
-        history: conversationHistory,
-      );
-
-      debugPrint('LlmService: Generating response (prompt: ${prompt.length} chars)');
-
-      // Generate with streaming
-      final response = await _generateWithStreaming(prompt, onToken);
-
-      if (response.isEmpty) {
-        return GenerationResult.error('Model returned empty response.');
-      }
+      // Parse citations from response and clean up
+      final parsed = _parseResponse(responseText, retrievalResult.citations);
 
       return GenerationResult(
-        response: response,
-        citations: retrievalResult.citations,
+        response: parsed.cleanedText,
+        citations: parsed.matchedCitations,
       );
-    } catch (e) {
+    } on PlatformException catch (e) {
       debugPrint('LlmService: Generation error: $e');
-      return GenerationResult.error(
-          'Failed to generate response: ${e.toString()}');
+      _channel.setMethodCallHandler(null);
+      return GenerationResult.error('Model inference failed: ${e.message}');
+    } catch (e) {
+      debugPrint('LlmService: Error: $e');
+      _channel.setMethodCallHandler(null);
+      return GenerationResult.error('Failed to generate response: $e');
     }
   }
 
-  /// Build a structured prompt for Phi-3.5 Mini (ChatML format).
-  ///
-  /// Phi-3.5 uses the ChatML template:
-  /// <|system|>\n{system}<|end|>\n<|user|>\n{user}<|end|>\n<|assistant|>\n
-  ///
-  /// Instructs the model to:
-  /// - Only answer from the provided context
-  /// - Cite page numbers
-  /// - Say "I don't know" if the answer isn't in the context
+  /// Build a citation-grounded prompt for Gemma 2B.
   String _buildPrompt({
     required String query,
     required String context,
+    required List<Citation> citations,
     required List<ChatMessage> history,
   }) {
     final buffer = StringBuffer();
 
-    // System message
-    buffer.writeln('<|system|>');
-    buffer.writeln(
-        'You are a helpful study assistant. Answer questions ONLY using the '
-        'provided document context below. If the answer is not in the context, '
-        'say "I couldn\'t find information about that in this document."'
-        '\nAlways reference which page the information comes from (e.g., "According to page 3...").'
-        '\nBe concise, accurate, and helpful.');
-    buffer.writeln('<|end|>');
-
-    // Document context as a user message
-    buffer.writeln('<|user|>');
-    buffer.writeln('Here is the document context to answer from:');
+    // System instruction for Gemma format
+    buffer.writeln('<start_of_turn>user');
+    buffer.writeln('You are CiteCoach, a document analysis assistant. '
+        'Answer questions ONLY using the provided document excerpts. '
+        'Always cite your sources using [Page X] format. '
+        'If the answer is not in the excerpts, say "I could not find this information in the document."');
     buffer.writeln();
+    buffer.writeln('--- DOCUMENT EXCERPTS ---');
     buffer.writeln(context);
-    buffer.writeln('<|end|>');
+    buffer.writeln('--- END EXCERPTS ---');
+    buffer.writeln();
 
-    // Recent conversation history (last 4 turns for context window efficiency)
+    // Add recent conversation history (last 4 exchanges)
     final recentHistory = history.length > 8
         ? history.sublist(history.length - 8)
         : history;
 
     for (final msg in recentHistory) {
       if (msg.isUser) {
-        buffer.writeln('<|user|>');
-        buffer.writeln(msg.content);
-        buffer.writeln('<|end|>');
-      } else {
-        buffer.writeln('<|assistant|>');
-        buffer.writeln(msg.content);
-        buffer.writeln('<|end|>');
+        buffer.writeln('Previous question: ${msg.content}');
+      } else if (msg.isAssistant) {
+        buffer.writeln('Previous answer: ${msg.content}');
       }
     }
 
-    // Current question
-    buffer.writeln('<|user|>');
-    buffer.writeln(query);
-    buffer.writeln('<|end|>');
-
-    // Start assistant response
-    buffer.writeln('<|assistant|>');
+    buffer.writeln();
+    buffer.writeln('Question: $query');
+    buffer.writeln();
+    buffer.writeln(
+        'Answer the question using ONLY the document excerpts above. '
+        'Include [Page X] citations for every claim.');
+    buffer.writeln('<end_of_turn>');
+    buffer.writeln('<start_of_turn>model');
 
     return buffer.toString();
   }
 
-  /// Generate response with token streaming via EventChannel.
-  Future<String> _generateWithStreaming(
-    String prompt,
-    StreamCallback? onToken,
-  ) async {
-    final completer = Completer<String>();
-    final responseBuffer = StringBuffer();
+  /// Parse model response to extract and validate citations.
+  _ParsedResponse _parseResponse(
+    String responseText,
+    List<Citation> availableCitations,
+  ) {
+    // Extract page references from the response text
+    final pageRefs = RegExp(r'\[Page\s*(\d+)\]');
+    final matches = pageRefs.allMatches(responseText);
+    final referencedPages = <int>{};
 
-    try {
-      // Start generation on native side
-      await _methodChannel.invokeMethod('startGeneration', {
-        'prompt': prompt,
-        'maxTokens': 512,
-        'temperature': 0.7,
-        'topP': 0.9,
-        'repeatPenalty': 1.1,
-      });
-
-      // Listen for streamed tokens
-      _streamSubscription?.cancel();
-      _streamSubscription = _streamChannel.receiveBroadcastStream().listen(
-        (dynamic event) {
-          if (event is String) {
-            if (event == '[DONE]') {
-              if (!completer.isCompleted) {
-                completer.complete(responseBuffer.toString().trim());
-              }
-            } else if (event.startsWith('[ERROR]')) {
-              if (!completer.isCompleted) {
-                completer.completeError(
-                    event.replaceFirst('[ERROR]', '').trim());
-              }
-            } else {
-              responseBuffer.write(event);
-              onToken?.call(event);
-            }
-          }
-        },
-        onError: (error) {
-          if (!completer.isCompleted) {
-            completer.completeError(error);
-          }
-        },
-        onDone: () {
-          if (!completer.isCompleted) {
-            completer.complete(responseBuffer.toString().trim());
-          }
-        },
-      );
-
-      return await completer.future.timeout(
-        const Duration(seconds: 60),
-        onTimeout: () {
-          _streamSubscription?.cancel();
-          _stopGeneration();
-          return responseBuffer.toString().trim();
-        },
-      );
-    } catch (e) {
-      _streamSubscription?.cancel();
-      if (e is PlatformException || e is MissingPluginException) {
-        rethrow;
-      }
-      return responseBuffer.toString().trim();
+    for (final match in matches) {
+      final pageNum = int.tryParse(match.group(1) ?? '');
+      if (pageNum != null) referencedPages.add(pageNum);
     }
-  }
 
-  /// Stop current generation.
-  Future<void> _stopGeneration() async {
-    try {
-      await _methodChannel.invokeMethod('stopGeneration');
-    } catch (_) {}
-  }
+    // Match to available citations
+    final matched = availableCitations
+        .where((c) => referencedPages.contains(c.pageNumber))
+        .toList();
 
-  /// Unload the model from memory.
-  Future<void> unloadModel() async {
-    try {
-      await _methodChannel.invokeMethod('unloadModel');
-      _isModelLoaded = false;
-      debugPrint('LlmService: Model unloaded');
-    } catch (e) {
-      debugPrint('LlmService: Error unloading model: $e');
+    // If model didn't cite but we have citations, add them
+    if (matched.isEmpty && availableCitations.isNotEmpty) {
+      matched.addAll(availableCitations.take(3));
     }
+
+    // Clean up response text
+    var cleaned = responseText.trim();
+    // Remove any model artifacts
+    cleaned = cleaned.replaceAll('<end_of_turn>', '');
+    cleaned = cleaned.replaceAll('<start_of_turn>', '');
+
+    return _ParsedResponse(cleanedText: cleaned, matchedCitations: matched);
   }
 
-  /// Get model info (name, size, quantization).
-  Future<Map<String, dynamic>?> getModelInfo() async {
-    try {
-      final result =
-          await _methodChannel.invokeMapMethod<String, dynamic>('getModelInfo');
-      return result;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Dispose of model resources.
   void dispose() {
-    _streamSubscription?.cancel();
-    unloadModel();
+    if (_isModelLoaded) {
+      try { _channel.invokeMethod('dispose'); } catch (_) {}
+    }
+    _isModelLoaded = false;
+    debugPrint('LlmService: Disposed');
   }
+}
+
+class _ParsedResponse {
+  final String cleanedText;
+  final List<Citation> matchedCitations;
+  _ParsedResponse({required this.cleanedText, required this.matchedCitations});
 }
