@@ -10,7 +10,6 @@ import '../../../core/database/tables/document_pages_table.dart';
 import '../../../core/database/tables/documents_table.dart';
 import '../../library/data/document_repository.dart';
 import '../../library/domain/document.dart';
-import '../data/embedding_service.dart';
 import '../data/pdf_processor.dart';
 import '../domain/processing_state.dart';
 
@@ -23,36 +22,40 @@ final processingProvider = StateNotifierProvider.family<
         orElse: () => null,
       );
   final pdfProcessor = ref.watch(pdfProcessorProvider);
-  final embeddingService = ref.watch(embeddingServiceProvider);
   final documentRepository = ref.watch(documentRepositoryProvider);
 
   return ProcessingNotifier(
     documentId: documentId,
     db: db,
     pdfProcessor: pdfProcessor,
-    embeddingService: embeddingService,
     documentRepository: documentRepository,
   );
 });
 
 /// State notifier for document processing.
+///
+/// Processing pipeline:
+/// 1. Load PDF file
+/// 2. Extract text page by page (Syncfusion)
+/// 3. Chunk text with overlap for RAG retrieval
+/// 4. Store pages and chunks in SQLite
+///
+/// BM25 retrieval indexes are built on-the-fly at query time
+/// from the stored text, so no embedding step is needed.
 class ProcessingNotifier extends StateNotifier<ProcessingState> {
   ProcessingNotifier({
     required this.documentId,
     required Database? db,
     required PdfProcessor pdfProcessor,
-    required EmbeddingService embeddingService,
     required DocumentRepository documentRepository,
   })  : _db = db,
         _pdfProcessor = pdfProcessor,
-        _embeddingService = embeddingService,
         _documentRepository = documentRepository,
         super(ProcessingState.initial(documentId));
 
   final int documentId;
   final Database? _db;
   final PdfProcessor _pdfProcessor;
-  final EmbeddingService _embeddingService;
   final DocumentRepository _documentRepository;
 
   bool _isCancelled = false;
@@ -67,7 +70,8 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
     _isCancelled = false;
 
     try {
-      debugPrint('ProcessingNotifier: Starting processing for document $documentId');
+      debugPrint(
+          'ProcessingNotifier: Starting processing for document $documentId');
 
       // Get the document
       final document = await _documentRepository.getDocument(documentId);
@@ -77,7 +81,8 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       }
 
       // Update status to processing
-      await _documentRepository.updateStatus(documentId, DocumentStatus.processing);
+      await _documentRepository.updateStatus(
+          documentId, DocumentStatus.processing);
 
       // Step 1: Load PDF
       state = state.copyWith(
@@ -100,7 +105,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         onProgress: (current, total, status) {
           if (!_isCancelled) {
             final stepProgress = current / total;
-            final overallProgress = 0.1 + (stepProgress * 0.3); // 10-40%
+            final overallProgress = 0.1 + (stepProgress * 0.4); // 10-50%
             state = state.copyWith(
               stepProgress: stepProgress,
               overallProgress: overallProgress,
@@ -118,7 +123,8 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         return false;
       }
 
-      debugPrint('ProcessingNotifier: Extracted ${extractionResult.pages.length} pages');
+      debugPrint(
+          'ProcessingNotifier: Extracted ${extractionResult.pages.length} pages');
 
       // Save extracted pages to database
       await _savePages(extractionResult.pages);
@@ -126,7 +132,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       // Step 3: Chunk text
       state = state.copyWith(
         currentPhase: ProcessingPhase.chunking,
-        overallProgress: 0.4,
+        overallProgress: 0.5,
         stepProgress: 0.0,
         pageCount: extractionResult.pageCount,
       );
@@ -138,7 +144,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         onProgress: (current, total, status) {
           if (!_isCancelled) {
             final stepProgress = current / total;
-            final overallProgress = 0.4 + (stepProgress * 0.2); // 40-60%
+            final overallProgress = 0.5 + (stepProgress * 0.3); // 50-80%
             state = state.copyWith(
               stepProgress: stepProgress,
               overallProgress: overallProgress,
@@ -154,7 +160,8 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         return false;
       }
 
-      debugPrint('ProcessingNotifier: Created ${chunkingResult.chunks.length} chunks');
+      debugPrint(
+          'ProcessingNotifier: Created ${chunkingResult.chunks.length} chunks');
 
       // Save chunks to database
       await _saveChunks(chunkingResult.chunks);
@@ -163,42 +170,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
         chunksCreated: chunkingResult.chunks.length,
       );
 
-      // Step 4: Generate embeddings
-      state = state.copyWith(
-        currentPhase: ProcessingPhase.embedding,
-        overallProgress: 0.6,
-        stepProgress: 0.0,
-      );
-
-      if (_isCancelled) return false;
-
-      final embeddingResult = await _embeddingService.generateEmbeddings(
-        chunkingResult.chunks,
-        onProgress: (current, total) {
-          if (!_isCancelled) {
-            final stepProgress = current / total;
-            final overallProgress = 0.6 + (stepProgress * 0.3); // 60-90%
-            state = state.copyWith(
-              stepProgress: stepProgress,
-              overallProgress: overallProgress,
-            );
-          }
-        },
-      );
-
-      if (_isCancelled) return false;
-
-      if (!embeddingResult.isSuccess) {
-        await _setError(embeddingResult.error ?? 'Embedding generation failed');
-        return false;
-      }
-
-      debugPrint('ProcessingNotifier: Generated ${embeddingResult.embeddings.length} embeddings');
-
-      // Save embeddings to database
-      await _saveEmbeddings(chunkingResult.chunks, embeddingResult.embeddings);
-
-      // Step 5: Finalize
+      // Step 4: Finalize (no embedding step needed - BM25 works from text)
       state = state.copyWith(
         currentPhase: ProcessingPhase.finalizing,
         overallProgress: 0.95,
@@ -208,7 +180,8 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       if (_isCancelled) return false;
 
       // Mark document as ready
-      await _documentRepository.markReady(documentId, extractionResult.pageCount);
+      await _documentRepository.markReady(
+          documentId, extractionResult.pageCount);
 
       // Complete
       state = ProcessingState.completed(
@@ -267,29 +240,6 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
 
     await chunksTable.insertBatch(chunkRecords);
     debugPrint('ProcessingNotifier: Saved ${chunkRecords.length} chunks');
-  }
-
-  /// Save embeddings to the database.
-  Future<void> _saveEmbeddings(
-    List<TextChunk> chunks,
-    Map<int, dynamic> embeddings,
-  ) async {
-    if (_db == null) return;
-
-    final chunksTable = DocumentChunksTable(_db);
-
-    // Get chunk IDs from database (they were just inserted)
-    final savedChunks = await chunksTable.getByDocumentId(documentId);
-
-    for (int i = 0; i < savedChunks.length && i < embeddings.length; i++) {
-      final chunk = savedChunks[i];
-      final embedding = embeddings[i];
-      if (chunk.id != null && embedding != null) {
-        await chunksTable.updateEmbedding(chunk.id!, embedding);
-      }
-    }
-
-    debugPrint('ProcessingNotifier: Saved embeddings');
   }
 
   /// Set error state.

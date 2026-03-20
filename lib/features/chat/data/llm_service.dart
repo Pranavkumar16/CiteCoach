@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/chat_message.dart';
@@ -48,33 +49,61 @@ class GenerationResult {
 /// Callback for streaming response tokens.
 typedef StreamCallback = void Function(String token);
 
-/// Service for LLM inference.
-/// 
-/// In V1, this is a stub that generates mock responses.
-/// Real implementation with Gemma 2B will be added in Commit 9.
+/// Service for on-device LLM inference using llama.cpp via platform channels.
+///
+/// Communicates with native Android (Kotlin) and iOS (Swift) code that
+/// runs llama.cpp for local model inference. All processing happens
+/// on-device with zero network calls.
+///
+/// Architecture:
+/// - Dart ↔ MethodChannel → Native llama.cpp
+/// - Token streaming via EventChannel
+/// - Model lifecycle managed natively for memory efficiency
 class LlmService {
   LlmService();
 
-  /// Whether the model is loaded and ready.
+  static const _methodChannel = MethodChannel('com.citecoach/llm');
+  static const _streamChannel = EventChannel('com.citecoach/llm_stream');
+
+  /// Whether the model is loaded and ready for inference.
   bool _isModelLoaded = false;
 
   /// Check if model is ready.
   bool get isModelLoaded => _isModelLoaded;
 
-  /// Initialize the LLM model.
-  /// 
-  /// In V1, this is a no-op stub.
-  Future<bool> initialize() async {
-    debugPrint('LlmService: Initializing (stub)');
-    await Future.delayed(const Duration(milliseconds: 300));
-    _isModelLoaded = true;
-    debugPrint('LlmService: Model ready (stub)');
-    return true;
+  /// Stream subscription for token streaming.
+  StreamSubscription<dynamic>? _streamSubscription;
+
+  /// Initialize the LLM model from the given path.
+  ///
+  /// Loads the GGUF model file into memory on the native side.
+  /// This is a heavy operation (~2-5 seconds) and should be called
+  /// once during app startup after model download.
+  Future<bool> initialize({String? modelPath}) async {
+    if (_isModelLoaded) return true;
+
+    try {
+      debugPrint('LlmService: Loading model...');
+      final result = await _methodChannel.invokeMethod<bool>(
+        'loadModel',
+        {'modelPath': modelPath},
+      );
+      _isModelLoaded = result ?? false;
+      debugPrint('LlmService: Model loaded: $_isModelLoaded');
+      return _isModelLoaded;
+    } on PlatformException catch (e) {
+      debugPrint('LlmService: Failed to load model: ${e.message}');
+      return false;
+    } on MissingPluginException {
+      debugPrint('LlmService: Native plugin not available');
+      return false;
+    }
   }
 
-  /// Generate a response to a query given context.
-  /// 
-  /// In V1, this generates a mock response based on the context.
+  /// Generate a response to a query given retrieved context.
+  ///
+  /// Builds a prompt from the context and query, sends it to the
+  /// native LLM, and streams tokens back via EventChannel.
   Future<GenerationResult> generate({
     required String query,
     required RetrievalResult retrievalResult,
@@ -82,24 +111,36 @@ class LlmService {
     StreamCallback? onToken,
   }) async {
     if (!_isModelLoaded) {
-      await initialize();
+      final loaded = await initialize();
+      if (!loaded) {
+        return GenerationResult.error(
+          'AI model not loaded. Please download the model in Settings.',
+        );
+      }
     }
 
     try {
-      debugPrint('LlmService: Generating response for query');
-
       if (!retrievalResult.isSuccess || retrievalResult.context.isEmpty) {
         return GenerationResult.error(
           'No relevant information found in the document.',
         );
       }
 
-      // Generate mock response
-      final response = await _generateMockResponse(
-        query,
-        retrievalResult,
-        onToken,
+      // Build the prompt
+      final prompt = _buildPrompt(
+        query: query,
+        context: retrievalResult.context,
+        history: conversationHistory,
       );
+
+      debugPrint('LlmService: Generating response (prompt: ${prompt.length} chars)');
+
+      // Generate with streaming
+      final response = await _generateWithStreaming(prompt, onToken);
+
+      if (response.isEmpty) {
+        return GenerationResult.error('Model returned empty response.');
+      }
 
       return GenerationResult(
         response: response,
@@ -107,132 +148,171 @@ class LlmService {
       );
     } catch (e) {
       debugPrint('LlmService: Generation error: $e');
-      return GenerationResult.error('Failed to generate response: ${e.toString()}');
+      return GenerationResult.error(
+          'Failed to generate response: ${e.toString()}');
     }
   }
 
-  /// Generate a mock response based on the context.
-  /// 
-  /// This stub creates a plausible response by:
-  /// 1. Acknowledging the query
-  /// 2. Summarizing relevant information from context
-  /// 3. Adding citation references
-  Future<String> _generateMockResponse(
-    String query,
-    RetrievalResult retrievalResult,
+  /// Build a structured prompt for Phi-3.5 Mini (ChatML format).
+  ///
+  /// Phi-3.5 uses the ChatML template:
+  /// <|system|>\n{system}<|end|>\n<|user|>\n{user}<|end|>\n<|assistant|>\n
+  ///
+  /// Instructs the model to:
+  /// - Only answer from the provided context
+  /// - Cite page numbers
+  /// - Say "I don't know" if the answer isn't in the context
+  String _buildPrompt({
+    required String query,
+    required String context,
+    required List<ChatMessage> history,
+  }) {
+    final buffer = StringBuffer();
+
+    // System message
+    buffer.writeln('<|system|>');
+    buffer.writeln(
+        'You are a helpful study assistant. Answer questions ONLY using the '
+        'provided document context below. If the answer is not in the context, '
+        'say "I couldn\'t find information about that in this document."'
+        '\nAlways reference which page the information comes from (e.g., "According to page 3...").'
+        '\nBe concise, accurate, and helpful.');
+    buffer.writeln('<|end|>');
+
+    // Document context as a user message
+    buffer.writeln('<|user|>');
+    buffer.writeln('Here is the document context to answer from:');
+    buffer.writeln();
+    buffer.writeln(context);
+    buffer.writeln('<|end|>');
+
+    // Recent conversation history (last 4 turns for context window efficiency)
+    final recentHistory = history.length > 8
+        ? history.sublist(history.length - 8)
+        : history;
+
+    for (final msg in recentHistory) {
+      if (msg.isUser) {
+        buffer.writeln('<|user|>');
+        buffer.writeln(msg.content);
+        buffer.writeln('<|end|>');
+      } else {
+        buffer.writeln('<|assistant|>');
+        buffer.writeln(msg.content);
+        buffer.writeln('<|end|>');
+      }
+    }
+
+    // Current question
+    buffer.writeln('<|user|>');
+    buffer.writeln(query);
+    buffer.writeln('<|end|>');
+
+    // Start assistant response
+    buffer.writeln('<|assistant|>');
+
+    return buffer.toString();
+  }
+
+  /// Generate response with token streaming via EventChannel.
+  Future<String> _generateWithStreaming(
+    String prompt,
     StreamCallback? onToken,
   ) async {
-    // Build a response that references the context
-    final citations = retrievalResult.citations;
-    final queryLower = query.toLowerCase();
+    final completer = Completer<String>();
+    final responseBuffer = StringBuffer();
 
-    // Determine response type based on query
-    String response;
-    
-    if (queryLower.contains('what') || queryLower.contains('explain')) {
-      response = _buildExplanatoryResponse(query, retrievalResult);
-    } else if (queryLower.contains('how')) {
-      response = _buildHowToResponse(query, retrievalResult);
-    } else if (queryLower.contains('why')) {
-      response = _buildWhyResponse(query, retrievalResult);
-    } else if (queryLower.contains('list') || queryLower.contains('what are')) {
-      response = _buildListResponse(query, retrievalResult);
-    } else {
-      response = _buildGeneralResponse(query, retrievalResult);
+    try {
+      // Start generation on native side
+      await _methodChannel.invokeMethod('startGeneration', {
+        'prompt': prompt,
+        'maxTokens': 512,
+        'temperature': 0.7,
+        'topP': 0.9,
+        'repeatPenalty': 1.1,
+      });
+
+      // Listen for streamed tokens
+      _streamSubscription?.cancel();
+      _streamSubscription = _streamChannel.receiveBroadcastStream().listen(
+        (dynamic event) {
+          if (event is String) {
+            if (event == '[DONE]') {
+              if (!completer.isCompleted) {
+                completer.complete(responseBuffer.toString().trim());
+              }
+            } else if (event.startsWith('[ERROR]')) {
+              if (!completer.isCompleted) {
+                completer.completeError(
+                    event.replaceFirst('[ERROR]', '').trim());
+              }
+            } else {
+              responseBuffer.write(event);
+              onToken?.call(event);
+            }
+          }
+        },
+        onError: (error) {
+          if (!completer.isCompleted) {
+            completer.completeError(error);
+          }
+        },
+        onDone: () {
+          if (!completer.isCompleted) {
+            completer.complete(responseBuffer.toString().trim());
+          }
+        },
+      );
+
+      return await completer.future.timeout(
+        const Duration(seconds: 60),
+        onTimeout: () {
+          _streamSubscription?.cancel();
+          _stopGeneration();
+          return responseBuffer.toString().trim();
+        },
+      );
+    } catch (e) {
+      _streamSubscription?.cancel();
+      if (e is PlatformException || e is MissingPluginException) {
+        rethrow;
+      }
+      return responseBuffer.toString().trim();
     }
+  }
 
-    // Add page citations
-    if (citations.isNotEmpty) {
-      final pageRefs = citations.map((c) => 'p.${c.pageNumber}').toSet().join(', ');
-      response += '\n\n[Source: $pageRefs]';
+  /// Stop current generation.
+  Future<void> _stopGeneration() async {
+    try {
+      await _methodChannel.invokeMethod('stopGeneration');
+    } catch (_) {}
+  }
+
+  /// Unload the model from memory.
+  Future<void> unloadModel() async {
+    try {
+      await _methodChannel.invokeMethod('unloadModel');
+      _isModelLoaded = false;
+      debugPrint('LlmService: Model unloaded');
+    } catch (e) {
+      debugPrint('LlmService: Error unloading model: $e');
     }
-
-    // Simulate streaming if callback provided
-    if (onToken != null) {
-      await _simulateStreaming(response, onToken);
-    }
-
-    return response;
   }
 
-  String _buildExplanatoryResponse(String query, RetrievalResult result) {
-    final snippet = result.citations.isNotEmpty 
-        ? result.citations.first.preview 
-        : 'the document content';
-    
-    return 'Based on the document, ${_extractTopic(query)} refers to the following:\n\n'
-        '$snippet\n\n'
-        'This information provides context for understanding the main concepts discussed in the document.';
-  }
-
-  String _buildHowToResponse(String query, RetrievalResult result) {
-    return 'According to the document, here is how ${_extractTopic(query)}:\n\n'
-        '1. The document outlines the key steps and considerations.\n'
-        '2. It emphasizes the importance of following the proper methodology.\n'
-        '3. Additional details can be found in the referenced pages.\n\n'
-        'The document provides comprehensive guidance on this topic.';
-  }
-
-  String _buildWhyResponse(String query, RetrievalResult result) {
-    final snippet = result.citations.isNotEmpty 
-        ? result.citations.first.preview 
-        : '';
-    
-    return 'The document explains that ${_extractTopic(query)} is important because:\n\n'
-        '${snippet.isNotEmpty ? '"$snippet"\n\n' : ''}'
-        'This reasoning is central to the document\'s argument and supports its main conclusions.';
-  }
-
-  String _buildListResponse(String query, RetrievalResult result) {
-    final items = result.citations.take(3).map((c) => '• ${c.preview}').join('\n');
-    
-    return 'Based on the document, here are the relevant points about ${_extractTopic(query)}:\n\n'
-        '${items.isNotEmpty ? items : '• Key information from the document'}\n\n'
-        'These points summarize the main content related to your query.';
-  }
-
-  String _buildGeneralResponse(String query, RetrievalResult result) {
-    final snippet = result.citations.isNotEmpty 
-        ? result.citations.first.preview 
-        : 'the relevant content';
-    
-    return 'Regarding ${_extractTopic(query)}, the document states:\n\n'
-        '"$snippet"\n\n'
-        'This passage directly addresses your question and provides the key information available in the document.';
-  }
-
-  /// Extract the main topic from a query.
-  String _extractTopic(String query) {
-    // Remove common question words
-    var topic = query
-        .replaceAll(RegExp(r'^(what|how|why|when|where|who|which|can|does|is|are|do)\s+', caseSensitive: false), '')
-        .replaceAll(RegExp(r'\?+$'), '')
-        .trim();
-    
-    if (topic.length > 50) {
-      topic = '${topic.substring(0, 47)}...';
-    }
-    
-    return topic.isEmpty ? 'this topic' : topic;
-  }
-
-  /// Simulate token-by-token streaming.
-  Future<void> _simulateStreaming(String response, StreamCallback onToken) async {
-    final words = response.split(' ');
-    
-    for (int i = 0; i < words.length; i++) {
-      final token = i == 0 ? words[i] : ' ${words[i]}';
-      onToken(token);
-      
-      // Vary delay to simulate realistic streaming
-      final delay = 20 + (i % 3) * 10;
-      await Future.delayed(Duration(milliseconds: delay));
+  /// Get model info (name, size, quantization).
+  Future<Map<String, dynamic>?> getModelInfo() async {
+    try {
+      final result =
+          await _methodChannel.invokeMapMethod<String, dynamic>('getModelInfo');
+      return result;
+    } catch (_) {
+      return null;
     }
   }
 
   /// Dispose of model resources.
   void dispose() {
-    _isModelLoaded = false;
-    debugPrint('LlmService: Disposed');
+    _streamSubscription?.cancel();
+    unloadModel();
   }
 }

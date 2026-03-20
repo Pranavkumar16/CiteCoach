@@ -79,7 +79,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Navigator.pop(context);
             // Navigate to reader at specific page
             context.push(
-              '${AppRoutes.reader}?id=${document.id}&page=${citation.pageNumber}',
+              AppRoutes.documentReader(
+                document.id.toString(),
+                page: citation.pageNumber,
+              ),
             );
           },
         ),
@@ -214,7 +217,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           icon: const Icon(Icons.menu_book_rounded),
           tooltip: 'Open in Reader',
           onPressed: document != null
-              ? () => context.push('${AppRoutes.reader}?id=${document.id}')
+              ? () => context.push(
+                    AppRoutes.documentReader(document.id.toString()),
+                  )
               : null,
         ),
         // Clear chat

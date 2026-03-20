@@ -6,6 +6,8 @@ import '../features/chat/presentation/chat_screen.dart';
 import '../features/library/presentation/library_screen.dart';
 import '../features/processing/presentation/document_ready_screen.dart';
 import '../features/processing/presentation/processing_screen.dart';
+import '../features/reader/presentation/reader_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 import '../features/setup/domain/setup_state.dart';
 import '../features/setup/presentation/download_progress_screen.dart';
 import '../features/setup/presentation/model_setup_screen.dart';
@@ -27,7 +29,6 @@ abstract final class AppRoutes {
   // Main app
   static const String library = '/library';
   static const String settings = '/settings';
-  static const String modelInfo = '/settings/model-info';
 
   // Document specific
   static const String processing = '/document/:id/processing';
@@ -36,7 +37,6 @@ abstract final class AppRoutes {
   static const String chat = '/document/:id/chat';
 
   // Voice overlay (shown as dialog/overlay)
-  static const String voice = '/voice';
   static const String voiceInput = '/voice-input';
 
   // Download required (when user chose "Download Later")
@@ -45,8 +45,11 @@ abstract final class AppRoutes {
   // Helper to build document routes
   static String documentProcessing(String documentId) =>
       '/document/$documentId/processing';
-  static String documentReader(String documentId) =>
-      '/document/$documentId/reader';
+  static String documentReader(String documentId, {int? page}) {
+    final base = '/document/$documentId/reader';
+    return page != null ? '$base?page=$page' : base;
+  }
+
   static String documentChat(String documentId) =>
       '/document/$documentId/chat';
 }
@@ -65,7 +68,7 @@ GoRouter createRouter(Ref ref) {
     redirect: (context, state) {
       final setupState = ref.read(setupProvider);
       final currentPath = state.uri.path;
-      
+
       // List of setup paths
       final setupPaths = [
         AppRoutes.splash,
@@ -74,22 +77,22 @@ GoRouter createRouter(Ref ref) {
         AppRoutes.downloadProgress,
         AppRoutes.setupComplete,
       ];
-      
+
       final isSetupPath = setupPaths.contains(currentPath);
       final isSetupCompleted = setupState.currentStep == SetupStep.done;
-      
+
       // If setup is completed and user tries to access setup screens,
       // redirect to library
       if (isSetupCompleted && isSetupPath) {
         return AppRoutes.library;
       }
-      
+
       // If setup is not completed and user tries to access main app,
       // redirect to current setup step
       if (!isSetupCompleted && !isSetupPath) {
         return setupState.currentStep.routePath;
       }
-      
+
       // No redirect needed
       return null;
     },
@@ -135,18 +138,9 @@ GoRouter createRouter(Ref ref) {
           GoRoute(
             path: AppRoutes.settings,
             name: 'settings',
-            builder: (context, state) =>
-                const _PlaceholderScreen(name: 'Settings'),
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
-      ),
-
-      // Settings sub-routes
-      GoRoute(
-        path: AppRoutes.modelInfo,
-        name: 'modelInfo',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Model Info'),
       ),
 
       // Document routes
@@ -173,9 +167,9 @@ GoRouter createRouter(Ref ref) {
           final documentId = int.parse(state.pathParameters['id']!);
           final pageStr = state.uri.queryParameters['page'];
           final initialPage = pageStr != null ? int.tryParse(pageStr) : null;
-          return _PlaceholderScreen(
-            name: 'Reader',
-            extra: 'Document: $documentId, Page: ${initialPage ?? 1}',
+          return ReaderScreen(
+            documentId: documentId,
+            initialPage: initialPage,
           );
         },
       ),
@@ -194,19 +188,17 @@ GoRouter createRouter(Ref ref) {
         name: 'voiceInput',
         builder: (context, state) {
           final documentIdStr = state.uri.queryParameters['documentId'];
-          final documentId = documentIdStr != null 
-              ? int.tryParse(documentIdStr) ?? 0 
-              : 0;
+          final documentId =
+              documentIdStr != null ? int.tryParse(documentIdStr) ?? 0 : 0;
           return VoiceOverlayScreen(documentId: documentId);
         },
       ),
 
-      // Download Required
+      // Download Required - redirect to setup download
       GoRoute(
         path: AppRoutes.downloadRequired,
         name: 'downloadRequired',
-        builder: (context, state) =>
-            const _PlaceholderScreen(name: 'Download Required'),
+        builder: (context, state) => const DownloadProgressScreen(),
       ),
     ],
     errorBuilder: (context, state) => _ErrorScreen(error: state.error),
@@ -246,48 +238,6 @@ class _MainShell extends StatelessWidget {
             label: 'Settings',
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Temporary placeholder screen for routes not yet implemented.
-/// This will be removed as screens are implemented in subsequent commits.
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({
-    required this.name,
-    this.extra,
-  });
-
-  final String name;
-  final String? extra;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(name)),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              name,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            if (extra != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                extra!,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-            const SizedBox(height: 16),
-            const Text(
-              'Screen implementation coming in next commit',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -341,10 +291,7 @@ extension GoRouterExtension on BuildContext {
 
   /// Navigate to document reader screen with optional page.
   void goToReader(String documentId, {int? page}) {
-    final uri = page != null
-        ? '${AppRoutes.documentReader(documentId)}?page=$page'
-        : AppRoutes.documentReader(documentId);
-    go(uri);
+    go(AppRoutes.documentReader(documentId, page: page));
   }
 
   /// Navigate to document processing screen.

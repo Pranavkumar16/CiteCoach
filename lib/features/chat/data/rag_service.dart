@@ -4,8 +4,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/database_provider.dart';
 import '../../../core/database/tables/document_chunks_table.dart';
-import '../../../core/database/tables/document_pages_table.dart';
-import '../../processing/data/embedding_service.dart';
+import '../../processing/data/bm25_service.dart';
 import '../domain/chat_message.dart';
 
 /// Provider for the RAG service.
@@ -14,8 +13,8 @@ final ragServiceProvider = Provider<RagService>((ref) {
         data: (db) => db,
         orElse: () => null,
       );
-  final embeddingService = ref.watch(embeddingServiceProvider);
-  return RagService(db, embeddingService);
+  final bm25Service = ref.watch(bm25ServiceProvider);
+  return RagService(db, bm25Service);
 });
 
 /// Result of RAG retrieval.
@@ -56,34 +55,26 @@ class RetrievalResult {
   }
 }
 
-/// A scored chunk from retrieval.
-class ScoredChunk {
-  const ScoredChunk({
-    required this.chunk,
-    required this.score,
-  });
-
-  final ChunkRecord chunk;
-  final double score;
-}
-
 /// Service for Retrieval-Augmented Generation (RAG).
-/// 
-/// Implements a hierarchical retrieval strategy:
-/// 1. First, find relevant pages using page-level embeddings
-/// 2. Then, retrieve chunks from those pages
-/// 3. Rank chunks by similarity and return top-k
+///
+/// Uses BM25 ranking for fast, model-free retrieval:
+/// 1. Load all chunks for the document
+/// 2. Build BM25 index from chunk text
+/// 3. Score chunks against the query
+/// 4. Return top-k chunks as context with citations
 class RagService {
-  RagService(this._db, this._embeddingService);
+  RagService(this._db, this._bm25Service);
 
   final Database? _db;
-  final EmbeddingService _embeddingService;
+  final BM25Service _bm25Service;
 
   /// Configuration
-  static const int topKPages = 3; // Number of pages to consider
-  static const int topKChunks = 5; // Number of chunks to return
+  static const int topKChunks = 5;
   static const int maxContextTokens = 3000; // ~12000 chars
-  static const double minSimilarityThreshold = 0.3;
+  static const double minScoreThreshold = 0.1;
+
+  /// Cache for BM25 indexes per document.
+  final Map<int, BM25Index> _indexCache = {};
 
   /// Retrieve relevant context for a query.
   Future<RetrievalResult> retrieve(int documentId, String query) async {
@@ -92,184 +83,116 @@ class RagService {
     }
 
     try {
-      debugPrint('RagService: Retrieving context for query: "${query.substring(0, query.length.clamp(0, 50))}..."');
+      debugPrint(
+          'RagService: Retrieving context for: "${query.substring(0, query.length.clamp(0, 50))}..."');
 
-      // Generate query embedding
-      final queryEmbedding = await _embeddingService.generateQueryEmbedding(query);
-      if (queryEmbedding == null) {
-        return RetrievalResult.error('Failed to generate query embedding');
+      // Get or build BM25 index for this document
+      final index = await _getOrBuildIndex(documentId);
+      if (index == null || index.chunkCount == 0) {
+        return RetrievalResult.error(
+            'No indexed content found for this document');
       }
 
-      // Step 1: Find relevant pages
-      final relevantPages = await _findRelevantPages(documentId, queryEmbedding);
-      if (relevantPages.isEmpty) {
-        debugPrint('RagService: No relevant pages found');
-        return RetrievalResult.empty();
-      }
+      // Search using BM25
+      final results = _bm25Service.search(index, query, topK: topKChunks);
 
-      debugPrint('RagService: Found ${relevantPages.length} relevant pages');
-
-      // Step 2: Retrieve and rank chunks from relevant pages
-      final rankedChunks = await _retrieveAndRankChunks(
-        documentId,
-        relevantPages,
-        queryEmbedding,
-      );
-
-      if (rankedChunks.isEmpty) {
+      if (results.isEmpty) {
         debugPrint('RagService: No relevant chunks found');
         return RetrievalResult.empty();
       }
 
-      debugPrint('RagService: Retrieved ${rankedChunks.length} chunks');
+      // Filter by minimum score
+      final filtered =
+          results.where((r) => r.score >= minScoreThreshold).toList();
 
-      // Step 3: Build context and citations
-      return _buildResult(rankedChunks);
+      if (filtered.isEmpty) {
+        debugPrint('RagService: All results below score threshold');
+        return RetrievalResult.empty();
+      }
+
+      debugPrint('RagService: Found ${filtered.length} relevant chunks');
+
+      // Build context and citations within token limit
+      return _buildResult(filtered);
     } catch (e) {
       debugPrint('RagService: Retrieval error: $e');
       return RetrievalResult.error('Retrieval failed: ${e.toString()}');
     }
   }
 
-  /// Find relevant pages using page-level embeddings.
-  Future<List<int>> _findRelevantPages(
-    int documentId,
-    Float32List queryEmbedding,
-  ) async {
-    final pagesTable = DocumentPagesTable(_db!);
-    final pageEmbeddingsList = await pagesTable.getPageEmbeddings(documentId);
-
-    if (pageEmbeddingsList.isEmpty) {
-      // Fall back to returning all pages if no embeddings
-      final pages = await pagesTable.getByDocumentId(documentId);
-      return pages.map((p) => p.pageNumber).take(topKPages).toList();
+  /// Get cached index or build a new one.
+  Future<BM25Index?> _getOrBuildIndex(int documentId) async {
+    if (_indexCache.containsKey(documentId)) {
+      return _indexCache[documentId];
     }
 
-    // Score each page - pageEmbeddingsList is List<(int, Float32List)>
-    final scoredPages = <MapEntry<int, double>>[];
-    for (final (pageNumber, embedding) in pageEmbeddingsList) {
-      final score = EmbeddingService.cosineSimilarity(queryEmbedding, embedding);
-      if (score >= minSimilarityThreshold) {
-        scoredPages.add(MapEntry(pageNumber, score));
-      }
-    }
-
-    // Sort by score descending
-    scoredPages.sort((a, b) => b.value.compareTo(a.value));
-
-    // Return top-k page numbers
-    return scoredPages.take(topKPages).map((e) => e.key).toList();
-  }
-
-  /// Retrieve and rank chunks from relevant pages.
-  Future<List<ScoredChunk>> _retrieveAndRankChunks(
-    int documentId,
-    List<int> pageNumbers,
-    Float32List queryEmbedding,
-  ) async {
     final chunksTable = DocumentChunksTable(_db!);
-    
-    // Get chunks from relevant pages
-    final chunks = await chunksTable.getByPages(documentId, pageNumbers);
-    
-    if (chunks.isEmpty) {
-      return [];
-    }
+    final chunks = await chunksTable.getByDocumentId(documentId);
 
-    // Get embeddings for these chunks - returns List<(int, int, Float32List)>
-    final chunkEmbeddingsList = await chunksTable.getChunkEmbeddingsByPages(
-      documentId,
-      pageNumbers,
-    );
+    if (chunks.isEmpty) return null;
 
-    // Convert to map for lookup: chunkId -> embedding
-    final chunkEmbeddings = <int, Float32List>{};
-    for (final (id, _, embedding) in chunkEmbeddingsList) {
-      chunkEmbeddings[id] = embedding;
-    }
+    final indexableChunks = chunks
+        .map((c) => IndexableChunk(
+              id: c.id ?? 0,
+              text: c.chunkText,
+              pageNumber: c.pageNumber,
+              chunkIndex: c.chunkIndex,
+              startOffset: c.startOffset,
+              endOffset: c.endOffset,
+            ))
+        .toList();
 
-    // Score each chunk
-    final scoredChunks = <ScoredChunk>[];
-    for (final chunk in chunks) {
-      final embedding = chunkEmbeddings[chunk.id];
-      double score = 0.0;
-      
-      if (embedding != null) {
-        score = EmbeddingService.cosineSimilarity(queryEmbedding, embedding);
-      } else {
-        // Fall back to keyword matching if no embedding
-        score = _keywordScore(chunk.chunkText, queryEmbedding.toString());
-      }
-
-      if (score >= minSimilarityThreshold) {
-        scoredChunks.add(ScoredChunk(chunk: chunk, score: score));
-      }
-    }
-
-    // Sort by score descending
-    scoredChunks.sort((a, b) => b.score.compareTo(a.score));
-
-    // Return top-k chunks, respecting token limit
-    return _selectChunksWithinLimit(scoredChunks);
+    final index = _bm25Service.buildIndex(indexableChunks);
+    _indexCache[documentId] = index;
+    return index;
   }
 
-  /// Simple keyword-based scoring fallback.
-  double _keywordScore(String text, String query) {
-    final textLower = text.toLowerCase();
-    final queryWords = query.toLowerCase().split(RegExp(r'\s+'));
-    
-    int matches = 0;
-    for (final word in queryWords) {
-      if (word.length > 2 && textLower.contains(word)) {
-        matches++;
-      }
-    }
-    
-    return queryWords.isNotEmpty ? matches / queryWords.length : 0.0;
+  /// Invalidate cached index for a document (call after reprocessing).
+  void invalidateIndex(int documentId) {
+    _indexCache.remove(documentId);
   }
 
-  /// Select chunks within the token limit.
-  List<ScoredChunk> _selectChunksWithinLimit(List<ScoredChunk> chunks) {
-    final selected = <ScoredChunk>[];
-    int totalTokens = 0;
-
-    for (final chunk in chunks) {
-      if (selected.length >= topKChunks) break;
-      
-      final chunkTokens = chunk.chunk.tokenCount;
-      if (totalTokens + chunkTokens <= maxContextTokens) {
-        selected.add(chunk);
-        totalTokens += chunkTokens;
-      }
-    }
-
-    return selected;
-  }
-
-  /// Build the final result with context and citations.
-  RetrievalResult _buildResult(List<ScoredChunk> rankedChunks) {
+  /// Build the final result with context and citations, respecting token limit.
+  RetrievalResult _buildResult(List<BM25Result> results) {
     final contextParts = <String>[];
     final citations = <Citation>[];
+    int totalChars = 0;
+    const maxChars = maxContextTokens * 4; // ~4 chars per token
 
-    for (int i = 0; i < rankedChunks.length; i++) {
-      final scored = rankedChunks[i];
-      final chunk = scored.chunk;
+    for (final result in results) {
+      final chunk = result.chunk;
+      final chunkText = chunk.text;
 
-      // Add to context with page reference
-      contextParts.add('[Page ${chunk.pageNumber}] ${chunk.chunkText}');
+      if (totalChars + chunkText.length > maxChars) {
+        // Truncate if needed to fit within limit
+        final remaining = maxChars - totalChars;
+        if (remaining > 100) {
+          final truncated = chunkText.substring(0, remaining);
+          contextParts.add('[Page ${chunk.pageNumber}] $truncated...');
+          citations.add(Citation(
+            pageNumber: chunk.pageNumber,
+            chunkIndex: chunk.chunkIndex,
+            text: _createSnippet(chunkText),
+            relevanceScore: result.score,
+          ));
+        }
+        break;
+      }
 
-      // Create citation
+      contextParts.add('[Page ${chunk.pageNumber}] $chunkText');
       citations.add(Citation(
         pageNumber: chunk.pageNumber,
         chunkIndex: chunk.chunkIndex,
-        text: _createSnippet(chunk.chunkText),
-        relevanceScore: scored.score,
+        text: _createSnippet(chunkText),
+        relevanceScore: result.score,
       ));
+      totalChars += chunkText.length;
     }
 
     final context = contextParts.join('\n\n');
 
-    debugPrint('RagService: Built context with ${contextParts.length} chunks, ${context.length} chars');
+    debugPrint(
+        'RagService: Built context with ${contextParts.length} chunks, ${context.length} chars');
 
     return RetrievalResult(
       context: context,
@@ -280,19 +203,19 @@ class RagService {
   /// Create a short snippet from chunk text.
   String _createSnippet(String text, {int maxLength = 150}) {
     if (text.length <= maxLength) return text;
-    
+
     // Try to cut at a sentence boundary
     final cutoff = text.lastIndexOf('. ', maxLength - 3);
     if (cutoff > maxLength / 2) {
       return text.substring(0, cutoff + 1);
     }
-    
+
     // Fall back to word boundary
     final spaceIndex = text.lastIndexOf(' ', maxLength - 3);
     if (spaceIndex > maxLength / 2) {
       return '${text.substring(0, spaceIndex)}...';
     }
-    
+
     return '${text.substring(0, maxLength - 3)}...';
   }
 }

@@ -22,18 +22,18 @@ abstract final class AppStrings {
   static const String modelSetupTitle = 'One-Time Setup';
   static const String modelSetupSubtitle = 
       'Download the AI model to enable intelligent Q&A';
-  static const String modelSetupDescription = 
-      'Download the offline intelligence engine (1.5GB) to enable Q&A. This happens once.';
-  static const String modelName = 'Gemma 2B';
-  static const String modelDescription = 'Lightweight AI optimized for documents';
-  static const String modelSize = '1.5 GB';
+  static const String modelSetupDescription =
+      'Download the offline AI engine (2.4GB) to enable Q&A. This is a one-time setup.';
+  static const String modelName = 'Phi-3.5 Mini';
+  static const String modelDescription = 'Advanced AI optimized for document understanding';
+  static const String modelSize = '2.4 GB';
   static const String modelNetwork = 'Wi-Fi only';
-  static const String modelTime = '~3-5 minutes';
+  static const String modelTime = '~5-8 minutes';
   static const String downloadSizeLabel = 'Download Size';
   static const String storageNeededLabel = 'Storage Needed';
   static const String requirementsTitle = 'Requirements';
   static const String requirement1 = 'Wi-Fi connection recommended';
-  static const String requirement2 = 'At least 2GB free storage';
+  static const String requirement2 = 'At least 3GB free storage';
   static const String requirement3 = 'Keep app open during download';
   
   // Setup Flow - Download Screen

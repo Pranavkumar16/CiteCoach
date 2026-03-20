@@ -239,6 +239,12 @@ class DocumentRepository {
     return rows > 0;
   }
 
+  /// Update last read page for a document.
+  Future<bool> updateLastReadPage(int id, int page) async {
+    final rows = await _table.updateLastOpened(id, lastReadPage: page);
+    return rows > 0;
+  }
+
   /// Update document title.
   Future<bool> updateTitle(int id, String title) async {
     final rows = await _db.update(

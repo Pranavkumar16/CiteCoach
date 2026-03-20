@@ -258,6 +258,15 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
     state = state.copyWith(clearImportError: true);
   }
 
+  /// Update last read page for a document.
+  Future<void> updateLastReadPage(int documentId, int page) async {
+    try {
+      await _repository.updateLastReadPage(documentId, page);
+    } catch (e) {
+      debugPrint('LibraryNotifier: Error updating last read page: $e');
+    }
+  }
+
   /// Clear general error.
   void clearError() {
     state = state.copyWith(clearError: true);

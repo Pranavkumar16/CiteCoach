@@ -1,4 +1,4 @@
-export 'data/embedding_service.dart';
+export 'data/bm25_service.dart';
 export 'data/pdf_processor.dart';
 export 'domain/processing_state.dart';
 export 'presentation/document_ready_screen.dart';
