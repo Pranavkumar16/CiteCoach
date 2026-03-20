@@ -10,14 +10,15 @@ import UIKit
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         GeneratedPluginRegistrant.register(with: self)
+        let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
-        // Register LLM plugin
+        // Register LLM plugin after Flutter engine is ready
         if let controller = window?.rootViewController as? FlutterViewController {
             llmPlugin = LlmPlugin()
             llmPlugin?.register(with: controller.binaryMessenger)
         }
 
-        return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+        return result
     }
 
     override func applicationWillTerminate(_ application: UIApplication) {

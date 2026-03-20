@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 final documentTextExtractorProvider = Provider<DocumentTextExtractor>((ref) {
@@ -235,34 +234,10 @@ class DocumentTextExtractor {
 
   /// OCR a single PDF page by rendering to image then running ML Kit.
   Future<String> _ocrPdfPage(PdfDocument document, int pageIndex) async {
-    try {
-      // Render page to image bytes using Syncfusion
-      final page = document.pages[pageIndex];
-
-      // Export the page as image
-      final imageBytes = await page.exportAsImage(
-        dpi: 200, // Good balance of quality vs speed
-      );
-
-      if (imageBytes == null || imageBytes.isEmpty) return '';
-
-      // Save to temp file for ML Kit
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File(
-          '${tempDir.path}/ocr_page_${pageIndex}_${DateTime.now().millisecondsSinceEpoch}.png');
-      await tempFile.writeAsBytes(imageBytes);
-
-      // Run on-device OCR
-      final result = await _runOcr(tempFile.path);
-
-      // Clean up temp file
-      try { await tempFile.delete(); } catch (_) {}
-
-      return result;
-    } catch (e) {
-      debugPrint('DocumentTextExtractor: OCR page $pageIndex failed: $e');
-      return '';
-    }
+    // PDF page-to-image rendering is not supported by syncfusion_flutter_pdf.
+    // Scanned PDF pages without embedded text will return empty.
+    debugPrint('DocumentTextExtractor: PDF OCR not available for page $pageIndex (no image renderer)');
+    return '';
   }
 
   // ========== Word Document Extraction ==========

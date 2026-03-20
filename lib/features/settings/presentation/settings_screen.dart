@@ -34,18 +34,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final downloader = ref.read(modelDownloaderProvider);
     final size = await downloader.getDownloadedSize();
     setState(() {
-      _lowPowerMode = storage.getBool(StorageKeys.lowPowerMode) ?? false;
-      _speechSpeed = storage.getDouble(StorageKeys.speechSpeed) ?? 1.0;
-      _hapticFeedback = storage.getBool(StorageKeys.hapticFeedback) ?? true;
-      _cacheEnabled = storage.getBool(StorageKeys.cacheEnabled) ?? true;
+      _lowPowerMode = storage.isLowPowerMode;
+      _speechSpeed = storage.speechSpeed;
+      _hapticFeedback = storage.isHapticFeedback;
+      _cacheEnabled = storage.isCacheEnabled;
       _modelSizeBytes = size;
     });
   }
 
   Future<void> _saveSetting(String key, dynamic value) async {
     final storage = ref.read(storageServiceProvider);
-    if (value is bool) await storage.setBool(key, value);
-    if (value is double) await storage.setDouble(key, value);
+    if (key == StorageKeys.lowPowerMode && value is bool) {
+      await storage.setLowPowerMode(value);
+    } else if (key == StorageKeys.speechSpeed && value is double) {
+      await storage.setSpeechSpeed(value);
+    } else if (key == StorageKeys.hapticFeedback && value is bool) {
+      await storage.setHapticFeedback(value);
+    } else if (key == StorageKeys.cacheEnabled && value is bool) {
+      await storage.setCacheEnabled(value);
+    }
   }
 
   @override

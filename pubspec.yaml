@@ -39,8 +39,8 @@ dependencies:
   # EPUB (ebooks)
   epubx: ^4.0.0
 
-  # Image handling for OCR
-  image: ^4.2.0
+  # Image handling for OCR (constrained by epubx ^4.0.0 dependency)
+  image: ^3.3.0
 
   # File Handling
   file_picker: ^8.0.3

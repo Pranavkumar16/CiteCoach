@@ -78,12 +78,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onNavigate: () {
             Navigator.pop(context);
             // Navigate to reader at specific page
-            context.push(
-              AppRoutes.documentReader(
-                document.id.toString(),
-                page: citation.pageNumber,
-              ),
-            );
+            context.push('${AppRoutes.documentReader(document.id.toString())}?page=${citation.pageNumber}');
           },
         ),
       ),

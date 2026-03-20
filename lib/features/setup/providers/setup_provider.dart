@@ -131,12 +131,6 @@ class SetupNotifier extends StateNotifier<SetupState> {
         );
         break;
 
-      case DownloadStatus.verifying:
-        state = state.copyWith(
-          downloadProgress: 1.0,
-          isDownloading: true,
-        );
-        break;
 
       case DownloadStatus.idle:
         state = state.copyWith(

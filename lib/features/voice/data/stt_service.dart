@@ -107,9 +107,11 @@ class SttService {
         localeId: localeId ?? _currentLocaleId,
         listenFor: listenFor ?? const Duration(seconds: 30),
         pauseFor: pauseFor ?? const Duration(seconds: 3),
-        partialResults: true,
-        cancelOnError: true,
-        listenMode: ListenMode.confirmation,
+        listenOptions: SpeechListenOptions(
+          partialResults: true,
+          cancelOnError: true,
+          listenMode: ListenMode.confirmation,
+        ),
       );
 
       return true;
