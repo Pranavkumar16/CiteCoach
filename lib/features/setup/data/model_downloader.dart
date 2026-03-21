@@ -7,16 +7,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Check network connectivity before attempting download.
+/// Uses multiple DNS lookups to avoid platform-specific blocking.
 Future<bool> _checkNetworkConnectivity() async {
-  try {
-    final result = await InternetAddress.lookup('google.com')
-        .timeout(const Duration(seconds: 5));
-    return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-  } on SocketException catch (_) {
-    return false;
-  } on TimeoutException catch (_) {
-    return false;
+  // Try multiple hosts in case one is blocked on certain platforms
+  final hosts = ['dns.google', 'one.one.one.one', 'example.com'];
+  for (final host in hosts) {
+    try {
+      final result = await InternetAddress.lookup(host)
+          .timeout(const Duration(seconds: 5));
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        return true;
+      }
+    } on SocketException catch (_) {
+      continue;
+    } on TimeoutException catch (_) {
+      continue;
+    } catch (_) {
+      continue;
+    }
   }
+  return false;
 }
 
 final modelDownloaderProvider = Provider<ModelDownloader>((ref) {

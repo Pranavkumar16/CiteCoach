@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <application
         android:networkSecurityConfig="@xml/network_security_config"
-        android:label="citecoach"
+        android:label="CiteCoach"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
