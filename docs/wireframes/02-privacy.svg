@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#18181b"/>
+      <stop offset="100%" style="stop-color:#09090b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="375" height="812" fill="url(#bg)" rx="40"/>
+  <!-- Status bar -->
+  <text x="30" y="52" fill="#a1a1aa" font-family="system-ui" font-size="14" font-weight="600">9:41</text>
+  <!-- Back button -->
+  <text x="30" y="100" fill="#6366f1" font-family="system-ui" font-size="16">← Back</text>
+  <!-- Shield icon -->
+  <rect x="152" y="130" width="70" height="70" rx="20" fill="#6366f1" opacity="0.15"/>
+  <text x="187" y="175" fill="#6366f1" font-family="system-ui" font-size="30" text-anchor="middle">🛡</text>
+  <!-- Title -->
+  <text x="187" y="240" fill="white" font-family="system-ui" font-size="28" font-weight="bold" text-anchor="middle">Privacy First</text>
+  <text x="187" y="268" fill="#a1a1aa" font-family="system-ui" font-size="14" text-anchor="middle">Everything runs locally on your device</text>
+  <!-- Card 1: No Internet -->
+  <rect x="30" y="310" width="315" height="90" rx="16" fill="#27272a"/>
+  <rect x="46" y="328" width="44" height="44" rx="12" fill="#6366f1" opacity="0.15"/>
+  <text x="68" y="358" fill="#6366f1" font-family="system-ui" font-size="20" text-anchor="middle">📶</text>
+  <text x="110" y="348" fill="white" font-family="system-ui" font-size="16" font-weight="600">No Internet Required</text>
+  <text x="110" y="372" fill="#a1a1aa" font-family="system-ui" font-size="12">Works completely offline after setup</text>
+  <!-- Card 2: Local Processing -->
+  <rect x="30" y="416" width="315" height="90" rx="16" fill="#27272a"/>
+  <rect x="46" y="434" width="44" height="44" rx="12" fill="#6366f1" opacity="0.15"/>
+  <text x="68" y="464" fill="#6366f1" font-family="system-ui" font-size="20" text-anchor="middle">📱</text>
+  <text x="110" y="454" fill="white" font-family="system-ui" font-size="16" font-weight="600">100% Local Processing</text>
+  <text x="110" y="478" fill="#a1a1aa" font-family="system-ui" font-size="12">AI runs entirely on your device</text>
+  <!-- Card 3: No Cloud -->
+  <rect x="30" y="522" width="315" height="90" rx="16" fill="#27272a"/>
+  <rect x="46" y="540" width="44" height="44" rx="12" fill="#6366f1" opacity="0.15"/>
+  <text x="68" y="570" fill="#6366f1" font-family="system-ui" font-size="20" text-anchor="middle">☁️</text>
+  <text x="110" y="560" fill="white" font-family="system-ui" font-size="16" font-weight="600">No Cloud Storage</text>
+  <text x="110" y="584" fill="#a1a1aa" font-family="system-ui" font-size="12">Your documents never leave your device</text>
+  <!-- Continue Button -->
+  <rect x="30" y="700" width="315" height="56" rx="16" fill="url(#accent)"/>
+  <text x="187" y="734" fill="white" font-family="system-ui" font-size="17" font-weight="600" text-anchor="middle">Continue</text>
+</svg>

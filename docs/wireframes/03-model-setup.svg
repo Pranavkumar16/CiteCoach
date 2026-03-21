@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#18181b"/>
+      <stop offset="100%" style="stop-color:#09090b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="375" height="812" fill="url(#bg)" rx="40"/>
+  <text x="30" y="52" fill="#a1a1aa" font-family="system-ui" font-size="14" font-weight="600">9:41</text>
+  <text x="30" y="100" fill="#6366f1" font-family="system-ui" font-size="16">← Back</text>
+  <!-- Brain icon -->
+  <rect x="152" y="120" width="70" height="70" rx="20" fill="#6366f1" opacity="0.15"/>
+  <text x="187" y="165" fill="#6366f1" font-family="system-ui" font-size="30" text-anchor="middle">🧠</text>
+  <!-- Title -->
+  <text x="187" y="225" fill="white" font-family="system-ui" font-size="26" font-weight="bold" text-anchor="middle">Download AI Model</text>
+  <text x="187" y="250" fill="#a1a1aa" font-family="system-ui" font-size="13" text-anchor="middle">Powers your document intelligence</text>
+  <!-- Model Info Card -->
+  <rect x="30" y="280" width="315" height="130" rx="16" fill="#27272a"/>
+  <rect x="46" y="298" width="40" height="40" rx="10" fill="#6366f1" opacity="0.2"/>
+  <text x="66" y="325" fill="#6366f1" font-family="system-ui" font-size="18" text-anchor="middle">✨</text>
+  <text x="100" y="314" fill="white" font-family="system-ui" font-size="17" font-weight="600">Gemma 2B</text>
+  <text x="100" y="335" fill="#a1a1aa" font-family="system-ui" font-size="12">Optimized for mobile Q&amp;A</text>
+  <line x1="46" y1="358" x2="329" y2="358" stroke="#3f3f46" stroke-width="1"/>
+  <text x="46" y="380" fill="#a1a1aa" font-family="system-ui" font-size="12">Download size</text>
+  <text x="329" y="380" fill="white" font-family="system-ui" font-size="12" font-weight="600" text-anchor="end">~1.5 GB</text>
+  <text x="46" y="400" fill="#a1a1aa" font-family="system-ui" font-size="12">Storage needed</text>
+  <text x="329" y="400" fill="white" font-family="system-ui" font-size="12" font-weight="600" text-anchor="end">~1.7 GB</text>
+  <!-- Requirements -->
+  <text x="30" y="450" fill="#a1a1aa" font-family="system-ui" font-size="13" font-weight="600">REQUIREMENTS</text>
+  <rect x="30" y="466" width="315" height="48" rx="12" fill="#27272a"/>
+  <text x="50" y="496" fill="#a1a1aa" font-family="system-ui" font-size="13">📶  WiFi connection recommended</text>
+  <rect x="30" y="522" width="315" height="48" rx="12" fill="#27272a"/>
+  <text x="50" y="552" fill="#a1a1aa" font-family="system-ui" font-size="13">💾  1.7 GB free storage space</text>
+  <rect x="30" y="578" width="315" height="48" rx="12" fill="#27272a"/>
+  <text x="50" y="608" fill="#a1a1aa" font-family="system-ui" font-size="13">🔋  Adequate battery power</text>
+  <!-- Buttons -->
+  <rect x="30" y="680" width="315" height="56" rx="16" fill="url(#accent)"/>
+  <text x="187" y="714" fill="white" font-family="system-ui" font-size="17" font-weight="600" text-anchor="middle">Download Now</text>
+  <text x="187" y="762" fill="#6366f1" font-family="system-ui" font-size="15" text-anchor="middle">Skip for Now</text>
+</svg>
