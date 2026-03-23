@@ -3,7 +3,6 @@ import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
 
 /// Bottom navigation bar with 2 tabs: Library and Settings.
-/// Follows the CiteCoach V1 spec which explicitly has only 2 tabs.
 class AppBottomNavBar extends StatelessWidget {
   const AppBottomNavBar({
     super.key,
@@ -11,10 +10,7 @@ class AppBottomNavBar extends StatelessWidget {
     required this.onTap,
   });
 
-  /// Currently selected tab index (0 = Library, 1 = Settings).
   final int currentIndex;
-
-  /// Callback when a tab is tapped.
   final ValueChanged<int> onTap;
 
   @override
@@ -22,9 +18,9 @@ class AppBottomNavBar extends StatelessWidget {
     return Container(
       height: AppDimensions.bottomNavHeight + MediaQuery.of(context).padding.bottom,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.zinc900,
         border: Border(
-          top: BorderSide(color: AppColors.border, width: 1),
+          top: BorderSide(color: AppColors.zinc700, width: 0.5),
         ),
       ),
       child: SafeArea(
@@ -65,7 +61,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? AppColors.primaryIndigo : AppColors.textTertiary;
+    final color = isSelected ? AppColors.accent : AppColors.textTertiary;
 
     return Expanded(
       child: Material(
@@ -103,7 +99,6 @@ class _NavItem extends StatelessWidget {
 }
 
 /// Shell scaffold that includes bottom navigation.
-/// Used as the parent for Library and Settings screens.
 class AppShell extends StatelessWidget {
   const AppShell({
     super.key,

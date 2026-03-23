@@ -12,13 +12,8 @@ class CitationBadge extends StatelessWidget {
     this.onTap,
   });
 
-  /// The citation to display.
   final Citation citation;
-
-  /// The citation index (1-based for display).
   final int index;
-
-  /// Callback when badge is tapped.
   final VoidCallback? onTap;
 
   @override
@@ -32,10 +27,10 @@ class CitationBadge extends StatelessWidget {
           vertical: AppDimensions.spacingXxs,
         ),
         decoration: BoxDecoration(
-          color: AppColors.primaryIndigo.withOpacity(0.1),
+          color: AppColors.accent.withOpacity(0.1),
           borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
           border: Border.all(
-            color: AppColors.primaryIndigo.withOpacity(0.3),
+            color: AppColors.accent.withOpacity(0.3),
             width: 1,
           ),
         ),
@@ -45,7 +40,7 @@ class CitationBadge extends StatelessWidget {
             const Icon(
               Icons.description_outlined,
               size: 14,
-              color: AppColors.primaryIndigo,
+              color: AppColors.accent,
             ),
             const SizedBox(width: 4),
             Text(
@@ -53,7 +48,7 @@ class CitationBadge extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: AppColors.primaryIndigo,
+                color: AppColors.accent,
               ),
             ),
           ],
@@ -71,17 +66,13 @@ class CitationRow extends StatelessWidget {
     required this.onCitationTap,
   });
 
-  /// The citations to display.
   final List<Citation> citations;
-
-  /// Callback when a citation is tapped.
   final void Function(Citation citation) onCitationTap;
 
   @override
   Widget build(BuildContext context) {
     if (citations.isEmpty) return const SizedBox.shrink();
 
-    // Get unique pages
     final uniquePages = <int>{};
     final uniqueCitations = <Citation>[];
     for (final citation in citations) {
@@ -101,7 +92,7 @@ class CitationRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
+              color: AppColors.textTertiary,
               letterSpacing: 0.5,
             ),
           ),
@@ -132,10 +123,7 @@ class CitationCard extends StatelessWidget {
     this.onNavigate,
   });
 
-  /// The citation to display.
   final Citation citation;
-
-  /// Callback to navigate to the page.
   final VoidCallback? onNavigate;
 
   @override
@@ -156,7 +144,7 @@ class CitationCard extends StatelessWidget {
                     vertical: AppDimensions.spacingXxs,
                   ),
                   decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
+                    color: AppColors.accent,
                     borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
                   ),
                   child: Text(
@@ -164,7 +152,7 @@ class CitationCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: AppColors.textOnPrimary,
                     ),
                   ),
                 ),
@@ -184,10 +172,10 @@ class CitationCard extends StatelessWidget {
               width: double.infinity,
               padding: EdgeInsets.all(AppDimensions.spacingMd),
               decoration: BoxDecoration(
-                color: AppColors.slate100,
+                color: AppColors.zinc700,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
                 border: Border.all(
-                  color: AppColors.slate200,
+                  color: AppColors.zinc600,
                   width: 1,
                 ),
               ),
@@ -208,7 +196,7 @@ class CitationCard extends StatelessWidget {
                 icon: const Icon(Icons.open_in_new, size: 18),
                 label: const Text('Go to page'),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primaryIndigo,
+                  foregroundColor: AppColors.accent,
                 ),
               ),
             ),

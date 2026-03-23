@@ -58,10 +58,10 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
+                          color: AppColors.accent,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.smart_toy, color: Colors.white),
+                        child: const Icon(Icons.smart_toy, color: AppColors.textOnPrimary),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -181,7 +181,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: AppColors.primaryIndigo),
+          Icon(icon, size: 18, color: AppColors.accent),
           const SizedBox(width: 10),
           Text(text, style: const TextStyle(fontSize: 14)),
         ],

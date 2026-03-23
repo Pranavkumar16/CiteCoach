@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
 
-/// Primary gradient button used throughout the app.
-/// Features the indigo-purple gradient with rounded corners.
+/// Primary accent button used throughout the app.
+/// Solid accent color with subtle glow on dark backgrounds.
 class GradientButton extends StatelessWidget {
   const GradientButton({
     super.key,
@@ -18,37 +18,20 @@ class GradientButton extends StatelessWidget {
     this.icon,
   });
 
-  /// Callback when button is pressed.
   final VoidCallback? onPressed;
-
-  /// The button text.
   final String text;
-
-  /// Whether to show loading indicator instead of text.
   final bool isLoading;
-
-  /// Whether the button is enabled.
   final bool isEnabled;
-
-  /// Optional fixed width. If null, uses max available width.
   final double? width;
-
-  /// Button height.
   final double height;
-
-  /// The gradient to use. Defaults to primary gradient.
   final LinearGradient gradient;
-
-  /// Optional custom text style.
   final TextStyle? textStyle;
-
-  /// Optional leading icon.
   final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     final effectiveOnPressed = isEnabled && !isLoading ? onPressed : null;
-    final opacity = isEnabled ? 1.0 : 0.5;
+    final opacity = isEnabled ? 1.0 : 0.4;
 
     return AnimatedOpacity(
       duration: AppDimensions.animationFast,
@@ -57,14 +40,14 @@ class GradientButton extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(AppDimensions.buttonRadiusPrimary),
+          color: AppColors.accent,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           boxShadow: isEnabled
               ? [
                   BoxShadow(
-                    color: AppColors.primaryIndigo.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
+                    color: AppColors.accent.withOpacity(0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ]
               : null,
@@ -73,9 +56,9 @@ class GradientButton extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: effectiveOnPressed,
-            borderRadius: BorderRadius.circular(AppDimensions.buttonRadiusPrimary),
-            splashColor: Colors.white.withOpacity(0.2),
-            highlightColor: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+            splashColor: Colors.white.withOpacity(0.15),
+            highlightColor: Colors.white.withOpacity(0.05),
             child: Center(
               child: isLoading
                   ? const SizedBox(
@@ -83,21 +66,21 @@ class GradientButton extends StatelessWidget {
                       height: 24,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.textOnPrimary),
                       ),
                     )
                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (icon != null) ...[
-                          Icon(icon, color: Colors.white, size: 20),
+                          Icon(icon, color: AppColors.textOnPrimary, size: 20),
                           const SizedBox(width: AppDimensions.spacingXs),
                         ],
                         Text(
                           text,
                           style: textStyle ??
                               const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textOnPrimary,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.2,
@@ -113,7 +96,7 @@ class GradientButton extends StatelessWidget {
   }
 }
 
-/// Secondary outline button with indigo border.
+/// Secondary outline button with subtle border.
 class SecondaryButton extends StatelessWidget {
   const SecondaryButton({
     super.key,
@@ -139,7 +122,7 @@ class SecondaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveOnPressed = isEnabled && !isLoading ? onPressed : null;
-    final opacity = isEnabled ? 1.0 : 0.5;
+    final opacity = isEnabled ? 1.0 : 0.4;
 
     return AnimatedOpacity(
       duration: AppDimensions.animationFast,
@@ -148,20 +131,20 @@ class SecondaryButton extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppDimensions.buttonRadiusPrimary),
+          color: AppColors.zinc800,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           border: Border.all(
-            color: AppColors.primaryIndigo,
-            width: 2,
+            color: AppColors.zinc600,
+            width: 1.5,
           ),
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: effectiveOnPressed,
-            borderRadius: BorderRadius.circular(AppDimensions.buttonRadiusPrimary),
-            splashColor: AppColors.primaryIndigo.withOpacity(0.1),
-            highlightColor: AppColors.primaryIndigo.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+            splashColor: AppColors.accent.withOpacity(0.1),
+            highlightColor: AppColors.accent.withOpacity(0.05),
             child: Center(
               child: isLoading
                   ? SizedBox(
@@ -170,7 +153,7 @@ class SecondaryButton extends StatelessWidget {
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.primaryIndigo,
+                          AppColors.textSecondary,
                         ),
                       ),
                     )
@@ -180,7 +163,7 @@ class SecondaryButton extends StatelessWidget {
                         if (icon != null) ...[
                           Icon(
                             icon,
-                            color: AppColors.primaryIndigo,
+                            color: AppColors.textPrimary,
                             size: 20,
                           ),
                           const SizedBox(width: AppDimensions.spacingXs),
@@ -189,7 +172,7 @@ class SecondaryButton extends StatelessWidget {
                           text,
                           style: textStyle ??
                               const TextStyle(
-                                color: AppColors.primaryIndigo,
+                                color: AppColors.textPrimary,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.2,
@@ -229,7 +212,7 @@ class DashedButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveEnabled = isEnabled && !isLoading;
-    final opacity = effectiveEnabled ? 1.0 : 0.5;
+    final opacity = effectiveEnabled ? 1.0 : 0.4;
 
     return AnimatedOpacity(
       duration: AppDimensions.animationFast,
@@ -238,23 +221,23 @@ class DashedButton extends StatelessWidget {
         width: width,
         height: height,
         child: Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+          color: AppColors.zinc800,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           child: InkWell(
             onTap: effectiveEnabled ? onPressed : null,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-            splashColor: AppColors.primaryIndigo.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+            splashColor: AppColors.accent.withOpacity(0.1),
             child: CustomPaint(
               painter: _DashedBorderPainter(
-                color: AppColors.slate300,
-                strokeWidth: 2,
+                color: AppColors.zinc600,
+                strokeWidth: 1.5,
                 dashWidth: 8,
                 dashSpace: 4,
-                radius: AppDimensions.radiusLg,
+                radius: AppDimensions.radiusMd,
               ),
               child: Center(
                 child: isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
@@ -377,14 +360,14 @@ class SmallActionButton extends StatelessWidget {
       return Container(
         height: 40,
         decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+          color: AppColors.accent,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: isEnabled ? onPressed : null,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Center(
@@ -392,13 +375,13 @@ class SmallActionButton extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, color: Colors.white, size: 16),
+                      Icon(icon, color: AppColors.textOnPrimary, size: 16),
                       const SizedBox(width: AppDimensions.spacingXs),
                     ],
                     Text(
                       text,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textOnPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),
@@ -415,15 +398,15 @@ class SmallActionButton extends StatelessWidget {
     return Container(
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.zinc800,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
+        border: Border.all(color: AppColors.zinc600),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isEnabled ? onPressed : null,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Center(
@@ -431,13 +414,13 @@ class SmallActionButton extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, color: AppColors.primaryIndigo, size: 16),
+                    Icon(icon, color: AppColors.textSecondary, size: 16),
                     const SizedBox(width: AppDimensions.spacingXs),
                   ],
                   Text(
                     text,
                     style: const TextStyle(
-                      color: AppColors.primaryIndigo,
+                      color: AppColors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),

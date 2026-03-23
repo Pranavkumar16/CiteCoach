@@ -55,6 +55,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       floatingActionButton: state.documents.isNotEmpty
           ? _buildFAB(context, state)
           : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -135,7 +136,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 const Icon(
                   Icons.check_rounded,
                   size: AppDimensions.iconSizeSm,
-                  color: AppColors.primaryIndigo,
+                  color: AppColors.accent,
                 )
               else
                 const SizedBox(width: AppDimensions.iconSizeSm),
@@ -168,7 +169,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     return RefreshIndicator(
       onRefresh: () => ref.read(libraryProvider.notifier).refresh(),
-      color: AppColors.primaryIndigo,
+      color: AppColors.accent,
       child: ListView.builder(
         padding: const EdgeInsets.only(
           top: AppDimensions.spacingSm,
@@ -227,8 +228,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Widget _buildFAB(BuildContext context, LibraryState state) {
     return FloatingActionButton.extended(
       onPressed: state.isImporting ? null : _importPdf,
-      backgroundColor: AppColors.primaryIndigo,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.accent,
+      foregroundColor: AppColors.textOnPrimary,
       icon: state.isImporting
           ? const SizedBox(
               width: 20,

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#18181b"/>
+      <stop offset="100%" style="stop-color:#09090b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="375" height="812" fill="url(#bg)" rx="40"/>
+  <text x="30" y="52" fill="#a1a1aa" font-family="system-ui" font-size="14" font-weight="600">9:41</text>
+  <!-- Header -->
+  <text x="30" y="105" fill="white" font-family="system-ui" font-size="28" font-weight="bold">Library</text>
+  <text x="30" y="125" fill="#a1a1aa" font-family="system-ui" font-size="13">3 documents</text>
+  <rect x="280" y="88" width="65" height="32" rx="10" fill="#27272a"/>
+  <text x="312" y="110" fill="#a1a1aa" font-family="system-ui" font-size="12" text-anchor="middle">Sort ↕</text>
+  <!-- Document Card 1 -->
+  <rect x="20" y="150" width="335" height="100" rx="16" fill="#27272a"/>
+  <rect x="36" y="166" width="52" height="68" rx="8" fill="#3f3f46"/>
+  <text x="62" y="207" fill="#ef4444" font-family="system-ui" font-size="11" font-weight="bold" text-anchor="middle">PDF</text>
+  <rect x="44" y="218" width="36" height="14" rx="4" fill="#52525b"/>
+  <text x="62" y="228" fill="#a1a1aa" font-family="system-ui" font-size="8" text-anchor="middle">12p</text>
+  <text x="104" y="186" fill="white" font-family="system-ui" font-size="15" font-weight="600">Research Paper on NLP</text>
+  <rect x="104" y="194" width="52" height="20" rx="6" fill="#22c55e" opacity="0.15"/>
+  <text x="130" y="208" fill="#22c55e" font-family="system-ui" font-size="11" text-anchor="middle">Ready</text>
+  <text x="104" y="230" fill="#52525b" font-family="system-ui" font-size="11">2 hours ago · 2.4 MB</text>
+  <rect x="270" y="192" width="34" height="28" rx="8" fill="#6366f1" opacity="0.15"/>
+  <text x="287" y="211" fill="#6366f1" font-family="system-ui" font-size="12" text-anchor="middle">💬</text>
+  <rect x="310" y="192" width="34" height="28" rx="8" fill="#6366f1" opacity="0.15"/>
+  <text x="327" y="211" fill="#6366f1" font-family="system-ui" font-size="12" text-anchor="middle">📖</text>
+  <!-- Document Card 2 -->
+  <rect x="20" y="266" width="335" height="100" rx="16" fill="#27272a"/>
+  <rect x="36" y="282" width="52" height="68" rx="8" fill="#3f3f46"/>
+  <text x="62" y="323" fill="#ef4444" font-family="system-ui" font-size="11" font-weight="bold" text-anchor="middle">PDF</text>
+  <rect x="44" y="334" width="36" height="14" rx="4" fill="#52525b"/>
+  <text x="62" y="344" fill="#a1a1aa" font-family="system-ui" font-size="8" text-anchor="middle">8p</text>
+  <text x="104" y="302" fill="white" font-family="system-ui" font-size="15" font-weight="600">Machine Learning Basics</text>
+  <rect x="104" y="310" width="72" height="20" rx="6" fill="#f59e0b" opacity="0.15"/>
+  <text x="140" y="324" fill="#f59e0b" font-family="system-ui" font-size="11" text-anchor="middle">Processing</text>
+  <text x="104" y="346" fill="#52525b" font-family="system-ui" font-size="11">5 minutes ago · 1.8 MB</text>
+  <!-- Progress bar on card 2 -->
+  <rect x="104" y="356" width="200" height="4" rx="2" fill="#3f3f46"/>
+  <rect x="104" y="356" width="120" height="4" rx="2" fill="#f59e0b"/>
+  <!-- Document Card 3 -->
+  <rect x="20" y="382" width="335" height="100" rx="16" fill="#27272a"/>
+  <rect x="36" y="398" width="52" height="68" rx="8" fill="#3f3f46"/>
+  <text x="62" y="439" fill="#ef4444" font-family="system-ui" font-size="11" font-weight="bold" text-anchor="middle">PDF</text>
+  <rect x="44" y="450" width="36" height="14" rx="4" fill="#52525b"/>
+  <text x="62" y="460" fill="#a1a1aa" font-family="system-ui" font-size="8" text-anchor="middle">24p</text>
+  <text x="104" y="418" fill="white" font-family="system-ui" font-size="15" font-weight="600">Flutter Architecture Guide</text>
+  <rect x="104" y="426" width="52" height="20" rx="6" fill="#22c55e" opacity="0.15"/>
+  <text x="130" y="440" fill="#22c55e" font-family="system-ui" font-size="11" text-anchor="middle">Ready</text>
+  <text x="104" y="462" fill="#52525b" font-family="system-ui" font-size="11">Yesterday · 4.1 MB</text>
+  <rect x="270" y="424" width="34" height="28" rx="8" fill="#6366f1" opacity="0.15"/>
+  <text x="287" y="443" fill="#6366f1" font-family="system-ui" font-size="12" text-anchor="middle">💬</text>
+  <rect x="310" y="424" width="34" height="28" rx="8" fill="#6366f1" opacity="0.15"/>
+  <text x="327" y="443" fill="#6366f1" font-family="system-ui" font-size="12" text-anchor="middle">📖</text>
+  <!-- FAB -->
+  <rect x="220" y="700" width="135" height="52" rx="26" fill="url(#accent)"/>
+  <text x="287" y="732" fill="white" font-family="system-ui" font-size="14" font-weight="600" text-anchor="middle">+ Import PDF</text>
+  <!-- Bottom Nav -->
+  <rect x="0" y="756" width="375" height="56" rx="0" fill="#18181b"/>
+  <line x1="0" y1="756" x2="375" y2="756" stroke="#27272a" stroke-width="1"/>
+  <text x="94" y="786" fill="#6366f1" font-family="system-ui" font-size="11" font-weight="600" text-anchor="middle">📚 Library</text>
+  <text x="281" y="786" fill="#52525b" font-family="system-ui" font-size="11" text-anchor="middle">⚙ Settings</text>
+</svg>

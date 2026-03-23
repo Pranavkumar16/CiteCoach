@@ -102,37 +102,37 @@ class _KineticLogoPainter extends CustomPainter {
         const gradient = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.primaryIndigo, AppColors.primaryPurple],
+          colors: [AppColors.accent, AppColors.accentLight],
         );
         return (
           gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
-          Colors.white,
-          Colors.white,
-          AppColors.primaryIndigo,
+          AppColors.zinc950,
+          AppColors.zinc950,
+          AppColors.accent,
         );
 
       case KineticLogoVariant.white:
         return (
           null,
-          AppColors.primaryIndigo,
-          AppColors.primaryIndigo,
-          Colors.white,
+          AppColors.accent,
+          AppColors.accent,
+          AppColors.zinc950,
         );
 
       case KineticLogoVariant.indigo:
         return (
           null,
-          Colors.white,
-          Colors.white,
-          AppColors.primaryIndigo,
+          AppColors.zinc950,
+          AppColors.zinc950,
+          AppColors.accent,
         );
 
       case KineticLogoVariant.inverted:
         return (
           null,
-          AppColors.primaryIndigo,
-          AppColors.primaryIndigo,
-          Colors.white,
+          AppColors.accent,
+          AppColors.accent,
+          AppColors.zinc950,
         );
     }
   }
@@ -207,7 +207,7 @@ class _KineticLogoPainter extends CustomPainter {
     } else {
       paint.color = variant == KineticLogoVariant.white
           ? Colors.white
-          : AppColors.primaryIndigo;
+          : AppColors.accent;
     }
 
     canvas.drawPath(path, paint);

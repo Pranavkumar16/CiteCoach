@@ -31,12 +31,12 @@ class DownloadRequiredScreen extends ConsumerWidget {
                 width: 96,
                 height: 96,
                 decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
+                  color: AppColors.accent.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Icon(
                   Icons.cloud_download_outlined,
-                  color: Colors.white,
+                  color: AppColors.accent,
                   size: 48,
                 ),
               ),
@@ -68,18 +68,18 @@ class DownloadRequiredScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.indigo50,
+                  color: AppColors.accent.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.storage, color: AppColors.primaryIndigo, size: 20),
+                    Icon(Icons.storage, color: AppColors.accent, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       '~1.5 GB storage required',
                       style: TextStyle(
-                        color: AppColors.primaryIndigo,
+                        color: AppColors.accent,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -96,8 +96,8 @@ class DownloadRequiredScreen extends ConsumerWidget {
                   children: [
                     LinearProgressIndicator(
                       value: setupState.downloadProgress,
-                      backgroundColor: AppColors.slate200,
-                      valueColor: AlwaysStoppedAnimation(AppColors.primaryIndigo),
+                      backgroundColor: AppColors.zinc700,
+                      valueColor: AlwaysStoppedAnimation(AppColors.accent),
                     ),
                     SizedBox(height: AppDimensions.spacingSm),
                     Text(

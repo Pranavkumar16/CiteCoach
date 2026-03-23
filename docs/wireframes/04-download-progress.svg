@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#18181b"/>
+      <stop offset="100%" style="stop-color:#09090b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="progress" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="375" height="812" fill="url(#bg)" rx="40"/>
+  <text x="30" y="52" fill="#a1a1aa" font-family="system-ui" font-size="14" font-weight="600">9:41</text>
+  <text x="30" y="100" fill="#6366f1" font-family="system-ui" font-size="16">← Back</text>
+  <!-- Download icon -->
+  <rect x="152" y="130" width="70" height="70" rx="20" fill="#6366f1" opacity="0.15"/>
+  <text x="187" y="175" fill="#6366f1" font-family="system-ui" font-size="30" text-anchor="middle">⬇</text>
+  <!-- Title -->
+  <text x="187" y="240" fill="white" font-family="system-ui" font-size="26" font-weight="bold" text-anchor="middle">Downloading...</text>
+  <text x="187" y="265" fill="#a1a1aa" font-family="system-ui" font-size="13" text-anchor="middle">This may take a few minutes</text>
+  <!-- Progress Card -->
+  <rect x="30" y="300" width="315" height="160" rx="16" fill="#27272a"/>
+  <text x="46" y="330" fill="#a1a1aa" font-family="system-ui" font-size="12">DOWNLOADING</text>
+  <text x="329" y="330" fill="white" font-family="system-ui" font-size="20" font-weight="bold" text-anchor="end">47%</text>
+  <!-- Progress bar background -->
+  <rect x="46" y="348" width="283" height="10" rx="5" fill="#3f3f46"/>
+  <!-- Progress bar fill -->
+  <rect x="46" y="348" width="133" height="10" rx="5" fill="url(#progress)"/>
+  <!-- Size info -->
+  <text x="46" y="385" fill="#a1a1aa" font-family="system-ui" font-size="12">705 MB / 1.5 GB</text>
+  <text x="329" y="385" fill="#a1a1aa" font-family="system-ui" font-size="12" text-anchor="end">~3 min left</text>
+  <line x1="46" y1="405" x2="329" y2="405" stroke="#3f3f46" stroke-width="1"/>
+  <!-- Status rows -->
+  <circle cx="56" cy="430" r="5" fill="#22c55e"/>
+  <text x="70" y="434" fill="#a1a1aa" font-family="system-ui" font-size="13">Gemma 2B Model</text>
+  <text x="329" y="434" fill="#22c55e" font-family="system-ui" font-size="12" text-anchor="end">Downloading</text>
+  <circle cx="56" cy="450" r="5" fill="#3f3f46"/>
+  <text x="70" y="454" fill="#52525b" font-family="system-ui" font-size="13">Embedding Model</text>
+  <text x="329" y="454" fill="#52525b" font-family="system-ui" font-size="12" text-anchor="end">Pending</text>
+  <!-- Pause button -->
+  <rect x="30" y="510" width="315" height="50" rx="14" fill="none" stroke="#6366f1" stroke-width="2"/>
+  <text x="187" y="541" fill="#6366f1" font-family="system-ui" font-size="16" font-weight="600" text-anchor="middle">⏸  Pause Download</text>
+  <!-- Skip link -->
+  <text x="187" y="600" fill="#52525b" font-family="system-ui" font-size="14" text-anchor="middle">Skip for Now</text>
+</svg>

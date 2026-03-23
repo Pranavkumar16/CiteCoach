@@ -1,106 +1,127 @@
 import 'package:flutter/material.dart';
 
-/// CiteCoach color palette based on the Kinetic Identity design system.
-/// Primary gradient: Indigo (#6366f1) → Purple (#a855f7)
+/// CiteCoach dark theme color palette.
+/// Inspired by ChatGPT/Slack dark mode with teal accent.
 abstract final class AppColors {
-  // Primary Brand Colors
-  static const Color primaryIndigo = Color(0xFF6366F1);
-  static const Color primaryPurple = Color(0xFFA855F7);
-  
-  // Gradient definitions
+  // Primary Accent — Emerald/Teal for a modern dark theme
+  static const Color accent = Color(0xFF10B981); // Emerald-500
+  static const Color accentLight = Color(0xFF6EE7B7); // Emerald-300
+  static const Color accentDark = Color(0xFF059669); // Emerald-600
+
+  // Secondary accent — Cyan for gradient pairing
+  static const Color accentCyan = Color(0xFF06B6D4); // Cyan-500
+
+  // Gradient definitions — Emerald → Cyan
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primaryIndigo, primaryPurple],
+    colors: [accent, accentCyan],
   );
-  
+
   static const LinearGradient primaryGradientVertical = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [primaryIndigo, primaryPurple],
+    colors: [accent, accentCyan],
   );
-  
+
   static const LinearGradient primaryGradientHorizontal = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [primaryIndigo, primaryPurple],
+    colors: [accent, accentCyan],
   );
 
-  // Slate Gray Scale (from Tailwind)
-  static const Color slate50 = Color(0xFFF8FAFC);
-  static const Color slate100 = Color(0xFFF1F5F9);
-  static const Color slate200 = Color(0xFFE2E8F0);
-  static const Color slate300 = Color(0xFFCBD5E1);
-  static const Color slate400 = Color(0xFF94A3B8);
-  static const Color slate500 = Color(0xFF64748B);
-  static const Color slate600 = Color(0xFF475569);
-  static const Color slate700 = Color(0xFF334155);
-  static const Color slate800 = Color(0xFF1E293B);
-  static const Color slate900 = Color(0xFF0F172A);
+  // Dark Neutrals (Zinc scale)
+  static const Color zinc50 = Color(0xFFFAFAFA);
+  static const Color zinc100 = Color(0xFFF4F4F5);
+  static const Color zinc200 = Color(0xFFE4E4E7);
+  static const Color zinc300 = Color(0xFFD4D4D8);
+  static const Color zinc400 = Color(0xFFA1A1AA);
+  static const Color zinc500 = Color(0xFF71717A);
+  static const Color zinc600 = Color(0xFF52525B);
+  static const Color zinc700 = Color(0xFF3F3F46);
+  static const Color zinc800 = Color(0xFF27272A);
+  static const Color zinc900 = Color(0xFF18181B);
+  static const Color zinc950 = Color(0xFF09090B);
+
+  // Keep old names as aliases for backward compat in non-UI code
+  static const Color slate50 = zinc50;
+  static const Color slate100 = zinc100;
+  static const Color slate200 = zinc200;
+  static const Color slate300 = zinc300;
+  static const Color slate400 = zinc400;
+  static const Color slate500 = zinc500;
+  static const Color slate600 = zinc600;
+  static const Color slate700 = zinc700;
+  static const Color slate800 = zinc800;
+  static const Color slate900 = zinc900;
 
   // Semantic Colors
-  static const Color success = Color(0xFF34C759);
-  static const Color warning = Color(0xFFFF9500);
-  static const Color error = Color(0xFFFF3B30);
-  static const Color info = Color(0xFF0071E3);
+  static const Color success = Color(0xFF22C55E);
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color error = Color(0xFFEF4444);
+  static const Color info = Color(0xFF3B82F6);
 
   // Base colors
   static const Color white = Colors.white;
   static const Color black = Colors.black;
 
-  // UI Colors
-  static const Color background = slate50;
-  static const Color backgroundPrimary = slate50;
-  static const Color backgroundSecondary = slate100;
-  static const Color surface = Colors.white;
-  static const Color surfacePrimary = Colors.white;
-  static const Color surfaceVariant = slate100;
-  static const Color border = slate200;
-  static const Color borderLight = Color(0xFFE2E8F0);
-  
-  // Semantic colors with more specific names
-  static const Color successGreen = Color(0xFF34C759);
-  static const Color warningOrange = Color(0xFFFF9500);
-  static const Color errorRed = Color(0xFFFF3B30);
-  static const Color infoBlue = Color(0xFF0071E3);
-  
-  // Text Colors
-  static const Color textPrimary = slate900;
-  static const Color textSecondary = slate500;
-  static const Color textTertiary = slate400;
-  static const Color textOnPrimary = Colors.white;
-  
+  // UI Colors — Dark surfaces
+  static const Color background = zinc950;
+  static const Color backgroundPrimary = zinc950;
+  static const Color backgroundSecondary = zinc900;
+  static const Color surface = zinc900;
+  static const Color surfacePrimary = zinc800;
+  static const Color surfaceVariant = zinc700;
+  static const Color border = zinc700;
+  static const Color borderLight = zinc700;
+
+  // Semantic colors with specific names
+  static const Color successGreen = Color(0xFF22C55E);
+  static const Color warningOrange = Color(0xFFF59E0B);
+  static const Color errorRed = Color(0xFFEF4444);
+  static const Color infoBlue = Color(0xFF3B82F6);
+
+  // Text Colors — Light on dark
+  static const Color textPrimary = Color(0xFFF4F4F5); // zinc100
+  static const Color textSecondary = Color(0xFFA1A1AA); // zinc400
+  static const Color textTertiary = Color(0xFF71717A); // zinc500
+  static const Color textOnPrimary = Color(0xFF09090B); // dark text on accent
+
+  // Alias for backward compat
+  static const Color primaryIndigo = accent;
+  static const Color primaryPurple = accentLight;
+
   // Chat specific colors
-  static const Color userMessageBackground = primaryIndigo;
-  static const Color aiMessageBackground = Colors.white;
-  static const Color citationBadge = primaryIndigo;
-  
+  static const Color userMessageBackground = Color(0xFF1A3A2F); // dark teal
+  static const Color aiMessageBackground = zinc800;
+  static const Color citationBadge = accent;
+
   // Voice overlay colors
-  static const Color voiceOverlayStart = primaryIndigo;
-  static const Color voiceOverlayEnd = primaryPurple;
+  static const Color voiceOverlayStart = zinc950;
+  static const Color voiceOverlayEnd = Color(0xFF0D2818); // very dark green
   static const LinearGradient voiceOverlayGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xF86366F1), // 97% opacity indigo
-      Color(0xF8A855F7), // 97% opacity purple
+      Color(0xF809090B), // 97% zinc950
+      Color(0xF80D2818), // 97% dark green
     ],
   );
-  
+
   // Mic button color
   static const Color micActive = Color(0xFFEF4444);
-  static const Color micInactive = slate400;
-  
+  static const Color micInactive = zinc500;
+
   // Shadow colors
-  static const Color shadowPrimary = Color(0x1A6366F1); // 10% indigo
-  static const Color shadowDark = Color(0x1A0F172A); // 10% slate900
-  
-  // Indigo variations for UI elements
-  static const Color indigo50 = Color(0xFFEEF2FF);
-  static const Color indigo100 = Color(0xFFE0E7FF);
-  static const Color indigo200 = Color(0xFFC7D2FE);
-  static const Color indigo600 = Color(0xFF4F46E5);
-  
+  static const Color shadowPrimary = Color(0x3310B981); // 20% accent
+  static const Color shadowDark = Color(0x33000000); // 20% black
+
+  // Accent variations for UI elements
+  static const Color indigo50 = Color(0xFF0D2818); // dark accent bg
+  static const Color indigo100 = Color(0xFF103D24);
+  static const Color indigo200 = Color(0xFF166534);
+  static const Color indigo600 = Color(0xFF059669);
+
   // Highlight color for citations in PDF
-  static const Color highlightYellow = Color(0xFFFEF3C7);
+  static const Color highlightYellow = Color(0xFF422006);
 }

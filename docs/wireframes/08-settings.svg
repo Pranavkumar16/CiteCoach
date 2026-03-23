@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#18181b"/>
+      <stop offset="100%" style="stop-color:#09090b"/>
+    </linearGradient>
+  </defs>
+  <rect width="375" height="812" fill="url(#bg)" rx="40"/>
+  <text x="30" y="52" fill="#a1a1aa" font-family="system-ui" font-size="14" font-weight="600">9:41</text>
+  <!-- Title -->
+  <text x="187" y="100" fill="white" font-family="system-ui" font-size="22" font-weight="bold" text-anchor="middle">Settings</text>
+  <!-- Section: AI Model -->
+  <text x="30" y="145" fill="#6366f1" font-family="system-ui" font-size="12" font-weight="600">AI MODEL</text>
+  <rect x="20" y="156" width="335" height="110" rx="14" fill="#27272a"/>
+  <text x="36" y="182" fill="white" font-family="system-ui" font-size="14">Model Status</text>
+  <text x="329" y="182" fill="#22c55e" font-family="system-ui" font-size="13" text-anchor="end">✓ Downloaded</text>
+  <line x1="36" y1="196" x2="329" y2="196" stroke="#3f3f46" stroke-width="0.5"/>
+  <text x="36" y="218" fill="white" font-family="system-ui" font-size="14">Model Storage</text>
+  <text x="329" y="218" fill="#a1a1aa" font-family="system-ui" font-size="13" text-anchor="end">1.52 GB</text>
+  <line x1="36" y1="232" x2="329" y2="232" stroke="#3f3f46" stroke-width="0.5"/>
+  <text x="36" y="254" fill="#6366f1" font-family="system-ui" font-size="14">Model Info →</text>
+  <!-- Section: Performance -->
+  <text x="30" y="295" fill="#6366f1" font-family="system-ui" font-size="12" font-weight="600">PERFORMANCE</text>
+  <rect x="20" y="306" width="335" height="80" rx="14" fill="#27272a"/>
+  <text x="36" y="336" fill="white" font-family="system-ui" font-size="14">Low Power Mode</text>
+  <!-- Toggle off -->
+  <rect x="293" y="322" width="42" height="26" rx="13" fill="#3f3f46"/>
+  <circle cx="308" cy="335" r="10" fill="white"/>
+  <line x1="36" y1="350" x2="329" y2="350" stroke="#3f3f46" stroke-width="0.5"/>
+  <text x="36" y="374" fill="white" font-family="system-ui" font-size="14">Response Cache</text>
+  <!-- Toggle on -->
+  <rect x="293" y="360" width="42" height="26" rx="13" fill="#6366f1"/>
+  <circle cx="322" cy="373" r="10" fill="white"/>
+  <!-- Section: Voice -->
+  <text x="30" y="418" fill="#6366f1" font-family="system-ui" font-size="12" font-weight="600">VOICE</text>
+  <rect x="20" y="429" width="335" height="110" rx="14" fill="#27272a"/>
+  <text x="36" y="458" fill="white" font-family="system-ui" font-size="14">Speech Speed</text>
+  <text x="329" y="458" fill="#a1a1aa" font-family="system-ui" font-size="13" text-anchor="end">1.0x</text>
+  <!-- Slider -->
+  <rect x="36" y="470" width="293" height="4" rx="2" fill="#3f3f46"/>
+  <rect x="36" y="470" width="146" height="4" rx="2" fill="#6366f1"/>
+  <circle cx="182" cy="472" r="8" fill="#6366f1"/>
+  <text x="36" y="498" fill="#52525b" font-family="system-ui" font-size="10">0.5x</text>
+  <text x="329" y="498" fill="#52525b" font-family="system-ui" font-size="10" text-anchor="end">2.0x</text>
+  <line x1="36" y1="508" x2="329" y2="508" stroke="#3f3f46" stroke-width="0.5"/>
+  <text x="36" y="530" fill="white" font-family="system-ui" font-size="14">Haptic Feedback</text>
+  <rect x="293" y="516" width="42" height="26" rx="13" fill="#6366f1"/>
+  <circle cx="322" cy="529" r="10" fill="white"/>
+  <!-- Section: About -->
+  <text x="30" y="575" fill="#6366f1" font-family="system-ui" font-size="12" font-weight="600">ABOUT</text>
+  <rect x="20" y="586" width="335" height="80" rx="14" fill="#27272a"/>
+  <text x="36" y="616" fill="white" font-family="system-ui" font-size="14">CiteCoach</text>
+  <text x="329" y="616" fill="#a1a1aa" font-family="system-ui" font-size="13" text-anchor="end">v1.0.0</text>
+  <line x1="36" y1="630" x2="329" y2="630" stroke="#3f3f46" stroke-width="0.5"/>
+  <text x="36" y="654" fill="white" font-family="system-ui" font-size="14">Privacy Policy</text>
+  <text x="329" y="654" fill="#52525b" font-family="system-ui" font-size="14" text-anchor="end">→</text>
+  <!-- Reset button -->
+  <rect x="20" y="690" width="335" height="46" rx="14" fill="none" stroke="#ef4444" stroke-width="1.5" opacity="0.6"/>
+  <text x="187" y="719" fill="#ef4444" font-family="system-ui" font-size="15" text-anchor="middle">Reset App</text>
+  <!-- Bottom Nav -->
+  <rect x="0" y="756" width="375" height="56" fill="#18181b"/>
+  <line x1="0" y1="756" x2="375" y2="756" stroke="#27272a" stroke-width="1"/>
+  <text x="94" y="786" fill="#52525b" font-family="system-ui" font-size="11" text-anchor="middle">📚 Library</text>
+  <text x="281" y="786" fill="#6366f1" font-family="system-ui" font-size="11" font-weight="600" text-anchor="middle">⚙ Settings</text>
+</svg>

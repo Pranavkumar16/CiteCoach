@@ -12,16 +12,9 @@ class ChatInput extends StatefulWidget {
     this.placeholder = 'Ask about this document...',
   });
 
-  /// Callback when a message is sent.
   final void Function(String message) onSend;
-
-  /// Callback when voice input is started.
   final VoidCallback? onVoiceStart;
-
-  /// Whether the input is disabled.
   final bool isDisabled;
-
-  /// Placeholder text.
   final String placeholder;
 
   @override
@@ -75,11 +68,11 @@ class _ChatInputState extends State<ChatInput> {
         bottom: bottomPadding + AppDimensions.spacingSm,
       ),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.zinc900,
         border: Border(
           top: BorderSide(
-            color: AppColors.slate200,
-            width: 1,
+            color: AppColors.zinc700,
+            width: 0.5,
           ),
         ),
       ),
@@ -104,30 +97,30 @@ class _ChatInputState extends State<ChatInput> {
                     fontSize: 15,
                   ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                     borderSide: const BorderSide(
-                      color: AppColors.slate200,
+                      color: AppColors.zinc600,
                       width: 1,
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                     borderSide: const BorderSide(
-                      color: AppColors.slate200,
+                      color: AppColors.zinc600,
                       width: 1,
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                     borderSide: const BorderSide(
-                      color: AppColors.primaryIndigo,
+                      color: AppColors.accent,
                       width: 1.5,
                     ),
                   ),
                   disabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                     borderSide: const BorderSide(
-                      color: AppColors.slate100,
+                      color: AppColors.zinc700,
                       width: 1,
                     ),
                   ),
@@ -136,7 +129,7 @@ class _ChatInputState extends State<ChatInput> {
                     vertical: AppDimensions.spacingSm + 2,
                   ),
                   filled: true,
-                  fillColor: widget.isDisabled ? AppColors.slate50 : Colors.white,
+                  fillColor: widget.isDisabled ? AppColors.zinc800 : AppColors.zinc800,
                 ),
                 style: const TextStyle(
                   fontSize: 15,
@@ -169,13 +162,12 @@ class _ChatInputState extends State<ChatInput> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          gradient: canSend ? AppColors.primaryGradient : null,
-          color: canSend ? null : AppColors.slate100,
+          color: canSend ? AppColors.accent : AppColors.zinc700,
           shape: BoxShape.circle,
         ),
         child: Icon(
           Icons.arrow_upward_rounded,
-          color: canSend ? Colors.white : AppColors.slate400,
+          color: canSend ? AppColors.textOnPrimary : AppColors.zinc500,
           size: 22,
         ),
       ),
@@ -192,9 +184,9 @@ class _ChatInputState extends State<ChatInput> {
       icon: Icon(icon),
       iconSize: 24,
       style: IconButton.styleFrom(
-        foregroundColor: isActive ? AppColors.primaryIndigo : AppColors.slate500,
+        foregroundColor: isActive ? AppColors.accent : AppColors.textSecondary,
         backgroundColor: isActive
-            ? AppColors.primaryIndigo.withOpacity(0.1)
+            ? AppColors.accent.withOpacity(0.1)
             : Colors.transparent,
       ),
     );

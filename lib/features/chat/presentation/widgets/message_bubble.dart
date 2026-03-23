@@ -13,13 +13,8 @@ class MessageBubble extends StatelessWidget {
     this.streamingContent,
   });
 
-  /// The message to display.
   final ChatMessage message;
-
-  /// Callback when a citation is tapped.
   final void Function(Citation citation)? onCitationTap;
-
-  /// Streaming content (for assistant messages being generated).
   final String? streamingContent;
 
   @override
@@ -61,13 +56,12 @@ class MessageBubble extends StatelessWidget {
                       bottomLeft: const Radius.circular(AppDimensions.radiusMd),
                       bottomRight: const Radius.circular(AppDimensions.radiusMd),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    border: Border.all(
+                      color: isUser
+                          ? AppColors.accent.withOpacity(0.2)
+                          : AppColors.zinc700,
+                      width: 0.5,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,7 +74,7 @@ class MessageBubble extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.4,
-                            color: isUser ? Colors.white : AppColors.textPrimary,
+                            color: isUser ? AppColors.accentLight : AppColors.textPrimary,
                           ),
                         ),
                       if (!isUser && message.hasCitations && onCitationTap != null)
@@ -110,14 +104,13 @@ class MessageBubble extends StatelessWidget {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        gradient: isUser ? null : AppColors.primaryGradient,
-        color: isUser ? AppColors.slate200 : null,
+        color: isUser ? AppColors.zinc700 : AppColors.accent.withOpacity(0.15),
         shape: BoxShape.circle,
       ),
       child: Icon(
         isUser ? Icons.person : Icons.auto_awesome,
         size: 18,
-        color: isUser ? AppColors.slate500 : Colors.white,
+        color: isUser ? AppColors.zinc400 : AppColors.accent,
       ),
     );
   }
@@ -220,7 +213,7 @@ class _TypingDotState extends State<_TypingDot>
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: AppColors.slate400.withOpacity(0.5 + (_animation.value * 0.5)),
+            color: AppColors.accent.withOpacity(0.3 + (_animation.value * 0.7)),
             shape: BoxShape.circle,
           ),
         );

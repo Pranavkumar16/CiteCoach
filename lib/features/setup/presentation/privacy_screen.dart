@@ -15,14 +15,7 @@ class PrivacyScreen extends ConsumerWidget {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.backgroundPrimary,
-              AppColors.backgroundSecondary,
-            ],
-          ),
+          color: AppColors.background,
         ),
         child: SafeArea(
           child: Padding(
@@ -52,13 +45,13 @@ class PrivacyScreen extends ConsumerWidget {
           width: AppDimensions.iconSizeSetup,
           height: AppDimensions.iconSizeSetup,
           decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
+            color: AppColors.accent.withOpacity(0.15),
             borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           ),
           child: const Icon(
             Icons.shield_outlined,
             size: AppDimensions.iconSizeLg,
-            color: AppColors.white,
+            color: AppColors.accent,
           ),
         ),
         const SizedBox(height: AppDimensions.spacingXl),
@@ -140,10 +133,10 @@ class _PrivacyFeature extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.spacingMd),
       decoration: BoxDecoration(
-        color: AppColors.surfacePrimary,
+        color: AppColors.zinc800,
         borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
         border: Border.all(
-          color: AppColors.borderLight,
+          color: AppColors.zinc700,
           width: 1,
         ),
       ),
@@ -153,13 +146,13 @@ class _PrivacyFeature extends StatelessWidget {
             width: AppDimensions.iconContainerSm,
             height: AppDimensions.iconContainerSm,
             decoration: BoxDecoration(
-              color: AppColors.primaryIndigo.withOpacity(0.1),
+              color: AppColors.accent.withOpacity(0.1),
               borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
             ),
             child: Icon(
               icon,
               size: AppDimensions.iconSizeMd,
-              color: AppColors.primaryIndigo,
+              color: AppColors.accent,
             ),
           ),
           const SizedBox(width: AppDimensions.spacingMd),

@@ -40,13 +40,13 @@ class EmptyLibraryView extends StatelessWidget {
       width: AppDimensions.iconSizeSetup,
       height: AppDimensions.iconSizeSetup,
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
+        color: AppColors.accent.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
       ),
       child: const Icon(
         Icons.library_books_rounded,
         size: AppDimensions.iconSizeLg + 8,
-        color: AppColors.white,
+        color: AppColors.accent,
       ),
     );
   }
