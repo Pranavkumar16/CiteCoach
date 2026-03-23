@@ -25,8 +25,6 @@ class PrivacyScreen extends ConsumerWidget {
               children: [
                 const Spacer(),
                 _buildHeader(context),
-                const SizedBox(height: AppDimensions.spacing3xl),
-                _buildPrivacyFeatures(context),
                 const Spacer(),
                 _buildContinueButton(context, ref),
                 const SizedBox(height: AppDimensions.spacingMd),
@@ -49,7 +47,7 @@ class PrivacyScreen extends ConsumerWidget {
             borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           ),
           child: const Icon(
-            Icons.shield_outlined,
+            Icons.lock_outlined,
             size: AppDimensions.iconSizeLg,
             color: AppColors.accent,
           ),
@@ -68,39 +66,11 @@ class PrivacyScreen extends ConsumerWidget {
           AppStrings.privacySubtitle,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppColors.textSecondary,
+                height: 1.7,
               ),
           textAlign: TextAlign.center,
         ),
       ],
-    );
-  }
-
-  Widget _buildPrivacyFeatures(BuildContext context) {
-    final features = [
-      const _PrivacyFeature(
-        icon: Icons.wifi_off_rounded,
-        title: AppStrings.privacyFeature1Title,
-        description: AppStrings.privacyFeature1Desc,
-      ),
-      const _PrivacyFeature(
-        icon: Icons.phone_android_rounded,
-        title: AppStrings.privacyFeature2Title,
-        description: AppStrings.privacyFeature2Desc,
-      ),
-      const _PrivacyFeature(
-        icon: Icons.cloud_off_rounded,
-        title: AppStrings.privacyFeature3Title,
-        description: AppStrings.privacyFeature3Desc,
-      ),
-    ];
-
-    return Column(
-      children: features
-          .map((feature) => Padding(
-                padding: const EdgeInsets.only(bottom: AppDimensions.spacingMd),
-                child: feature,
-              ))
-          .toList(),
     );
   }
 
@@ -113,72 +83,6 @@ class PrivacyScreen extends ConsumerWidget {
           context.go('/setup/model');
         }
       },
-    );
-  }
-}
-
-class _PrivacyFeature extends StatelessWidget {
-  const _PrivacyFeature({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.spacingMd),
-      decoration: BoxDecoration(
-        color: AppColors.zinc800,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-        border: Border.all(
-          color: AppColors.zinc700,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: AppDimensions.iconContainerSm,
-            height: AppDimensions.iconContainerSm,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-            ),
-            child: Icon(
-              icon,
-              size: AppDimensions.iconSizeMd,
-              color: AppColors.accent,
-            ),
-          ),
-          const SizedBox(width: AppDimensions.spacingMd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                ),
-                const SizedBox(height: AppDimensions.spacingXs),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

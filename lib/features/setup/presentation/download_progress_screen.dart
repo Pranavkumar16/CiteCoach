@@ -228,22 +228,7 @@ class _DownloadProgressScreenState
   }
 
   Widget _buildStatusInfo(BuildContext context, SetupState setupState) {
-    return Column(
-      children: [
-        _StatusItem(
-          icon: Icons.folder_rounded,
-          label: AppStrings.modelName,
-          status: setupState.isDownloading
-              ? AppStrings.downloading
-              : (setupState.isPaused ? AppStrings.paused : AppStrings.ready),
-        ),
-        _StatusItem(
-          icon: Icons.storage_rounded,
-          label: AppStrings.storageUsed,
-          status: setupState.downloadedSizeMb,
-        ),
-      ],
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildControls(
@@ -261,7 +246,7 @@ class _DownloadProgressScreenState
           ),
           const SizedBox(height: AppDimensions.spacingMd),
           SecondaryButton(
-            text: AppStrings.skipForNowButton,
+            text: AppStrings.downloadLaterButton,
             onPressed: () async {
               await ref.read(setupProvider.notifier).skipDownload();
               if (context.mounted) {
