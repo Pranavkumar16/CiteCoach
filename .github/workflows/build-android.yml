@@ -30,11 +30,6 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
-      - name: Clone llama.cpp
-        run: |
-          cd android/app/src/main/cpp
-          git clone --branch b4547 --depth 1 https://github.com/ggerganov/llama.cpp.git
-
       - name: Get dependencies
         run: flutter pub get
 
