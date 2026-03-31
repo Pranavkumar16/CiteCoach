@@ -29,6 +29,11 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Install CMake and Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+
       - name: Clone llama.cpp into Android cpp directory
         run: |
           cd android/app/src/main/cpp
@@ -37,15 +42,7 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Set up Android NDK
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: r26d
-
       - name: Build Android APK (Release)
-        env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: flutter build apk --release
 
       - name: Upload APK artifact
@@ -54,16 +51,3 @@ jobs:
           name: citecoach-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
-
-      - name: Upload APK (Debug) for testing
-        if: failure()
-        run: flutter build apk --debug
-        continue-on-error: true
-
-      - name: Upload Debug APK on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: citecoach-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 7
