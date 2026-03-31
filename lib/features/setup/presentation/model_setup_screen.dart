@@ -4,10 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/constants.dart';
 import '../../../core/widgets/widgets.dart';
-import '../data/model_downloader.dart';
 import '../providers/setup_provider.dart';
 
-/// Model setup screen explaining the AI model download.
+/// Model setup screen explaining the one-time download.
 class ModelSetupScreen extends ConsumerWidget {
   const ModelSetupScreen({super.key});
 
@@ -28,9 +27,7 @@ class ModelSetupScreen extends ConsumerWidget {
                 const Spacer(),
                 _buildHeader(context),
                 const SizedBox(height: AppDimensions.spacing3xl),
-                _buildModelInfo(context),
-                const SizedBox(height: AppDimensions.spacingXl),
-                _buildRequirements(context),
+                _buildInfoCard(context),
                 const Spacer(),
                 _buildButtons(context, ref),
                 const SizedBox(height: AppDimensions.spacingMd),
@@ -66,7 +63,7 @@ class ModelSetupScreen extends ConsumerWidget {
             borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           ),
           child: const Icon(
-            Icons.psychology_outlined,
+            Icons.inventory_2_outlined,
             size: AppDimensions.iconSizeLg,
             color: AppColors.accent,
           ),
@@ -85,6 +82,7 @@ class ModelSetupScreen extends ConsumerWidget {
           AppStrings.modelSetupSubtitle,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppColors.textSecondary,
+                height: 1.7,
               ),
           textAlign: TextAlign.center,
         ),
@@ -92,7 +90,7 @@ class ModelSetupScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildModelInfo(BuildContext context) {
+  Widget _buildInfoCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.spacingLg),
       decoration: BoxDecoration(
@@ -105,89 +103,13 @@ class ModelSetupScreen extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppDimensions.spacingSm),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  size: AppDimensions.iconSizeMd,
-                  color: AppColors.accent,
-                ),
-              ),
-              const SizedBox(width: AppDimensions.spacingMd),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppStrings.modelName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                    ),
-                    Text(
-                      AppStrings.modelDescription,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          _InfoRow(label: 'Size:', value: AppStrings.modelSize),
           const SizedBox(height: AppDimensions.spacingMd),
-          const Divider(height: 1, color: AppColors.borderLight),
+          _InfoRow(label: 'Network:', value: AppStrings.modelNetwork),
           const SizedBox(height: AppDimensions.spacingMd),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _ModelStat(
-                label: AppStrings.downloadSizeLabel,
-                value: '${(ModelDownloader.modelSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB',
-              ),
-              const _ModelStat(
-                label: AppStrings.storageNeededLabel,
-                value: '~1.7 GB',
-              ),
-            ],
-          ),
+          _InfoRow(label: 'Time:', value: AppStrings.modelTime),
         ],
       ),
-    );
-  }
-
-  Widget _buildRequirements(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppStrings.requirementsTitle,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-        ),
-        const SizedBox(height: AppDimensions.spacingSm),
-        const _RequirementItem(
-          icon: Icons.wifi_rounded,
-          text: AppStrings.requirement1,
-        ),
-        const _RequirementItem(
-          icon: Icons.storage_rounded,
-          text: AppStrings.requirement2,
-        ),
-        const _RequirementItem(
-          icon: Icons.battery_charging_full_rounded,
-          text: AppStrings.requirement3,
-        ),
-      ],
     );
   }
 
@@ -196,7 +118,6 @@ class ModelSetupScreen extends ConsumerWidget {
       children: [
         GradientButton(
           text: AppStrings.downloadNowButton,
-          icon: Icons.download_rounded,
           onPressed: () async {
             await ref.read(setupProvider.notifier).startDownload();
             if (context.mounted) {
@@ -206,7 +127,7 @@ class ModelSetupScreen extends ConsumerWidget {
         ),
         const SizedBox(height: AppDimensions.spacingMd),
         SecondaryButton(
-          text: AppStrings.skipForNowButton,
+          text: AppStrings.downloadLaterButton,
           onPressed: () async {
             await ref.read(setupProvider.notifier).skipDownload();
             if (context.mounted) {
@@ -219,69 +140,31 @@ class ModelSetupScreen extends ConsumerWidget {
   }
 }
 
-class _ModelStat extends StatelessWidget {
-  const _ModelStat({
-    required this.label,
-    required this.value,
-  });
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.accent,
-              ),
-        ),
-        const SizedBox(height: AppDimensions.spacingXs),
-        Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.textSecondary,
               ),
         ),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+        ),
       ],
-    );
-  }
-}
-
-class _RequirementItem extends StatelessWidget {
-  const _RequirementItem({
-    required this.icon,
-    required this.text,
-  });
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimensions.spacingSm),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: AppDimensions.iconSizeSm,
-            color: AppColors.textTertiary,
-          ),
-          const SizedBox(width: AppDimensions.spacingSm),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

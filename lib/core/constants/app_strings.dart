@@ -8,46 +8,24 @@ abstract final class AppStrings {
   
   // Setup Flow - Privacy Screen
   static const String privacyTitle = '100% Offline & Private';
-  static const String privacySubtitle = 
-      'Your documents stay on your device. No data ever leaves.';
-  static const String privacyDescription = 
+  static const String privacySubtitle =
       'CiteCoach works completely offline. Your documents never leave your device.';
-  static const String privacyFeature1Title = 'Fully Offline';
-  static const String privacyFeature1Desc = 'No internet required after initial setup';
-  static const String privacyFeature2Title = 'On-Device AI';
-  static const String privacyFeature2Desc = 'All processing happens locally on your phone';
-  static const String privacyFeature3Title = 'No Cloud Upload';
-  static const String privacyFeature3Desc = 'Your PDFs are never sent to any server';
   
   // Setup Flow - Model Setup Screen
   static const String modelSetupTitle = 'One-Time Setup';
-  static const String modelSetupSubtitle = 
-      'Download the AI model to enable intelligent Q&A';
-  static const String modelSetupDescription =
-      'Download the offline AI engine (2.4GB) to enable Q&A. This is a one-time setup.';
-  static const String modelName = 'Phi-3.5 Mini';
-  static const String modelDescription = 'Advanced AI optimized for document understanding';
-  static const String modelSize = '2.4 GB';
+  static const String modelSetupSubtitle =
+      'Download the offline intelligence engine (1.5GB) to enable Q&A. This happens once.';
+  static const String modelSize = '1.5 GB';
   static const String modelNetwork = 'Wi-Fi only';
-  static const String modelTime = '~5-8 minutes';
-  static const String downloadSizeLabel = 'Download Size';
-  static const String storageNeededLabel = 'Storage Needed';
-  static const String requirementsTitle = 'Requirements';
-  static const String requirement1 = 'Wi-Fi connection recommended';
-  static const String requirement2 = 'At least 3GB free storage';
-  static const String requirement3 = 'Keep app open during download';
+  static const String modelTime = '~3-5 minutes';
   
   // Setup Flow - Download Screen
   static const String downloadNowButton = 'Download Now';
-  static const String downloadNow = 'Download Now';
-  static const String downloadLater = 'Download Later';
-  static const String skipForNowButton = 'Skip for Now';
+  static const String downloadLaterButton = 'Download Later';
   static const String downloading = 'Downloading...';
-  static const String downloadingTitle = 'Downloading AI Model';
-  static const String downloadingSubtitle = 
-      'This may take a few minutes depending on your connection';
-  static const String downloadingDescription = 
-      "This may take a few minutes. You can leave the app—we'll continue in the background.";
+  static const String downloadingTitle = 'Downloading...';
+  static const String downloadingSubtitle =
+      "This may take a few minutes. You can leave the app\u2014we'll continue in the background.";
   static const String downloadInProgress = 'Download in Progress';
   static const String downloadPaused = 'Download Paused';
   static const String downloadError = 'Download Error';
@@ -61,28 +39,19 @@ abstract final class AppStrings {
   static const String retryButton = 'Retry Download';
   
   // Setup Flow - Complete Screen
-  static const String setupCompleteTitle = 'All Set!';
-  static const String setupCompleteSubtitle = 
-      'CiteCoach is now fully configured for offline use';
-  static const String setupCompleteDescription = 
+  static const String setupCompleteTitle = "You're Ready!";
+  static const String setupCompleteSubtitle =
       'CiteCoach is now fully offline. Import a PDF to start getting evidence-based answers.';
   static const String getStarted = 'Get Started';
-  static const String startUsingApp = 'Start Using CiteCoach';
-  static const String capability1Title = 'Read PDFs Anywhere';
-  static const String capability1Desc = 'Open and annotate documents offline';
-  static const String capability2Title = 'Ask Questions';
-  static const String capability2Desc = 'Get AI answers with page citations';
-  static const String capability3Title = 'Voice Interaction';
-  static const String capability3Desc = 'Ask questions by voice, hear answers aloud';
   
   // Library
   static const String libraryTitle = 'Library';
   static const String noDocumentsTitle = 'No Documents Yet';
-  static const String noDocumentsDescription = 
-      'Import a document to start asking questions and getting evidence-based answers with citations';
-  static const String importPdf = '+ Import Document';
-  static const String importAnotherPdf = '+ Import Document';
-  static const String supportedFormats = 'PDF, Word, EPUB, TXT, Images';
+  static const String noDocumentsDescription =
+      'Import a PDF to start asking questions and getting evidence-based answers';
+  static const String importPdf = '+ Import PDF';
+  static const String importAnotherPdf = '+ Import Another PDF';
+  static const String supportedFormats = 'PDF';
   static const String chat = 'Chat';
   static const String read = 'Read';
   
@@ -132,9 +101,10 @@ abstract final class AppStrings {
   
   // Download Required (when user chose "Download Later")
   static const String downloadRequiredTitle = 'Download Required';
-  static const String downloadRequiredDescription = 
-      'Download the offline engine (1.5GB) to start asking questions and getting evidence-based answers.';
-  static const String downloadRequiredNote = 
+  static const String downloadRequiredDescription =
+      'To chat with your documents, download the offline engine (1.5 GB). '
+      'This is a one-time download and all processing will happen offline on your device.';
+  static const String downloadRequiredNote =
       'You can still import and read PDFs. Chat will unlock after download.';
   static const String backToLibrary = 'Back to Library';
   

@@ -41,7 +41,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
     final setupState = ref.watch(setupProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('AI Model')),
+      appBar: AppBar(title: const Text('Model Info')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -69,7 +69,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Gemma 2B IT (Q4)',
+                              'Offline Engine',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -102,13 +102,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
           Card(
             child: Column(
               children: [
-                _infoRow('Model', 'Gemma 2B Instruct'),
-                const Divider(height: 1),
-                _infoRow('Quantization', '4-bit (Q4_K_M)'),
-                const Divider(height: 1),
-                _infoRow('Parameters', '2 billion'),
-                const Divider(height: 1),
-                _infoRow('Embedding Model', 'MiniLM-L6-v2'),
+                _infoRow('Type', 'Offline Intelligence Engine'),
                 const Divider(height: 1),
                 _infoRow('Storage Used',
                     _modelSizeBytes > 0
