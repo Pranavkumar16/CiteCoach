@@ -3,26 +3,8 @@ import Foundation
 
 /// Native LLM inference plugin using llama.cpp for iOS.
 ///
-/// This plugin bridges Flutter to llama.cpp for on-device inference.
-///
-/// ## Setup Instructions:
-///
-/// 1. Add llama.cpp to the iOS project:
-///    - Use Swift Package Manager (SPM):
-///      File > Add Packages > https://github.com/ggerganov/llama.cpp
-///    - Or use CocoaPods with the llama.cpp podspec
-///    - Or manually add the llama.cpp source files to the Xcode project
-///
-/// 2. Add to ios/Podfile (if using CocoaPods):
-///    ```ruby
-///    pod 'llama', :git => 'https://github.com/ggerganov/llama.cpp'
-///    ```
-///
-/// 3. Enable Metal acceleration in Build Settings:
-///    - Set METAL_LIBRARY_OUTPUT_DIR
-///    - Link Metal.framework and MetalKit.framework
-///
-/// 4. Set minimum deployment target to iOS 14.0+
+/// Uses llama.cpp C API directly via the bridging header.
+/// Metal GPU acceleration is enabled when available.
 ///
 class LlmPlugin: NSObject {
 
@@ -31,8 +13,8 @@ class LlmPlugin: NSObject {
     private var eventSink: FlutterEventSink?
 
     // Model state (opaque pointers to llama.cpp structs)
-    private var modelPointer: OpaquePointer?
-    private var contextPointer: OpaquePointer?
+    private var model: OpaquePointer?
+    private var ctx: OpaquePointer?
 
     private var isGenerating = false
     private var shouldStop = false
@@ -88,10 +70,10 @@ class LlmPlugin: NSObject {
 
         case "getModelInfo":
             let info: [String: Any] = [
-                "name": "Phi-3.5 Mini Instruct",
+                "name": "Gemma 2B Instruct",
                 "quantization": "Q4_K_M",
-                "parameters": "3.8B",
-                "isLoaded": modelPointer != nil
+                "parameters": "2B",
+                "isLoaded": model != nil
             ]
             result(info)
 
@@ -119,36 +101,48 @@ class LlmPlugin: NSObject {
                 return
             }
 
-            do {
-                // Initialize llama.cpp model
-                // NOTE: Replace these with actual llama.cpp API calls
-                // after adding llama.cpp to the project.
-                //
-                // var params = llama_model_default_params()
-                // params.n_gpu_layers = 99  // Use Metal GPU
-                // self.modelPointer = llama_load_model_from_file(modelPath, params)
-                //
-                // var ctxParams = llama_context_default_params()
-                // ctxParams.n_ctx = 2048
-                // ctxParams.n_threads = 4
-                // self.contextPointer = llama_new_context_with_model(self.modelPointer, ctxParams)
+            // Initialize llama.cpp backend
+            llama_backend_init()
 
-                // Placeholder: Simulate successful load
-                // Remove this once llama.cpp is integrated
-                self.modelPointer = OpaquePointer(bitPattern: 1)
-                self.contextPointer = OpaquePointer(bitPattern: 1)
+            // Configure model parameters with Metal GPU acceleration
+            var modelParams = llama_model_default_params()
+            modelParams.n_gpu_layers = 99 // Offload all layers to Metal GPU
 
-                DispatchQueue.main.async {
-                    result(true)
-                }
-            } catch {
+            // Load the model
+            guard let loadedModel = llama_model_load_from_file(modelPath, modelParams) else {
                 DispatchQueue.main.async {
                     result(FlutterError(
-                        code: "LOAD_ERROR",
-                        message: "Failed to load model: \(error.localizedDescription)",
+                        code: "LOAD_FAILED",
+                        message: "Failed to load model from: \(modelPath)",
                         details: nil
                     ))
                 }
+                return
+            }
+            self.model = loadedModel
+
+            // Create inference context
+            var ctxParams = llama_context_default_params()
+            ctxParams.n_ctx = 2048
+            ctxParams.n_threads = UInt32(min(ProcessInfo.processInfo.activeProcessorCount, 4))
+            ctxParams.n_batch = 512
+
+            guard let context = llama_init_from_model(loadedModel, ctxParams) else {
+                llama_model_free(loadedModel)
+                self.model = nil
+                DispatchQueue.main.async {
+                    result(FlutterError(
+                        code: "CONTEXT_FAILED",
+                        message: "Failed to create inference context",
+                        details: nil
+                    ))
+                }
+                return
+            }
+            self.ctx = context
+
+            DispatchQueue.main.async {
+                result(true)
             }
         }
     }
@@ -163,7 +157,7 @@ class LlmPlugin: NSObject {
         repeatPenalty: Float,
         result: @escaping FlutterResult
     ) {
-        guard modelPointer != nil, contextPointer != nil else {
+        guard let model = self.model, let ctx = self.ctx else {
             result(FlutterError(
                 code: "MODEL_NOT_LOADED",
                 message: "Model is not loaded",
@@ -183,61 +177,108 @@ class LlmPlugin: NSObject {
 
         isGenerating = true
         shouldStop = false
-        result(nil) // Acknowledge start
+        result(nil) // Acknowledge start, tokens come via EventChannel
 
         inferenceQueue.async { [weak self] in
             guard let self = self else { return }
-
             defer { self.isGenerating = false }
 
-            // NOTE: Replace this with actual llama.cpp inference
-            // after integrating the library.
-            //
-            // Actual implementation would:
-            // 1. Tokenize the prompt
-            // 2. Run inference token by token
-            // 3. Stream each decoded token back via eventSink
-            //
-            // Example with llama.cpp API:
-            //
-            // let tokens = llama_tokenize(self.contextPointer, prompt, ...)
-            // llama_eval(self.contextPointer, tokens, ...)
-            //
-            // for _ in 0..<maxTokens {
-            //     if self.shouldStop { break }
-            //
-            //     let logits = llama_get_logits(self.contextPointer)
-            //     let tokenId = llama_sample(logits, temperature, topP, repeatPenalty)
-            //
-            //     if tokenId == llama_token_eos(self.modelPointer) { break }
-            //
-            //     let tokenStr = llama_token_to_piece(self.modelPointer, tokenId)
-            //     DispatchQueue.main.async {
-            //         self.eventSink?(tokenStr)
-            //     }
-            //
-            //     llama_eval(self.contextPointer, [tokenId], ...)
-            // }
+            let vocab = llama_model_get_vocab(model)
 
-            // Placeholder response for testing without native lib
-            let placeholderTokens = [
-                "Based ", "on ", "the ", "document, ",
-                "I ", "can ", "see ", "that ",
-                "this ", "topic ", "is ", "discussed ",
-                "in ", "the ", "referenced ", "pages. ",
-                "Please ", "integrate ", "llama.cpp ",
-                "native ", "library ", "for ", "real ",
-                "AI-powered ", "responses."
-            ]
+            // Tokenize the prompt
+            let promptCStr = prompt.cString(using: .utf8)!
+            let nPromptMax = Int32(prompt.utf8.count + 256)
+            var tokens = [llama_token](repeating: 0, count: Int(nPromptMax))
+            let nTokens = llama_tokenize(vocab, promptCStr, Int32(promptCStr.count - 1),
+                                          &tokens, nPromptMax, true, true)
 
-            for token in placeholderTokens {
-                if self.shouldStop { break }
+            if nTokens < 0 {
                 DispatchQueue.main.async {
-                    self.eventSink?(token)
+                    self.eventSink?("[ERROR]Failed to tokenize prompt")
                 }
-                Thread.sleep(forTimeInterval: 0.03)
+                return
+            }
+            tokens = Array(tokens.prefix(Int(nTokens)))
+
+            // Clear KV cache
+            llama_kv_cache_clear(ctx)
+
+            // Process prompt in batches
+            var batch = llama_batch_init(512, 0, 1)
+
+            for i in 0..<Int(nTokens) {
+                llama_batch_add(&batch, tokens[i], Int32(i), [0], false)
+                if batch.n_tokens >= 512 || i == Int(nTokens) - 1 {
+                    if i == Int(nTokens) - 1 {
+                        batch.logits[Int(batch.n_tokens) - 1] = 1 // true
+                    }
+                    if llama_decode(ctx, batch) != 0 {
+                        DispatchQueue.main.async {
+                            self.eventSink?("[ERROR]Failed to decode prompt")
+                        }
+                        llama_batch_free(batch)
+                        return
+                    }
+                    llama_batch_clear(&batch)
+                }
             }
 
+            // Set up sampler chain
+            let smpl = llama_sampler_chain_init(llama_sampler_chain_default_params())!
+            llama_sampler_chain_add(smpl, llama_sampler_init_temp(temperature))
+            llama_sampler_chain_add(smpl, llama_sampler_init_top_p(topP, 1))
+            llama_sampler_chain_add(smpl, llama_sampler_init_penalties(
+                64, repeatPenalty, 0.0, 0.0))
+            llama_sampler_chain_add(smpl, llama_sampler_init_dist(42))
+
+            // Generate tokens
+            var nGenerated = 0
+            var nPos = Int32(nTokens)
+
+            while nGenerated < maxTokens {
+                if self.shouldStop { break }
+
+                // Sample next token
+                let newToken = llama_sampler_sample(smpl, ctx, -1)
+
+                // Check for end of generation
+                if llama_vocab_is_eog(vocab, newToken) {
+                    break
+                }
+
+                // Convert token to text
+                var buf = [CChar](repeating: 0, count: 256)
+                let n = llama_token_to_piece(vocab, newToken, &buf, 256, 0, true)
+                if n < 0 {
+                    break
+                }
+
+                let tokenText = String(cString: buf)
+
+                // Send token to Flutter via EventChannel
+                DispatchQueue.main.async {
+                    self.eventSink?(tokenText)
+                }
+
+                // Prepare next batch
+                llama_batch_clear(&batch)
+                llama_batch_add(&batch, newToken, nPos, [0], true)
+                nPos += 1
+
+                if llama_decode(ctx, batch) != 0 {
+                    DispatchQueue.main.async {
+                        self.eventSink?("[ERROR]Failed to decode token")
+                    }
+                    break
+                }
+
+                nGenerated += 1
+            }
+
+            llama_batch_free(batch)
+            llama_sampler_free(smpl)
+
+            // Signal completion
             DispatchQueue.main.async {
                 self.eventSink?("[DONE]")
             }
@@ -250,16 +291,16 @@ class LlmPlugin: NSObject {
         inferenceQueue.async { [weak self] in
             guard let self = self else { return }
 
-            // NOTE: Replace with actual llama.cpp cleanup:
-            // if let ctx = self.contextPointer {
-            //     llama_free(ctx)
-            // }
-            // if let model = self.modelPointer {
-            //     llama_free_model(model)
-            // }
+            if let ctx = self.ctx {
+                llama_free(ctx)
+            }
+            if let model = self.model {
+                llama_model_free(model)
+                llama_backend_free()
+            }
 
-            self.contextPointer = nil
-            self.modelPointer = nil
+            self.ctx = nil
+            self.model = nil
 
             DispatchQueue.main.async {
                 result(true)
@@ -275,17 +316,20 @@ class LlmPlugin: NSObject {
             in: .userDomainMask
         ).first!
         return documentsDir.appendingPathComponent(
-            "models/phi-3.5-mini-instruct-q4_k_m.gguf"
+            "models/gemma-2b-it-q4"
         ).path
     }
 
     func dispose() {
         shouldStop = true
         inferenceQueue.async { [weak self] in
-            // if let ctx = self?.contextPointer { llama_free(ctx) }
-            // if let model = self?.modelPointer { llama_free_model(model) }
-            self?.contextPointer = nil
-            self?.modelPointer = nil
+            if let ctx = self?.ctx { llama_free(ctx) }
+            if let model = self?.model {
+                llama_model_free(model)
+                llama_backend_free()
+            }
+            self?.ctx = nil
+            self?.model = nil
         }
         methodChannel?.setMethodCallHandler(nil)
     }

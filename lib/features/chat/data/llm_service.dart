@@ -33,11 +33,11 @@ class GenerationResult {
 
 typedef StreamCallback = void Function(String token);
 
-/// On-device LLM inference via platform channels.
+/// On-device LLM inference via platform channels (llama.cpp).
 ///
 /// Architecture:
-/// - Android: MediaPipe LLM Inference API (Gemma 2B Q4)
-/// - iOS: MLX Swift / CoreML (Gemma 2B Q4)
+/// - Android: llama.cpp via NDK/JNI (arm64-v8a)
+/// - iOS: llama.cpp via C API (arm64, Metal accelerated)
 /// - Prompt engineering: citation-grounded Q&A with context injection
 ///
 /// The service constructs prompts that force the model to ground answers
@@ -45,7 +45,8 @@ typedef StreamCallback = void Function(String token);
 class LlmService {
   LlmService();
 
-  static const _channel = MethodChannel('com.citecoach.citecoach/llm');
+  static const _channel = MethodChannel('com.citecoach/llm');
+  static const _streamChannel = EventChannel('com.citecoach/llm_stream');
   static const String modelName = 'gemma-2b-it-q4';
   static const int maxOutputTokens = 512;
   static const double temperature = 0.3;
@@ -53,6 +54,8 @@ class LlmService {
 
   bool _isModelLoaded = false;
   bool get isModelLoaded => _isModelLoaded;
+
+  StreamSubscription<dynamic>? _streamSubscription;
 
   /// Initialize the LLM model via platform channel.
   Future<bool> initialize() async {
@@ -70,9 +73,6 @@ class LlmService {
 
       final result = await _channel.invokeMethod<bool>('loadModel', {
         'modelPath': modelPath,
-        'maxTokens': maxOutputTokens,
-        'temperature': temperature,
-        'topP': topP,
       });
 
       _isModelLoaded = result == true;
@@ -131,33 +131,53 @@ class LlmService {
     try {
       debugPrint('LlmService: Generating response...');
 
-      String fullResponse = '';
+      final completer = Completer<String>();
+      final responseBuffer = StringBuffer();
 
-      // Set up streaming listener
-      _channel.setMethodCallHandler((call) async {
-        if (call.method == 'onToken') {
-          final token = call.arguments as String;
-          fullResponse += token;
-          onToken?.call(token);
-        }
-      });
+      // Listen to the EventChannel for streamed tokens
+      _streamSubscription = _streamChannel.receiveBroadcastStream().listen(
+        (event) {
+          final token = event as String;
+          if (token == '[DONE]') {
+            if (!completer.isCompleted) {
+              completer.complete(responseBuffer.toString());
+            }
+          } else if (token.startsWith('[ERROR]')) {
+            if (!completer.isCompleted) {
+              completer.completeError(token.substring(7));
+            }
+          } else {
+            responseBuffer.write(token);
+            onToken?.call(token);
+          }
+        },
+        onError: (error) {
+          if (!completer.isCompleted) {
+            completer.completeError(error.toString());
+          }
+        },
+        onDone: () {
+          if (!completer.isCompleted) {
+            completer.complete(responseBuffer.toString());
+          }
+        },
+      );
 
-      // Invoke generation
-      final result = await _channel.invokeMethod<String>('generate', {
+      // Start generation via MethodChannel
+      await _channel.invokeMethod('startGeneration', {
         'prompt': prompt,
         'maxTokens': maxOutputTokens,
         'temperature': temperature,
         'topP': topP,
-        'stream': onToken != null,
+        'repeatPenalty': 1.1,
       });
 
-      // Clear handler
-      _channel.setMethodCallHandler(null);
+      // Wait for generation to complete
+      final responseText = await completer.future;
 
-      // Use streamed response or direct result
-      final responseText = fullResponse.isNotEmpty
-          ? fullResponse
-          : (result ?? '');
+      // Clean up stream
+      await _streamSubscription?.cancel();
+      _streamSubscription = null;
 
       if (responseText.isEmpty) {
         return GenerationResult.error('Model returned empty response');
@@ -172,13 +192,24 @@ class LlmService {
       );
     } on PlatformException catch (e) {
       debugPrint('LlmService: Generation error: $e');
-      _channel.setMethodCallHandler(null);
+      await _streamSubscription?.cancel();
+      _streamSubscription = null;
       return GenerationResult.error('Model inference failed: ${e.message}');
     } catch (e) {
       debugPrint('LlmService: Error: $e');
-      _channel.setMethodCallHandler(null);
+      await _streamSubscription?.cancel();
+      _streamSubscription = null;
       return GenerationResult.error('Failed to generate response: $e');
     }
+  }
+
+  /// Stop an in-progress generation.
+  Future<void> stopGeneration() async {
+    try {
+      await _channel.invokeMethod('stopGeneration');
+    } catch (_) {}
+    await _streamSubscription?.cancel();
+    _streamSubscription = null;
   }
 
   /// Build a citation-grounded prompt for Gemma 2B.
@@ -254,7 +285,6 @@ class LlmService {
 
     // Clean up response text
     var cleaned = responseText.trim();
-    // Remove any model artifacts
     cleaned = cleaned.replaceAll('<end_of_turn>', '');
     cleaned = cleaned.replaceAll('<start_of_turn>', '');
 
@@ -262,8 +292,12 @@ class LlmService {
   }
 
   void dispose() {
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
     if (_isModelLoaded) {
-      try { _channel.invokeMethod('dispose'); } catch (_) {}
+      try {
+        _channel.invokeMethod('unloadModel');
+      } catch (_) {}
     }
     _isModelLoaded = false;
     debugPrint('LlmService: Disposed');
