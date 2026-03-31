@@ -316,7 +316,7 @@ class LlmPlugin: NSObject {
             in: .userDomainMask
         ).first!
         return documentsDir.appendingPathComponent(
-            "models/gemma-2b-it-q4"
+            "models/gemma-2-2b-it-Q4_K_M.gguf"
         ).path
     }
 

@@ -97,20 +97,20 @@ class DownloadProgress {
 class ModelDownloader {
   ModelDownloader();
 
-  static const String modelName = 'gemma-2b-it-q4';
+  static const String modelFileName = 'gemma-2-2b-it-Q4_K_M.gguf';
   static const String modelVersion = '1.0.0';
-  static const int modelSizeBytes = 1500 * 1024 * 1024; // 1.5 GB
+  static const int modelSizeBytes = 1630 * 1024 * 1024; // ~1.6 GB
 
-  /// Model download URLs (primary + fallback).
-  /// In production, these point to your hosted model files.
+  /// Model download URLs from HuggingFace (primary + mirror).
   static const List<String> _modelUrls = [
-    'https://models.citecoach.app/v1/gemma-2b-it-q4.bin',
-    'https://cdn.citecoach.app/models/gemma-2b-it-q4.bin',
+    'https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf',
+    'https://huggingface.co/lmstudio-community/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf',
   ];
 
-  /// Embedding model URL (smaller, bundled with main download).
+  /// Embedding model URL (MiniLM-L6-v2 ONNX → TFLite, ~22MB).
+  /// TF-IDF fallback works without this, so it's optional.
   static const String _embeddingModelUrl =
-      'https://models.citecoach.app/v1/minilm-l6-v2.tflite';
+      'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx';
   static const int _embeddingModelSize = 22 * 1024 * 1024; // 22 MB
 
   late final Dio _dio;
@@ -130,7 +130,7 @@ class ModelDownloader {
 
   Future<String> getModelPath() async {
     final appDir = await getApplicationDocumentsDirectory();
-    return '${appDir.path}/models/$modelName';
+    return '${appDir.path}/models/$modelFileName';
   }
 
   Future<String> _getEmbeddingModelPath() async {

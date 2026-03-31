@@ -243,16 +243,16 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
 
     private fun getModelInfo(result: MethodChannel.Result) {
         val info = HashMap<String, Any>()
-        info["name"] = "Phi-3.5 Mini Instruct"
+        info["name"] = "Gemma 2 2B Instruct"
         info["quantization"] = "Q4_K_M"
-        info["parameters"] = "3.8B"
+        info["parameters"] = "2B"
         info["isLoaded"] = modelHandle != 0L
         result.success(info)
     }
 
     private fun getDefaultModelPath(): String {
         val appDir = context?.filesDir?.absolutePath ?: ""
-        return "$appDir/models/phi-3.5-mini-instruct-q4_k_m.gguf"
+        return "$appDir/models/gemma-2-2b-it-Q4_K_M.gguf"
     }
 
     fun dispose() {

@@ -25,9 +25,9 @@ abstract final class AppStrings {
       'Download the AI model to enable intelligent Q&A';
   static const String modelSetupDescription =
       'Download the offline AI engine (2.4GB) to enable Q&A. This is a one-time setup.';
-  static const String modelName = 'Phi-3.5 Mini';
+  static const String modelName = 'Gemma 2 2B';
   static const String modelDescription = 'Advanced AI optimized for document understanding';
-  static const String modelSize = '2.4 GB';
+  static const String modelSize = '1.6 GB';
   static const String modelNetwork = 'Wi-Fi only';
   static const String modelTime = '~5-8 minutes';
   static const String downloadSizeLabel = 'Download Size';

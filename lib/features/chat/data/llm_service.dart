@@ -47,7 +47,7 @@ class LlmService {
 
   static const _channel = MethodChannel('com.citecoach/llm');
   static const _streamChannel = EventChannel('com.citecoach/llm_stream');
-  static const String modelName = 'gemma-2b-it-q4';
+  static const String modelName = 'gemma-2-2b-it-Q4_K_M.gguf';
   static const int maxOutputTokens = 512;
   static const double temperature = 0.3;
   static const double topP = 0.9;
