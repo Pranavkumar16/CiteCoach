@@ -9,8 +9,12 @@ workflows:
     environment:
       flutter: 3.24.0
       java: 17
-      ndk: r26d
     scripts:
+      - name: Install Android NDK
+        script: |
+          yes | sdkmanager "ndk;26.1.10909125" > /dev/null 2>&1 || true
+          echo "NDK installed"
+
       - name: Clone llama.cpp
         script: |
           cd android/app/src/main/cpp
