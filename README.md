@@ -1,72 +1,53 @@
 # CiteCoach
 
-Offline document intelligence app built with Flutter. Import PDFs, ask questions, and get evidence-based answers with page citations — all processed on-device with no data leaving your phone.
+**Offline document intelligence for your phone.**
 
-## Features
+Import PDFs, ask questions in plain language, and get evidence-based answers with page citations — all without an internet connection. Your documents never leave your device.
 
-- **100% Offline & Private** — Documents never leave your device. All AI processing runs locally after a one-time model download.
-- **Document Q&A with Citations** — Ask questions about imported PDFs and get answers with tappable citation badges that jump to the exact source page.
-- **Voice Input & Read Aloud** — Ask questions by voice (speech-to-text) and have answers read back (text-to-speech) using platform-native engines.
-- **PDF Reader** — Built-in reader with page navigation, search, and zoom. Citations from chat link directly to highlighted passages.
-- **Document Processing** — Automatic text extraction, chunking, and embedding for fast retrieval-augmented Q&A.
+## What It Does
 
-## Architecture
+CiteCoach turns your phone into a private research assistant. Import any PDF — textbooks, research papers, manuals, reports — and start a conversation with it. Every answer comes with tappable citations that take you straight to the source page.
 
-```
-lib/
-  core/           # Theme, constants, shared widgets, services
-  features/
-    setup/        # Splash, privacy, model download flow
-    library/      # Document library with import
-    processing/   # PDF text extraction & embedding pipeline
-    chat/         # Document Q&A with citation support
-    reader/       # PDF viewer with navigation
-    voice/        # Speech-to-text & text-to-speech overlay
-    settings/     # Offline status, performance, voice settings
-  routing/        # GoRouter configuration
-```
+### Key Features
 
-**State management:** Riverpod  
-**Navigation:** GoRouter  
-**Database:** SQLite (sqflite)  
-**PDF:** Syncfusion Flutter PDF Viewer  
-**Voice:** speech_to_text + flutter_tts  
-**Font:** Lexend  
+- **Ask Questions, Get Cited Answers** — Type or speak a question about your document. CiteCoach finds the relevant passages and gives you an answer with page-number citations you can tap to verify.
+
+- **100% Offline & Private** — After a one-time setup download (~1.5 GB), everything runs on your device. No cloud. No servers. No data collection. Your documents stay yours.
+
+- **Voice In, Voice Out** — Tap the mic to ask questions by voice. Tap "Read aloud" to hear answers spoken back. Great for hands-free studying or accessibility.
+
+- **Built-in PDF Reader** — Read your documents right in the app with page navigation, search, and zoom. When you tap a citation in chat, it jumps directly to the highlighted passage.
+
+- **Document Library** — Organize all your imported PDFs in one place. Each document gets its own chat history.
+
+## How It Works
+
+1. **Import a PDF** — Pick a file from your device
+2. **Automatic Processing** — CiteCoach extracts text and indexes it for search (takes about 30 seconds for a 127-page document)
+3. **Start Chatting** — Ask anything about your document and get answers backed by page citations
+4. **Verify Sources** — Tap any citation badge to jump to the exact page in the PDF reader
 
 ## Getting Started
 
-### Prerequisites
+1. Launch CiteCoach
+2. Complete the one-time offline engine download (Wi-Fi recommended, ~3-5 minutes)
+3. Import your first PDF
+4. Start asking questions
 
-- Flutter SDK >= 3.5.0
-- Android Studio or Xcode for platform builds
+You can also skip the download and import/read PDFs first — chat unlocks once the engine is downloaded.
 
-### Setup
+## Requirements
 
-```bash
-flutter pub get
-flutter run
-```
+- Android or iOS device
+- ~1.5 GB free storage for the offline engine
+- Wi-Fi for the initial one-time download
 
-### First Launch
+## Privacy
 
-1. Splash screen auto-advances to the privacy notice
-2. One-time offline engine download (~1.5 GB over Wi-Fi) — can be deferred with "Download Later"
-3. Import a PDF from your device
-4. Start chatting with citation-backed answers
+CiteCoach is built with privacy as the foundation:
 
-## Project Structure
-
-| Directory | Purpose |
-|-----------|---------|
-| `lib/core/constants/` | App strings, dimensions, color palette |
-| `lib/core/theme/` | Material 3 dark theme with Lexend font |
-| `lib/core/widgets/` | Reusable components (buttons, logo, progress bars) |
-| `lib/core/services/` | Storage, database, and platform services |
-| `lib/features/*/domain/` | State models and entities |
-| `lib/features/*/data/` | Data sources, repositories, AI service |
-| `lib/features/*/presentation/` | Screens and widgets |
-| `lib/features/*/providers/` | Riverpod state providers |
-
-## License
-
-Proprietary. All rights reserved.
+- All processing happens on your device
+- No documents are uploaded to any server
+- No internet required after the initial engine download
+- No analytics or tracking
+- Your conversations stay on your device
