@@ -1,7 +1,4 @@
 workflows:
-  # ============================================================
-  # Android APK Build (no signing needed for testing)
-  # ============================================================
   android-build:
     name: Android APK Build
     max_build_duration: 60
@@ -10,11 +7,6 @@ workflows:
       flutter: 3.24.0
       java: 17
     scripts:
-      - name: Install Android NDK
-        script: |
-          yes | sdkmanager "ndk;26.1.10909125" > /dev/null 2>&1 || true
-          echo "NDK installed"
-
       - name: Clone llama.cpp
         script: |
           cd android/app/src/main/cpp
@@ -23,89 +15,11 @@ workflows:
       - name: Get Flutter packages
         script: flutter pub get
 
+      - name: Flutter doctor
+        script: flutter doctor -v
+
       - name: Build APK (Release)
-        script: flutter build apk --release
+        script: flutter build apk --release --verbose
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
-
-  # ============================================================
-  # iOS IPA Build
-  # ============================================================
-  #
-  # To enable iOS builds:
-  # 1. Get Apple Developer Account ($99/year)
-  # 2. In Codemagic UI → Settings → Code signing:
-  #    - Upload your Apple signing certificate (.p12)
-  #    - Upload your provisioning profile (.mobileprovision)
-  #    OR use "Automatic code signing" with your Apple ID
-  # 3. Uncomment the workflow below
-  # ============================================================
-
-  ios-build:
-    name: iOS IPA Build
-    max_build_duration: 60
-    instance_type: mac_mini_m2
-    integrations:
-      app_store_connect: codemagic  # Set up in Codemagic UI
-    environment:
-      flutter: 3.24.0
-      ios_signing:
-        distribution_type: development
-        bundle_identifier: com.citecoach.citecoach
-      vars:
-        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
-        XCODE_SCHEME: "Runner"
-    scripts:
-      - name: Clone llama.cpp for iOS
-        script: |
-          cd ios
-          git clone --branch b4547 --depth 1 https://github.com/ggerganov/llama.cpp.git
-
-          # Build llama.cpp as a static library for iOS arm64
-          cd llama.cpp
-          mkdir build-ios && cd build-ios
-          cmake .. \
-            -DCMAKE_SYSTEM_NAME=iOS \
-            -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=15.5 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLLAMA_METAL=ON \
-            -DLLAMA_BUILD_TESTS=OFF \
-            -DLLAMA_BUILD_EXAMPLES=OFF \
-            -DLLAMA_BUILD_SERVER=OFF \
-            -DBUILD_SHARED_LIBS=OFF
-          cmake --build . --config Release -j$(sysctl -n hw.ncpu)
-
-      - name: Set up llama.cpp headers and library for Xcode
-        script: |
-          # Copy headers where the bridging header can find them
-          mkdir -p ios/Runner/llama_cpp
-          cp ios/llama.cpp/include/llama.h ios/Runner/llama_cpp/
-          cp ios/llama.cpp/ggml/include/ggml.h ios/Runner/llama_cpp/
-
-          # Copy the static libraries
-          mkdir -p ios/Runner/libs
-          cp ios/llama.cpp/build-ios/src/libllama.a ios/Runner/libs/ 2>/dev/null || \
-          cp ios/llama.cpp/build-ios/libllama.a ios/Runner/libs/ 2>/dev/null || true
-          cp ios/llama.cpp/build-ios/ggml/src/libggml.a ios/Runner/libs/ 2>/dev/null || \
-          cp ios/llama.cpp/build-ios/libggml.a ios/Runner/libs/ 2>/dev/null || true
-
-      - name: Install CocoaPods
-        script: |
-          cd ios
-          pod install
-
-      - name: Get Flutter packages
-        script: flutter pub get
-
-      - name: Build iOS IPA
-        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
-
-    artifacts:
-      - build/ios/ipa/*.ipa
-
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: false  # Set to true when ready
