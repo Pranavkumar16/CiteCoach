@@ -27,8 +27,8 @@ dependencies:
   shared_preferences: ^2.2.3
 
   # PDF
-  syncfusion_flutter_pdfviewer: ^26.1.41
-  syncfusion_flutter_pdf: ^26.1.41
+  syncfusion_flutter_pdfviewer: ^27.1.58
+  syncfusion_flutter_pdf: ^27.1.58
   
   # OCR - On-device text recognition (Google ML Kit)
   google_mlkit_text_recognition: ^0.14.0
