@@ -31,7 +31,7 @@ dependencies:
   syncfusion_flutter_pdf: ^27.1.58
   
   # OCR - On-device text recognition (Google ML Kit)
-  google_mlkit_text_recognition: ^0.14.0
+  google_mlkit_text_recognition: ^0.15.1
 
   # Word Documents (.doc, .docx)
   docx_to_text: ^1.0.1
@@ -43,14 +43,14 @@ dependencies:
   image: ^3.3.0
 
   # File Handling
-  file_picker: ^8.0.3
+  file_picker: ^10.3.10
 
   # Voice
   speech_to_text: ^7.0.0
   flutter_tts: ^4.0.2
 
   # Battery & System
-  battery_plus: ^6.0.1
+  battery_plus: ^7.0.0
 
   # SVG
   flutter_svg: ^2.0.10+1
