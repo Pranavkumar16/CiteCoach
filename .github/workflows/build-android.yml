@@ -32,7 +32,7 @@ jobs:
 
       - name: Clone llama.cpp for native LLM support
         run: |
-          git clone --branch b4000 --depth 1 https://github.com/ggerganov/llama.cpp.git \
+          git clone --depth 1 https://github.com/ggerganov/llama.cpp.git \
             android/app/src/main/cpp/llama.cpp
 
       - name: Get dependencies
