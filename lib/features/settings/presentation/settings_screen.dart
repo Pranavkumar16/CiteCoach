@@ -72,7 +72,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: Icons.smart_toy_outlined,
             title: 'Model Status',
             subtitle: setupState.isModelDownloaded
-                ? 'Gemma 2B — Ready'
+                ? 'AI Engine — Ready'
                 : 'Not downloaded',
             trailing: setupState.isModelDownloaded
                 ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)

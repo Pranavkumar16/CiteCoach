@@ -69,7 +69,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Gemma 2B IT (Q4)',
+                              'CiteCoach AI Engine',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -102,13 +102,11 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
           Card(
             child: Column(
               children: [
-                _infoRow('Model', 'Gemma 2B Instruct'),
+                _infoRow('Model', 'CiteCoach AI Engine'),
                 const Divider(height: 1),
-                _infoRow('Quantization', '4-bit (Q4_K_M)'),
+                _infoRow('Type', 'On-Device Language Model'),
                 const Divider(height: 1),
-                _infoRow('Parameters', '2 billion'),
-                const Divider(height: 1),
-                _infoRow('Embedding Model', 'MiniLM-L6-v2'),
+                _infoRow('Optimized For', 'Document Q&A'),
                 const Divider(height: 1),
                 _infoRow('Storage Used',
                     _modelSizeBytes > 0

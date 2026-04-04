@@ -212,7 +212,7 @@ class LlmService {
     _streamSubscription = null;
   }
 
-  /// Build a citation-grounded prompt for Gemma 2B.
+  /// Build a citation-grounded prompt for the on-device LLM.
   String _buildPrompt({
     required String query,
     required String context,
@@ -221,7 +221,7 @@ class LlmService {
   }) {
     final buffer = StringBuffer();
 
-    // System instruction for Gemma format
+    // System instruction
     buffer.writeln('<start_of_turn>user');
     buffer.writeln('You are CiteCoach, a document analysis assistant. '
         'Answer questions ONLY using the provided document excerpts. '

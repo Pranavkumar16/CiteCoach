@@ -41,8 +41,8 @@ void main() {
     });
 
     test('set and get model version', () async {
-      await storageService.setModelVersion('gemma-2b-v1');
-      expect(storageService.modelVersion, equals('gemma-2b-v1'));
+      await storageService.setModelVersion('citecoach-ai-v1');
+      expect(storageService.modelVersion, equals('citecoach-ai-v1'));
     });
   });
 
