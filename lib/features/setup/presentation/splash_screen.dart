@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/constants.dart';
-import '../../../core/widgets/widgets.dart';
+import '../../../core/theme/app_theme_data.dart';
 import '../providers/setup_provider.dart';
 
 /// Splash screen shown on app launch.
+///
+/// Design: App icon with a pulsing gradient ring, wordmark below,
+/// three loading dots, and a tagline at the bottom.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -15,41 +17,34 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+    with TickerProviderStateMixin {
+  late final AnimationController _fadeController;
+  late final AnimationController _pulseController;
   late final Animation<double> _fadeAnimation;
-  late final Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    ));
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2500),
+      vsync: this,
+    )..repeat();
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    ));
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
+    );
 
-    _controller.forward();
+    _fadeController.forward();
 
     Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        _advanceToPrivacy();
-      }
+      if (mounted) _advanceToPrivacy();
     });
   }
 
@@ -60,58 +55,214 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   void dispose() {
-    _controller.dispose();
+    _fadeController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context).extension<AppThemeData>()!;
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.zinc950,
-        ),
-        child: SafeArea(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: child,
+      backgroundColor: theme.background,
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Column(
+            children: [
+              const Spacer(flex: 3),
+              _buildIconWithRing(theme),
+              const SizedBox(height: 24),
+              Text(
+                'CiteCoach',
+                style: TextStyle(
+                  fontFamily: 'Lexend',
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: theme.textPrimary,
+                  letterSpacing: -0.4,
                 ),
-              );
-            },
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const KineticLogoAnimated(
-                    size: AppDimensions.logoSizeLg,
-                    variant: KineticLogoVariant.gradient,
-                  ),
-                  const SizedBox(height: AppDimensions.spacingXl),
-                  Text(
-                    AppStrings.appName,
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: AppDimensions.spacingSm),
-                  Text(
-                    AppStrings.appTagline,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                  ),
-                ],
               ),
-            ),
+              const SizedBox(height: 6),
+              Text(
+                'Chat with any document',
+                style: TextStyle(
+                  fontFamily: 'Lexend',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: theme.textTertiary,
+                ),
+              ),
+              const Spacer(flex: 4),
+              _buildLoadingDots(theme),
+              const SizedBox(height: 16),
+              Text(
+                '100% offline intelligence',
+                style: TextStyle(
+                  fontFamily: 'Lexend',
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: theme.textTertiary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  /// App icon (88×88) with animated gradient ring pulsing outward.
+  Widget _buildIconWithRing(AppThemeData theme) {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, _) {
+        return SizedBox(
+          width: 140,
+          height: 140,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Two staggered pulsing rings
+              for (int i = 0; i < 2; i++)
+                _buildPulseRing(theme, phase: i * 0.5),
+              // The icon
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: theme.accentGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.accentStart.withOpacity(0.4),
+                      blurRadius: 24,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // The "C" letterform
+                    Center(
+                      child: Text(
+                        'C',
+                        style: TextStyle(
+                          fontFamily: 'Lexend',
+                          fontSize: 56,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                    // Citation dot (amber)
+                    Positioned(
+                      top: 14,
+                      right: 16,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF59E0B),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Single pulsing gradient ring around the icon.
+  Widget _buildPulseRing(AppThemeData theme, {required double phase}) {
+    final t = ((_pulseController.value + phase) % 1.0);
+    final scale = 1.0 + 0.5 * t;
+    final opacity = (1.0 - t).clamp(0.0, 1.0);
+
+    return Transform.scale(
+      scale: scale,
+      child: Opacity(
+        opacity: opacity * 0.4,
+        child: CustomPaint(
+          size: const Size(88, 88),
+          painter: _GradientRingPainter(
+            gradient: theme.accentGradient,
+            radius: 20,
+            strokeWidth: 2,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Three pulsing dots with gradient color.
+  Widget _buildLoadingDots(AppThemeData theme) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (i) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, _) {
+              final t = ((_pulseController.value * 3 + i * 0.33) % 1.0);
+              final s = 0.5 + 0.5 * (1 - ((t - 0.5).abs() * 2));
+              return Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: theme.accentGradient,
+                ),
+                transform: Matrix4.identity()..scale(s),
+              );
+            },
+          ),
+        );
+      }),
+    );
+  }
+}
+
+/// Custom painter that draws a rounded rect outline with a gradient stroke.
+class _GradientRingPainter extends CustomPainter {
+  _GradientRingPainter({
+    required this.gradient,
+    required this.radius,
+    required this.strokeWidth,
+  });
+
+  final Gradient gradient;
+  final double radius;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final paint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(strokeWidth / 2),
+      Radius.circular(radius),
+    );
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GradientRingPainter oldDelegate) {
+    return oldDelegate.gradient != gradient ||
+        oldDelegate.radius != radius ||
+        oldDelegate.strokeWidth != strokeWidth;
   }
 }
