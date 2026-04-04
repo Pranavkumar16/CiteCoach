@@ -65,6 +65,9 @@ dependencies:
   # HTTP for model download
   dio: ^5.4.3+1
 
+  # Share / export
+  share_plus: ^10.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

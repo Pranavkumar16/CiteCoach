@@ -14,11 +14,13 @@ class MessageBubble extends ConsumerWidget {
     required this.message,
     this.onCitationTap,
     this.streamingContent,
+    this.onLongPress,
   });
 
   final ChatMessage message;
   final void Function(Citation citation)? onCitationTap;
   final String? streamingContent;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,7 +34,9 @@ class MessageBubble extends ConsumerWidget {
     final padding = _paddingForStyle(style);
     final radius = _radiusForStyle(style, isUser: isUser);
 
-    return Padding(
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: Padding(
       padding: EdgeInsets.only(
         left: isUser ? 48 : 0,
         right: isUser ? 0 : 48,
@@ -104,6 +108,7 @@ class MessageBubble extends ConsumerWidget {
             _buildAvatar(theme, isUser: true),
           ],
         ],
+      ),
       ),
     );
   }

@@ -9,12 +9,14 @@ import '../../../core/widgets/widgets.dart';
 import '../../../routing/app_router.dart';
 import '../../library/domain/document.dart';
 import '../../library/providers/library_provider.dart';
+import '../../voice/data/tts_service.dart';
 import '../domain/chat_message.dart';
 import '../providers/chat_provider.dart';
 import 'widgets/citation_badge.dart';
 import 'widgets/document_dna_strip.dart';
 import 'widgets/empty_chat_view.dart';
 import 'widgets/living_chat_input.dart';
+import 'widgets/message_actions_sheet.dart';
 import 'widgets/message_bubble.dart';
 
 /// Main chat screen for document Q&A.
@@ -33,11 +35,13 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _scrollController = ScrollController();
+  bool _showScrollToBottom = false;
+  int _lastAutoReadMessageId = -1;
 
   @override
   void initState() {
     super.initState();
-    // Initialize chat when screen loads
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatProvider.notifier).initialize(widget.documentId);
     });
@@ -45,8 +49,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    // Show FAB when user has scrolled up >150px from the bottom.
+    final distanceFromBottom = _scrollController.position.maxScrollExtent -
+        _scrollController.position.pixels;
+    final shouldShow = distanceFromBottom > 150;
+    if (shouldShow != _showScrollToBottom) {
+      setState(() => _showScrollToBottom = shouldShow);
+    }
   }
 
   void _scrollToBottom() {
@@ -174,15 +190,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final citationCounts = _computeCitationCounts(chatState.messages);
 
-    // Listen for new messages to scroll
+    final prefs = ref.watch(userPreferencesProvider);
+
+    // Listen for new messages: scroll + auto-read TTS (if enabled)
     ref.listen<ChatState>(chatProvider, (prev, next) {
-      if ((prev?.messages.length ?? 0) < next.messages.length) {
+      final grew = (prev?.messages.length ?? 0) < next.messages.length;
+      if (grew) {
         Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+
+        // Auto-read the new assistant message if enabled
+        final newMsg = next.messages.last;
+        if (prefs.autoReadResponses &&
+            newMsg.isAssistant &&
+            newMsg.id != null &&
+            newMsg.id != _lastAutoReadMessageId &&
+            newMsg.content.isNotEmpty) {
+          _lastAutoReadMessageId = newMsg.id!;
+          ref.read(ttsServiceProvider).speak(newMsg.content);
+        }
       }
     });
 
     return Scaffold(
       appBar: _buildAppBar(context, document),
+      floatingActionButton: _showScrollToBottom
+          ? _buildScrollToBottomFab(theme)
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         child: Row(
           children: [
@@ -338,8 +372,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onCitationTap: document != null
               ? (citation) => _handleCitationTap(citation, document)
               : null,
+          onLongPress: () => _handleMessageLongPress(message),
         );
       },
+    );
+  }
+
+  void _handleMessageLongPress(ChatMessage message) {
+    ref.read(appHapticsProvider).medium();
+    MessageActionsSheet.show(
+      context,
+      message: message,
+      onRegenerate: !message.isUser
+          ? null
+          : () async {
+              await ref.read(chatProvider.notifier).retryLastMessage();
+            },
+    );
+  }
+
+  Widget _buildScrollToBottomFab(AppThemeData theme) {
+    return GestureDetector(
+      onTap: () {
+        ref.read(appHapticsProvider).light();
+        _scrollToBottom();
+      },
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: theme.accentGradient,
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadow,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.arrow_downward_rounded,
+          color: Colors.white,
+          size: 22,
+        ),
+      ),
     );
   }
 }
