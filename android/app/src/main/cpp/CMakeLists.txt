@@ -15,10 +15,14 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/CMakeLists.txt")
     set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
     set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
+    set(GGML_LLAMAFILE OFF CACHE BOOL "" FORCE)
 
-    # Enable NEON for ARM
+    # Enable NEON for ARM64, disable FP16 for 32-bit ARM
     if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
         set(GGML_NEON ON CACHE BOOL "" FORCE)
+    else()
+        set(GGML_NEON OFF CACHE BOOL "" FORCE)
+        set(GGML_FP16 OFF CACHE BOOL "" FORCE)
     endif()
 
     add_subdirectory(llama.cpp)
