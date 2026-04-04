@@ -28,12 +28,12 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/CMakeLists.txt")
     target_include_directories(citecoach_llm PRIVATE
         llama.cpp/include
         llama.cpp/ggml/include
+        llama.cpp/ggml/src
     )
 
-    # Link against llama and ggml (common was removed in recent versions)
+    # Link against llama (ggml is bundled inside llama in latest versions)
     target_link_libraries(citecoach_llm
         llama
-        ggml
         log
     )
 

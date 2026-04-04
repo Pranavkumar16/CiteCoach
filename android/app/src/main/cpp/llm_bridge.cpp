@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <string>
+#include <vector>
 #include <android/log.h>
 
 #include "llama.h"
@@ -9,10 +10,27 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 // ============================================================
-// JNI Bridge: Kotlin LlmPlugin ↔ llama.cpp
-//
-// This file bridges the Kotlin LlmPlugin to the C++ llama.cpp
-// library, handling model loading, inference, and cleanup.
+// Batch helpers (inlined from common.h since we only link llama/ggml)
+// ============================================================
+
+static void batch_clear(llama_batch & batch) {
+    batch.n_tokens = 0;
+}
+
+static void batch_add(llama_batch & batch, llama_token id, llama_pos pos,
+                      const std::vector<llama_seq_id> & seq_ids, bool logits) {
+    batch.token   [batch.n_tokens] = id;
+    batch.pos     [batch.n_tokens] = pos;
+    batch.n_seq_id[batch.n_tokens] = (int32_t) seq_ids.size();
+    for (size_t j = 0; j < seq_ids.size(); j++) {
+        batch.seq_id[batch.n_tokens][j] = seq_ids[j];
+    }
+    batch.logits  [batch.n_tokens] = logits;
+    batch.n_tokens++;
+}
+
+// ============================================================
+// JNI Bridge: Kotlin LlmPlugin <-> llama.cpp
 // ============================================================
 
 extern "C" {
@@ -31,7 +49,7 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeLoadModel(
 
     // Configure model parameters
     auto model_params = llama_model_default_params();
-    model_params.n_gpu_layers = 0; // CPU only on Android (set > 0 for Vulkan)
+    model_params.n_gpu_layers = 0; // CPU only on Android
 
     // Load the model
     llama_model *model = llama_model_load_from_file(path, model_params);
@@ -109,14 +127,14 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
     tokens.resize(n_tokens);
     LOGI("Tokenized prompt: %d tokens", n_tokens);
 
-    // Clear KV cache
-    llama_kv_cache_clear(ctx);
+    // Clear memory (KV cache)
+    llama_memory_clear(llama_get_memory(ctx), true);
 
     // Process prompt in batches
     llama_batch batch = llama_batch_init(512, 0, 1);
 
     for (int i = 0; i < n_tokens; i++) {
-        llama_batch_add(batch, tokens[i], i, {0}, false);
+        batch_add(batch, tokens[i], i, {0}, false);
         if (batch.n_tokens >= 512 || i == n_tokens - 1) {
             if (i == n_tokens - 1) {
                 batch.logits[batch.n_tokens - 1] = true;
@@ -126,7 +144,7 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
                 llama_batch_free(batch);
                 return;
             }
-            llama_batch_clear(batch);
+            batch_clear(batch);
         }
     }
 
@@ -187,8 +205,8 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
         }
 
         // Prepare next batch
-        llama_batch_clear(batch);
-        llama_batch_add(batch, new_token, n_pos, {0}, true);
+        batch_clear(batch);
+        batch_add(batch, new_token, n_pos, {0}, true);
         n_pos++;
 
         if (llama_decode(ctx, batch) != 0) {
