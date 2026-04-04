@@ -3,15 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/constants.dart';
+import '../../../core/preferences/user_preferences.dart';
+import '../../../core/theme/app_theme_data.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../routing/app_router.dart';
 import '../../library/domain/document.dart';
 import '../../library/providers/library_provider.dart';
 import '../domain/chat_message.dart';
 import '../providers/chat_provider.dart';
-import 'widgets/chat_input.dart';
 import 'widgets/citation_badge.dart';
+import 'widgets/document_dna_strip.dart';
 import 'widgets/empty_chat_view.dart';
+import 'widgets/living_chat_input.dart';
 import 'widgets/message_bubble.dart';
 
 /// Main chat screen for document Q&A.
@@ -57,12 +60,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _handleSend(String message) {
+    ref.read(appHapticsProvider).light();
     ref.read(chatProvider.notifier).sendMessage(message);
-    // Scroll to bottom after sending
     Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
   }
 
   void _handleCitationTap(Citation citation, Document document) {
+    ref.read(appHapticsProvider).medium();
     // Show citation details in a bottom sheet
     showModalBottomSheet(
       context: context,
@@ -72,31 +76,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
       ),
       builder: (context) => Padding(
-        padding: EdgeInsets.all(AppDimensions.spacingLg),
+        padding: const EdgeInsets.all(AppDimensions.spacingLg),
         child: CitationCard(
           citation: citation,
           onNavigate: () {
             Navigator.pop(context);
-            // Navigate to reader at specific page
-            context.push('${AppRoutes.documentReader(document.id.toString())}?page=${citation.pageNumber}');
+            context.push(
+              '${AppRoutes.documentReader(document.id.toString())}?page=${citation.pageNumber}',
+            );
           },
         ),
       ),
     );
   }
 
+  void _handleDnaPageTap(int page, Document document) {
+    ref.read(appHapticsProvider).light();
+    context.push(
+      '${AppRoutes.documentReader(document.id.toString())}?page=$page',
+    );
+  }
+
   void _handleVoiceStart() async {
-    // Navigate to voice input screen and wait for result
+    ref.read(appHapticsProvider).medium();
     final result = await context.push<String>(
       '${AppRoutes.voiceInput}?documentId=${widget.documentId}',
     );
-    
-    // If we got transcribed text, send it as a message
+
     if (result != null && result.isNotEmpty) {
       ref.read(chatProvider.notifier).sendMessage(
-        result,
-        inputMethod: InputMethod.voice,
-      );
+            result,
+            inputMethod: InputMethod.voice,
+          );
       Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
     }
   }
@@ -116,9 +127,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.errorRed,
-            ),
+            style: TextButton.styleFrom(foregroundColor: AppColors.errorRed),
             child: const Text('Clear'),
           ),
         ],
@@ -126,17 +135,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
 
     if (confirmed == true && mounted) {
+      ref.read(appHapticsProvider).heavy();
       ref.read(chatProvider.notifier).clearConversation();
     }
+  }
+
+  /// Build a map of pageNumber → citation count from all AI messages.
+  Map<int, int> _computeCitationCounts(List<ChatMessage> messages) {
+    final counts = <int, int>{};
+    for (final msg in messages) {
+      if (!msg.isAssistant) continue;
+      for (final c in msg.citations) {
+        counts[c.pageNumber] = (counts[c.pageNumber] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }
+
+  /// Generate smart conversation starters based on the document.
+  List<String> _suggestedQuestions(Document? doc) {
+    if (doc == null) return const [];
+    return [
+      'What is this document about?',
+      'Summarize the key points.',
+      'What are the main arguments?',
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
     final libraryState = ref.watch(libraryProvider);
-    
-    // Get the document
-    final document = libraryState.documents.where((d) => d.id == widget.documentId).firstOrNull;
+    final theme = Theme.of(context).extension<AppThemeData>()!;
+
+    final document = libraryState.documents
+        .where((d) => d.id == widget.documentId)
+        .firstOrNull;
+
+    final citationCounts = _computeCitationCounts(chatState.messages);
 
     // Listen for new messages to scroll
     ref.listen<ChatState>(chatProvider, (prev, next) {
@@ -148,30 +184,49 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Scaffold(
       appBar: _buildAppBar(context, document),
       body: SafeArea(
-        child: Column(
+        child: Row(
           children: [
-            // Error banner
-            if (chatState.error != null)
-              _buildErrorBanner(chatState.error!),
-            
-            // Messages list
+            // Main chat column
             Expanded(
-              child: chatState.isLoading
-                  ? const Center(child: LoadingIndicator(useGradient: true))
-                  : chatState.messages.isEmpty
-                      ? EmptyChatView(
-                          documentTitle: document?.title ?? 'Document',
-                          onSampleQuestion: _handleSend,
-                        )
-                      : _buildMessageList(chatState, document),
+              child: Column(
+                children: [
+                  if (chatState.error != null)
+                    _buildErrorBanner(theme, chatState.error!),
+                  Expanded(
+                    child: chatState.isLoading
+                        ? const Center(
+                            child: LoadingIndicator(useGradient: true))
+                        : chatState.messages.isEmpty
+                            ? EmptyChatView(
+                                documentTitle: document?.title ?? 'Document',
+                                onSampleQuestion: _handleSend,
+                              )
+                            : _buildMessageList(chatState, document),
+                  ),
+                  LivingChatInput(
+                    onSend: _handleSend,
+                    onVoiceStart: _handleVoiceStart,
+                    suggestions: chatState.messages.isEmpty
+                        ? _suggestedQuestions(document)
+                        : const [],
+                    isDisabled: chatState.isInputDisabled,
+                  ),
+                ],
+              ),
             ),
-            
-            // Input area
-            ChatInput(
-              onSend: _handleSend,
-              onVoiceStart: _handleVoiceStart,
-              isDisabled: chatState.isInputDisabled,
-            ),
+            // Document DNA strip — only if the document has pages and
+            // there's at least one citation.
+            if (document != null &&
+                document.pageCount > 0 &&
+                citationCounts.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: DocumentDnaStrip(
+                  pageCount: document.pageCount,
+                  citationCounts: citationCounts,
+                  onPageTap: (p) => _handleDnaPageTap(p, document),
+                ),
+              ),
           ],
         ),
       ),
@@ -189,10 +244,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           Text(
             document?.title ?? 'Chat',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -207,23 +259,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
       actions: [
-        // Open in reader
         IconButton(
           icon: const Icon(Icons.menu_book_rounded),
           tooltip: 'Open in Reader',
           onPressed: document != null
-              ? () => context.push(
-                    AppRoutes.documentReader(document.id.toString()),
-                  )
+              ? () {
+                  ref.read(appHapticsProvider).light();
+                  context.push(
+                      AppRoutes.documentReader(document.id.toString()));
+                }
               : null,
         ),
-        // Clear chat
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert),
           onSelected: (value) {
-            if (value == 'clear') {
-              _handleClearChat();
-            }
+            if (value == 'clear') _handleClearChat();
           },
           itemBuilder: (context) => [
             const PopupMenuItem(
@@ -242,34 +292,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildErrorBanner(String error) {
+  Widget _buildErrorBanner(AppThemeData theme, String error) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: AppDimensions.spacingMd,
-        vertical: AppDimensions.spacingSm,
-      ),
-      color: AppColors.errorRed.withOpacity(0.1),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      color: theme.error.withOpacity(0.1),
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: AppColors.errorRed,
-            size: 20,
-          ),
-          SizedBox(width: AppDimensions.spacingSm),
+          Icon(Icons.error_outline, color: theme.error, size: 20),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               error,
-              style: const TextStyle(
-                color: AppColors.errorRed,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: theme.error, fontSize: 13),
             ),
           ),
           IconButton(
             icon: const Icon(Icons.close, size: 20),
-            color: AppColors.errorRed,
+            color: theme.error,
             onPressed: () => ref.read(chatProvider.notifier).clearError(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -282,13 +322,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _buildMessageList(ChatState state, Document? document) {
     return ListView.builder(
       controller: _scrollController,
-      padding: EdgeInsets.symmetric(
-        horizontal: AppDimensions.spacingMd,
-        vertical: AppDimensions.spacingMd,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       itemCount: state.messages.length + (state.isGenerating ? 1 : 0),
       itemBuilder: (context, index) {
-        // Show streaming indicator as last item
         if (index == state.messages.length && state.isGenerating) {
           return MessageBubble(
             message: ChatMessage.streaming(widget.documentId),
