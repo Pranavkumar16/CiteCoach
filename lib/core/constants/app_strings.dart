@@ -24,17 +24,18 @@ abstract final class AppStrings {
   static const String modelSetupSubtitle = 
       'Download the AI model to enable intelligent Q&A';
   static const String modelSetupDescription =
-      'Download the offline AI engine (~400MB) to enable Q&A. This is a one-time setup.';
-  static const String modelName = 'CiteCoach AI';
-  static const String modelDescription = 'Advanced AI optimized for document understanding';
-  static const String modelSize = '~400 MB';
+      'Download the offline AI engine (~900MB) to enable Q&A. This is a one-time setup.';
+  static const String modelName = 'Qwen 2.5';
+  static const String modelDescription =
+      '1.5B parameter instruct model, optimized for on-device document Q&A';
+  static const String modelSize = '900 MB';
   static const String modelNetwork = 'Wi-Fi recommended';
-  static const String modelTime = '~2-3 minutes';
+  static const String modelTime = '~3-5 minutes';
   static const String downloadSizeLabel = 'Download Size';
   static const String storageNeededLabel = 'Storage Needed';
   static const String requirementsTitle = 'Requirements';
   static const String requirement1 = 'Wi-Fi connection recommended';
-  static const String requirement2 = 'At least 600 MB free storage';
+  static const String requirement2 = 'At least 1 GB free storage';
   static const String requirement3 = 'Keep app open during download';
   
   // Setup Flow - Download Screen
@@ -133,7 +134,7 @@ abstract final class AppStrings {
   // Download Required (when user chose "Download Later")
   static const String downloadRequiredTitle = 'Download Required';
   static const String downloadRequiredDescription =
-      'Download the offline engine (~400MB) to start asking questions and getting evidence-based answers.';
+      'Download the offline engine (~900MB) to start asking questions and getting evidence-based answers.';
   static const String downloadRequiredNote = 
       'You can still import and read PDFs. Chat will unlock after download.';
   static const String backToLibrary = 'Back to Library';

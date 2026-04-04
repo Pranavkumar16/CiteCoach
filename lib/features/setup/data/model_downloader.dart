@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,6 +35,44 @@ final modelDownloaderProvider = Provider<ModelDownloader>((ref) {
 });
 
 enum DownloadStatus { idle, downloading, paused, completed, failed }
+
+/// Available on-device model variants.
+/// The app auto-selects based on device RAM.
+enum ModelVariant {
+  /// Qwen 2.5 1.5B Instruct — primary, for devices with >=4GB RAM.
+  qwen15b(
+    fileName: 'qwen2.5-1.5b-instruct-q4_k_m.gguf',
+    sizeBytes: 900 * 1024 * 1024,
+    displayName: 'Qwen 2.5 1.5B Instruct',
+    urls: [
+      'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf',
+      'https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf',
+    ],
+  ),
+
+  /// Qwen 2.5 0.5B Instruct — compact fallback, for devices with <4GB RAM.
+  qwen05b(
+    fileName: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
+    sizeBytes: 398 * 1024 * 1024,
+    displayName: 'Qwen 2.5 0.5B Instruct',
+    urls: [
+      'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
+      'https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf',
+    ],
+  );
+
+  const ModelVariant({
+    required this.fileName,
+    required this.sizeBytes,
+    required this.displayName,
+    required this.urls,
+  });
+
+  final String fileName;
+  final int sizeBytes;
+  final String displayName;
+  final List<String> urls;
+}
 
 class DownloadProgress {
   const DownloadProgress({
@@ -97,15 +136,69 @@ class DownloadProgress {
 class ModelDownloader {
   ModelDownloader();
 
-  static const String modelFileName = 'qwen2.5-0.5b-instruct-q4_k_m.gguf';
-  static const String modelVersion = '2.0.0';
-  static const int modelSizeBytes = 398 * 1024 * 1024; // ~398 MB
+  static const String modelVersion = '3.0.0';
 
-  /// Model download URLs from HuggingFace (primary + mirror).
-  static const List<String> _modelUrls = [
-    'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
-    'https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf',
-  ];
+  /// Default (primary) model. Auto-selected based on device RAM at runtime
+  /// via [selectedVariant], but this is the constant for UI that needs a
+  /// stable value.
+  static const ModelVariant defaultVariant = ModelVariant.qwen15b;
+
+  /// Display name of the default model (used by most UI).
+  static const String modelFileName = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
+
+  /// Size of the default model in bytes (~900 MB for Qwen 2.5 1.5B).
+  static const int modelSizeBytes = 900 * 1024 * 1024;
+
+  /// Cached RAM-selected variant (resolved once per app launch).
+  ModelVariant? _selectedVariant;
+
+  /// Detect total device RAM (in MB) and pick the best model variant.
+  ///
+  /// - Devices with >= 4 GB RAM get the 1.5B model (~900 MB, higher quality).
+  /// - Devices with < 4 GB RAM get the 0.5B model (~400 MB, fits comfortably).
+  Future<ModelVariant> selectedVariant() async {
+    if (_selectedVariant != null) return _selectedVariant!;
+
+    int totalRamMb = 0;
+    try {
+      if (Platform.isAndroid) {
+        // Read MemTotal from /proc/meminfo (standard Linux interface).
+        final memInfo = File('/proc/meminfo');
+        if (await memInfo.exists()) {
+          final content = await memInfo.readAsString();
+          final match =
+              RegExp(r'MemTotal:\s+(\d+)\s+kB').firstMatch(content);
+          if (match != null) {
+            final kb = int.tryParse(match.group(1) ?? '') ?? 0;
+            totalRamMb = kb ~/ 1024;
+          }
+        }
+
+        // Also fetch basic device info for logging.
+        try {
+          final android = await DeviceInfoPlugin().androidInfo;
+          debugPrint(
+              'ModelDownloader: Android ${android.version.release} on ${android.model}');
+        } catch (_) {}
+      } else if (Platform.isIOS) {
+        // iOS doesn't expose total RAM via device_info_plus. Assume modern
+        // iPhones have >= 4 GB RAM (iPhone 11 and newer) and pick 1.5B.
+        totalRamMb = 4096;
+      }
+    } catch (_) {
+      totalRamMb = 0;
+    }
+
+    // Threshold: 4 GB (4096 MB). Below that, use the compact model.
+    final variant = totalRamMb >= 3584 // ~3.5 GB buffer for OS overhead
+        ? ModelVariant.qwen15b
+        : ModelVariant.qwen05b;
+
+    debugPrint(
+        'ModelDownloader: Device RAM ~${totalRamMb}MB, selected ${variant.displayName}');
+    _selectedVariant = variant;
+    return variant;
+  }
 
   /// Embedding model URL (MiniLM-L6-v2 ONNX → TFLite, ~22MB).
   /// TF-IDF fallback works without this, so it's optional.
@@ -130,7 +223,8 @@ class ModelDownloader {
 
   Future<String> getModelPath() async {
     final appDir = await getApplicationDocumentsDirectory();
-    return '${appDir.path}/models/$modelFileName';
+    final variant = await selectedVariant();
+    return '${appDir.path}/models/${variant.fileName}';
   }
 
   Future<String> _getEmbeddingModelPath() async {
@@ -149,33 +243,45 @@ class ModelDownloader {
     try {
       await _cleanupLegacyModels();
 
+      final variant = await selectedVariant();
       final modelPath = await getModelPath();
       final modelFile = File(modelPath);
       if (!await modelFile.exists()) return false;
 
       final size = await modelFile.length();
       // Allow 5% variance for different quantization formats
-      return size > modelSizeBytes * 0.90;
+      return size > variant.sizeBytes * 0.90;
     } catch (_) {
       return false;
     }
   }
 
   /// Delete obsolete model files from previous versions to reclaim storage.
+  /// Also removes the non-selected Qwen variant to avoid keeping two LLMs.
   Future<void> _cleanupLegacyModels() async {
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final modelsDir = Directory('${appDir.path}/models');
       if (!await modelsDir.exists()) return;
 
-      const legacyFileNames = [
+      // Files from older versions of the app
+      final legacyFileNames = <String>[
         'gemma-2-2b-it-Q4_K_M.gguf',
       ];
+
+      // Also clean up the Qwen variant we're NOT using
+      final selected = await selectedVariant();
+      for (final v in ModelVariant.values) {
+        if (v != selected) {
+          legacyFileNames.add(v.fileName);
+        }
+      }
+
       for (final name in legacyFileNames) {
         final f = File('${modelsDir.path}/$name');
         if (await f.exists()) {
           await f.delete();
-          debugPrint('ModelDownloader: Removed legacy model: $name');
+          debugPrint('ModelDownloader: Removed obsolete model: $name');
         }
       }
     } catch (_) {}
@@ -231,13 +337,14 @@ class ModelDownloader {
       }
 
       // Phase 1: Download LLM model (95% of progress)
+      final variant = await selectedVariant();
       final modelPath = await getModelPath();
       await _ensureDirectoryExists(modelPath);
 
       final success = await _downloadFileWithRetry(
-        urls: _modelUrls,
+        urls: variant.urls,
         savePath: modelPath,
-        expectedSize: modelSizeBytes,
+        expectedSize: variant.sizeBytes,
         progressWeight: 0.95,
         progressOffset: 0.0,
       );

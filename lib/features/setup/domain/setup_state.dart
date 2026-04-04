@@ -67,9 +67,11 @@ class SetupState extends Equatable {
   /// Get download progress as percentage string.
   String get downloadProgressPercent => '${(downloadProgress * 100).toInt()}%';
 
-  /// Get downloaded size in MB (based on actual model size ~400MB).
+  /// Get downloaded size in MB (based on the selected model size).
+  /// Note: the actual model may be 900MB (1.5B) or 400MB (0.5B), chosen
+  /// dynamically based on device RAM. 900 is used as the display default.
   String get downloadedSizeMb {
-    final downloadedMb = (downloadProgress * 400).toInt();
+    final downloadedMb = (downloadProgress * 900).toInt();
     return '$downloadedMb MB';
   }
 

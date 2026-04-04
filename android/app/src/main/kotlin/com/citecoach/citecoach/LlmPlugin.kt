@@ -243,14 +243,15 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
 
     private fun getModelInfo(result: MethodChannel.Result) {
         val info = HashMap<String, Any>()
-        info["name"] = "CiteCoach AI Engine"
+        info["name"] = "Qwen 2.5 1.5B Instruct"
+        info["parameters"] = "1.5B"
         info["isLoaded"] = modelHandle != 0L
         result.success(info)
     }
 
     private fun getDefaultModelPath(): String {
         val appDir = context?.filesDir?.absolutePath ?: ""
-        return "$appDir/models/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+        return "$appDir/models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
     }
 
     fun dispose() {

@@ -69,7 +69,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'CiteCoach AI Engine',
+                              'Qwen 2.5 1.5B Instruct',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -102,9 +102,11 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
           Card(
             child: Column(
               children: [
-                _infoRow('Model', 'CiteCoach AI Engine'),
+                _infoRow('Model', 'Qwen 2.5 1.5B Instruct'),
                 const Divider(height: 1),
-                _infoRow('Type', 'On-Device Language Model'),
+                _infoRow('Parameters', '1.5 billion'),
+                const Divider(height: 1),
+                _infoRow('Storage', '~900 MB'),
                 const Divider(height: 1),
                 _infoRow('Optimized For', 'Document Q&A'),
                 const Divider(height: 1),

@@ -4,8 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart' show getApplicationDocumentsDirectory;
 
+import '../../setup/data/model_downloader.dart';
 import '../domain/chat_message.dart';
 import 'rag_service.dart';
 
@@ -47,7 +48,10 @@ class LlmService {
 
   static const _channel = MethodChannel('com.citecoach/llm');
   static const _streamChannel = EventChannel('com.citecoach/llm_stream');
-  static const String modelName = 'qwen2.5-0.5b-instruct-q4_k_m.gguf';
+  /// Default model file name. The actual model loaded is selected at runtime
+  /// based on device RAM via [ModelDownloader.selectedVariant]. This constant
+  /// refers to the primary (1.5B) model file.
+  static const String modelName = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
   static const int maxOutputTokens = 512;
   static const double temperature = 0.3;
   static const double topP = 0.9;
@@ -88,8 +92,10 @@ class LlmService {
   }
 
   Future<String> _getModelPath() async {
+    // Use the variant selected by ModelDownloader (RAM-aware).
     final appDir = await getApplicationDocumentsDirectory();
-    return '${appDir.path}/models/$modelName';
+    final variant = await ModelDownloader().selectedVariant();
+    return '${appDir.path}/models/${variant.fileName}';
   }
 
   /// Check if the model file exists on disk.

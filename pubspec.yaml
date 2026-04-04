@@ -51,6 +51,7 @@ dependencies:
 
   # Battery & System
   battery_plus: ^7.0.0
+  device_info_plus: ^10.1.2
 
   # SVG
   flutter_svg: ^2.0.10+1
