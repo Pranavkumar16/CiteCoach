@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/constants.dart';
+import '../../../core/preferences/user_preferences.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/theme/app_theme_data.dart';
 import '../../../routing/app_router.dart';
 import '../../setup/data/model_downloader.dart';
 import '../../setup/providers/setup_provider.dart';
+import 'widgets/theme_selector.dart';
 
-/// Full settings screen with model management, storage, and app info.
+/// Full settings screen with appearance, model management, and preferences.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -19,7 +22,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _lowPowerMode = false;
   double _speechSpeed = 1.0;
-  bool _hapticFeedback = true;
   bool _cacheEnabled = true;
   int _modelSizeBytes = 0;
 
@@ -36,7 +38,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _lowPowerMode = storage.isLowPowerMode;
       _speechSpeed = storage.speechSpeed;
-      _hapticFeedback = storage.isHapticFeedback;
       _cacheEnabled = storage.isCacheEnabled;
       _modelSizeBytes = size;
     });
@@ -48,8 +49,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await storage.setLowPowerMode(value);
     } else if (key == StorageKeys.speechSpeed && value is double) {
       await storage.setSpeechSpeed(value);
-    } else if (key == StorageKeys.hapticFeedback && value is bool) {
-      await storage.setHapticFeedback(value);
     } else if (key == StorageKeys.cacheEnabled && value is bool) {
       await storage.setCacheEnabled(value);
     }
@@ -58,6 +57,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final setupState = ref.watch(setupProvider);
+    final prefs = ref.watch(userPreferencesProvider);
+    final prefsNotifier = ref.read(userPreferencesProvider.notifier);
+    final haptics = ref.read(appHapticsProvider);
+    final appTheme = Theme.of(context).extension<AppThemeData>();
 
     return Scaffold(
       appBar: AppBar(
@@ -66,7 +69,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       body: ListView(
         children: [
-          // AI Model Section
+          // ========== APPEARANCE ==========
+          _buildSectionHeader('Appearance'),
+          const ThemeSelector(),
+          ListTile(
+            leading: const Icon(Icons.text_fields),
+            title: const Text('Font Size'),
+            subtitle: Slider(
+              value: prefs.fontScale.index.toDouble(),
+              min: 0,
+              max: 3,
+              divisions: 3,
+              label: prefs.fontScale.label,
+              onChanged: (v) {
+                haptics.selection();
+                prefsNotifier.setFontScale(FontScale.values[v.toInt()]);
+              },
+            ),
+          ),
+          _buildChoiceTile<ChatStyle>(
+            icon: Icons.chat_bubble_outline,
+            title: 'Chat Style',
+            currentLabel: prefs.chatStyle.label,
+            options: ChatStyle.values,
+            getLabel: (s) => s.label,
+            getSubtitle: (s) => s.description,
+            selected: prefs.chatStyle,
+            onSelect: (v) {
+              haptics.selection();
+              prefsNotifier.setChatStyle(v);
+            },
+          ),
+          _buildChoiceTile<CitationDisplay>(
+            icon: Icons.format_quote,
+            title: 'Citation Display',
+            currentLabel: prefs.citationDisplay.label,
+            options: CitationDisplay.values,
+            getLabel: (s) => s.label,
+            getSubtitle: (s) => s.description,
+            selected: prefs.citationDisplay,
+            onSelect: (v) {
+              haptics.selection();
+              prefsNotifier.setCitationDisplay(v);
+            },
+          ),
+
+          const Divider(height: 1),
+
+          // ========== AI MODEL ==========
           _buildSectionHeader('AI Model'),
           _buildTile(
             icon: Icons.smart_toy_outlined,
@@ -75,12 +125,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ? 'Qwen 2.5 — Ready'
                 : 'Not downloaded',
             trailing: setupState.isModelDownloaded
-                ? const Icon(Icons.check_circle, color: AppColors.success, size: 20)
+                ? Icon(Icons.check_circle,
+                    color: appTheme?.success ?? AppColors.success, size: 20)
                 : TextButton(
                     onPressed: () => context.push(AppRoutes.downloadRequired),
                     child: const Text('Download'),
                   ),
-            onTap: () => context.push(AppRoutes.modelInfo),
+            onTap: () {
+              haptics.light();
+              context.push(AppRoutes.modelInfo);
+            },
           ),
           _buildTile(
             icon: Icons.storage_outlined,
@@ -92,7 +146,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const Divider(height: 1),
 
-          // Performance Section
+          // ========== PERFORMANCE ==========
           _buildSectionHeader('Performance'),
           SwitchListTile(
             secondary: const Icon(Icons.battery_saver),
@@ -100,6 +154,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: const Text('Reduce model quality for longer battery life'),
             value: _lowPowerMode,
             onChanged: (v) {
+              haptics.selection();
               setState(() => _lowPowerMode = v);
               _saveSetting(StorageKeys.lowPowerMode, v);
             },
@@ -110,6 +165,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: const Text('Cache answers for instant repeat queries'),
             value: _cacheEnabled,
             onChanged: (v) {
+              haptics.selection();
               setState(() => _cacheEnabled = v);
               _saveSetting(StorageKeys.cacheEnabled, v);
             },
@@ -117,7 +173,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const Divider(height: 1),
 
-          // Voice Section
+          // ========== VOICE ==========
           _buildSectionHeader('Voice'),
           ListTile(
             leading: const Icon(Icons.speed),
@@ -135,19 +191,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           SwitchListTile(
-            secondary: const Icon(Icons.vibration),
-            title: const Text('Haptic Feedback'),
-            subtitle: const Text('Vibrate on voice recording events'),
-            value: _hapticFeedback,
+            secondary: const Icon(Icons.volume_up_outlined),
+            title: const Text('Auto-read Responses'),
+            subtitle: const Text('Read AI answers aloud automatically'),
+            value: prefs.autoReadResponses,
             onChanged: (v) {
-              setState(() => _hapticFeedback = v);
-              _saveSetting(StorageKeys.hapticFeedback, v);
+              haptics.selection();
+              prefsNotifier.setAutoReadResponses(v);
             },
           ),
 
           const Divider(height: 1),
 
-          // About Section
+          // ========== ACCESSIBILITY ==========
+          _buildSectionHeader('Accessibility'),
+          SwitchListTile(
+            secondary: const Icon(Icons.contrast),
+            title: const Text('High Contrast'),
+            subtitle: const Text('Stronger borders and text contrast'),
+            value: prefs.highContrast,
+            onChanged: (v) {
+              haptics.selection();
+              prefsNotifier.setHighContrast(v);
+            },
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.motion_photos_off_outlined),
+            title: const Text('Reduce Motion'),
+            subtitle: const Text('Disable animations and transitions'),
+            value: prefs.reduceMotion,
+            onChanged: (v) {
+              haptics.selection();
+              prefsNotifier.setReduceMotion(v);
+            },
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.vibration),
+            title: const Text('Haptic Feedback'),
+            subtitle: const Text('Vibrate on taps and actions'),
+            value: prefs.hapticFeedback,
+            onChanged: (v) {
+              prefsNotifier.setHapticFeedback(v);
+            },
+          ),
+
+          const Divider(height: 1),
+
+          // ========== ABOUT ==========
           _buildSectionHeader('About'),
           _buildTile(
             icon: Icons.info_outline,
@@ -156,13 +246,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           _buildTile(
             icon: Icons.privacy_tip_outlined,
-            title: 'Privacy Policy',
+            title: 'Privacy',
             subtitle: '100% offline — your data never leaves your device',
             onTap: () => _showPrivacyInfo(context),
           ),
           _buildTile(
             icon: Icons.description_outlined,
-            title: 'Licenses',
+            title: 'Open Source Licenses',
             onTap: () => showLicensePage(
               context: context,
               applicationName: AppStrings.appName,
@@ -176,13 +266,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: OutlinedButton.icon(
-              icon: const Icon(Icons.restart_alt, color: AppColors.errorRed),
-              label: const Text('Reset App',
-                  style: TextStyle(color: AppColors.errorRed)),
+              icon: Icon(Icons.restart_alt,
+                  color: appTheme?.error ?? AppColors.errorRed),
+              label: Text('Reset App',
+                  style: TextStyle(
+                      color: appTheme?.error ?? AppColors.errorRed)),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.errorRed),
+                side: BorderSide(
+                    color: appTheme?.error ?? AppColors.errorRed),
               ),
-              onPressed: () => _confirmReset(context),
+              onPressed: () {
+                haptics.medium();
+                _confirmReset(context);
+              },
             ),
           ),
           const SizedBox(height: 48),
@@ -192,6 +288,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildSectionHeader(String title) {
+    final appTheme = Theme.of(context).extension<AppThemeData>();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
@@ -199,7 +296,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: AppColors.textSecondary,
+          color: appTheme?.textSecondary ?? AppColors.textSecondary,
           letterSpacing: 0.8,
         ),
       ),
@@ -217,8 +314,89 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       leading: Icon(icon),
       title: Text(title),
       subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
+      trailing:
+          trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),
       onTap: onTap,
+    );
+  }
+
+  Widget _buildChoiceTile<T>({
+    required IconData icon,
+    required String title,
+    required String currentLabel,
+    required List<T> options,
+    required String Function(T) getLabel,
+    required String Function(T) getSubtitle,
+    required T selected,
+    required void Function(T) onSelect,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(currentLabel),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _showChoiceSheet<T>(
+        title: title,
+        options: options,
+        getLabel: getLabel,
+        getSubtitle: getSubtitle,
+        selected: selected,
+        onSelect: onSelect,
+      ),
+    );
+  }
+
+  void _showChoiceSheet<T>({
+    required String title,
+    required List<T> options,
+    required String Function(T) getLabel,
+    required String Function(T) getSubtitle,
+    required T selected,
+    required void Function(T) onSelect,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ...options.map((opt) {
+                final isSelected = opt == selected;
+                return ListTile(
+                  title: Text(getLabel(opt)),
+                  subtitle: Text(getSubtitle(opt)),
+                  trailing: isSelected
+                      ? const Icon(Icons.check, color: Colors.green)
+                      : null,
+                  onTap: () {
+                    onSelect(opt);
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -288,3 +466,4 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 }
+
