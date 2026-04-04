@@ -97,14 +97,14 @@ class DownloadProgress {
 class ModelDownloader {
   ModelDownloader();
 
-  static const String modelFileName = 'gemma-2-2b-it-Q4_K_M.gguf';
-  static const String modelVersion = '1.0.0';
-  static const int modelSizeBytes = 1630 * 1024 * 1024; // ~1.6 GB
+  static const String modelFileName = 'qwen2.5-0.5b-instruct-q4_k_m.gguf';
+  static const String modelVersion = '2.0.0';
+  static const int modelSizeBytes = 398 * 1024 * 1024; // ~398 MB
 
   /// Model download URLs from HuggingFace (primary + mirror).
   static const List<String> _modelUrls = [
-    'https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf',
-    'https://huggingface.co/lmstudio-community/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf',
+    'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
+    'https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf',
   ];
 
   /// Embedding model URL (MiniLM-L6-v2 ONNX → TFLite, ~22MB).
@@ -144,8 +144,11 @@ class ModelDownloader {
   }
 
   /// Check if model is fully downloaded and verified.
+  /// Also cleans up any legacy/old model files to free up space.
   Future<bool> isModelDownloaded() async {
     try {
+      await _cleanupLegacyModels();
+
       final modelPath = await getModelPath();
       final modelFile = File(modelPath);
       if (!await modelFile.exists()) return false;
@@ -156,6 +159,26 @@ class ModelDownloader {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Delete obsolete model files from previous versions to reclaim storage.
+  Future<void> _cleanupLegacyModels() async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final modelsDir = Directory('${appDir.path}/models');
+      if (!await modelsDir.exists()) return;
+
+      const legacyFileNames = [
+        'gemma-2-2b-it-Q4_K_M.gguf',
+      ];
+      for (final name in legacyFileNames) {
+        final f = File('${modelsDir.path}/$name');
+        if (await f.exists()) {
+          await f.delete();
+          debugPrint('ModelDownloader: Removed legacy model: $name');
+        }
+      }
+    } catch (_) {}
   }
 
   /// Check storage space availability.
@@ -222,22 +245,32 @@ class ModelDownloader {
       if (!success) return; // Error already reported
       if (_status != DownloadStatus.downloading) return; // Cancelled/paused
 
-      // Phase 2: Download embedding model (5% of progress)
+      // Phase 2: Download embedding model (best-effort; TF-IDF fallback if fails)
       final embPath = await _getEmbeddingModelPath();
-      await _downloadFileWithRetry(
-        urls: [_embeddingModelUrl],
-        savePath: embPath,
-        expectedSize: _embeddingModelSize,
-        progressWeight: 0.05,
-        progressOffset: 0.95,
-      );
+      try {
+        await _downloadFileWithRetry(
+          urls: [_embeddingModelUrl],
+          savePath: embPath,
+          expectedSize: _embeddingModelSize,
+          progressWeight: 0.05,
+          progressOffset: 0.95,
+        );
+      } catch (e) {
+        debugPrint(
+            'ModelDownloader: Embedding download failed (will use TF-IDF fallback): $e');
+      }
 
+      // Don't fail the overall flow if only the optional embedding model failed.
+      // The LLM is what matters; RAG works with TF-IDF fallback.
+      if (_status == DownloadStatus.failed) {
+        _status = DownloadStatus.downloading;
+      }
       if (_status != DownloadStatus.downloading) return;
 
       // All downloads complete
       _status = DownloadStatus.completed;
       _progressController?.add(DownloadProgress.completed());
-      debugPrint('ModelDownloader: All downloads completed');
+      debugPrint('ModelDownloader: Download sequence completed');
     } catch (e) {
       if (e is DioException && e.type == DioExceptionType.cancel) {
         debugPrint('ModelDownloader: Download cancelled');

@@ -47,7 +47,7 @@ class LlmService {
 
   static const _channel = MethodChannel('com.citecoach/llm');
   static const _streamChannel = EventChannel('com.citecoach/llm_stream');
-  static const String modelName = 'gemma-2-2b-it-Q4_K_M.gguf';
+  static const String modelName = 'qwen2.5-0.5b-instruct-q4_k_m.gguf';
   static const int maxOutputTokens = 512;
   static const double temperature = 0.3;
   static const double topP = 0.9;
@@ -221,17 +221,13 @@ class LlmService {
   }) {
     final buffer = StringBuffer();
 
-    // System instruction
-    buffer.writeln('<start_of_turn>user');
+    // ChatML format (used by Qwen)
+    buffer.writeln('<|im_start|>system');
     buffer.writeln('You are CiteCoach, a document analysis assistant. '
         'Answer questions ONLY using the provided document excerpts. '
         'Always cite your sources using [Page X] format. '
         'If the answer is not in the excerpts, say "I could not find this information in the document."');
-    buffer.writeln();
-    buffer.writeln('--- DOCUMENT EXCERPTS ---');
-    buffer.writeln(context);
-    buffer.writeln('--- END EXCERPTS ---');
-    buffer.writeln();
+    buffer.writeln('<|im_end|>');
 
     // Add recent conversation history (last 4 exchanges)
     final recentHistory = history.length > 8
@@ -240,20 +236,28 @@ class LlmService {
 
     for (final msg in recentHistory) {
       if (msg.isUser) {
-        buffer.writeln('Previous question: ${msg.content}');
+        buffer.writeln('<|im_start|>user');
+        buffer.writeln(msg.content);
+        buffer.writeln('<|im_end|>');
       } else if (msg.isAssistant) {
-        buffer.writeln('Previous answer: ${msg.content}');
+        buffer.writeln('<|im_start|>assistant');
+        buffer.writeln(msg.content);
+        buffer.writeln('<|im_end|>');
       }
     }
 
+    // Current user question with document context
+    buffer.writeln('<|im_start|>user');
+    buffer.writeln('--- DOCUMENT EXCERPTS ---');
+    buffer.writeln(context);
+    buffer.writeln('--- END EXCERPTS ---');
     buffer.writeln();
     buffer.writeln('Question: $query');
     buffer.writeln();
-    buffer.writeln(
-        'Answer the question using ONLY the document excerpts above. '
+    buffer.writeln('Answer using ONLY the excerpts above. '
         'Include [Page X] citations for every claim.');
-    buffer.writeln('<end_of_turn>');
-    buffer.writeln('<start_of_turn>model');
+    buffer.writeln('<|im_end|>');
+    buffer.writeln('<|im_start|>assistant');
 
     return buffer.toString();
   }
@@ -285,8 +289,9 @@ class LlmService {
 
     // Clean up response text
     var cleaned = responseText.trim();
-    cleaned = cleaned.replaceAll('<end_of_turn>', '');
-    cleaned = cleaned.replaceAll('<start_of_turn>', '');
+    cleaned = cleaned.replaceAll('<|im_end|>', '');
+    cleaned = cleaned.replaceAll('<|im_start|>', '');
+    cleaned = cleaned.replaceAll('<|endoftext|>', '');
 
     return _ParsedResponse(cleanedText: cleaned, matchedCitations: matched);
   }

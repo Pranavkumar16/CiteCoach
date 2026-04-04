@@ -150,11 +150,11 @@ class ModelSetupScreen extends ConsumerWidget {
             children: [
               _ModelStat(
                 label: AppStrings.downloadSizeLabel,
-                value: '${(ModelDownloader.modelSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB',
+                value: '${(ModelDownloader.modelSizeBytes / (1024 * 1024)).toStringAsFixed(0)} MB',
               ),
               const _ModelStat(
                 label: AppStrings.storageNeededLabel,
-                value: '~1.7 GB',
+                value: '~500 MB',
               ),
             ],
           ),

@@ -141,8 +141,8 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
                     return@execute
                 }
 
-                // Create inference context
-                contextHandle = nativeCreateContext(modelHandle, 2048)
+                // Create inference context (1024 tokens - balanced for mobile)
+                contextHandle = nativeCreateContext(modelHandle, 1024)
 
                 mainHandler.post { result.success(true) }
             } catch (e: UnsatisfiedLinkError) {
@@ -243,16 +243,14 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
 
     private fun getModelInfo(result: MethodChannel.Result) {
         val info = HashMap<String, Any>()
-        info["name"] = "Gemma 2 2B Instruct"
-        info["quantization"] = "Q4_K_M"
-        info["parameters"] = "2B"
+        info["name"] = "CiteCoach AI Engine"
         info["isLoaded"] = modelHandle != 0L
         result.success(info)
     }
 
     private fun getDefaultModelPath(): String {
         val appDir = context?.filesDir?.absolutePath ?: ""
-        return "$appDir/models/gemma-2-2b-it-Q4_K_M.gguf"
+        return "$appDir/models/qwen2.5-0.5b-instruct-q4_k_m.gguf"
     }
 
     fun dispose() {

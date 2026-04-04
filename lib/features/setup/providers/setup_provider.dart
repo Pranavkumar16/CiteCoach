@@ -180,10 +180,17 @@ class SetupNotifier extends StateNotifier<SetupState> {
 
   /// Skip download for now (can access library but not chat).
   Future<void> skipDownload() async {
+    // Cancel any active download to stop progress events from resetting state
+    _downloader.cancelDownload();
+    await _downloadSubscription?.cancel();
+    _downloadSubscription = null;
+
     await _repository.saveSetupCompleted(true);
     state = state.copyWith(
       currentStep: SetupStep.done,
       isSetupCompleted: true,
+      isDownloading: false,
+      clearError: true,
     );
     debugPrint('SetupNotifier: Download skipped, setup marked as done (limited functionality)');
   }
