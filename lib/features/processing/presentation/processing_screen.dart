@@ -27,7 +27,7 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
     super.initState();
     // Start processing when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startProcessing();
+      if (mounted) _startProcessing();
     });
   }
 
@@ -44,9 +44,10 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
     ref.listen<ProcessingState>(
       processingProvider(widget.documentId),
       (previous, next) {
-        if (next.isComplete) {
-          // Navigate to document ready screen
-          context.go('/document/${widget.documentId}/ready');
+        if (next.isComplete && mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) context.go('/document/${widget.documentId}/ready');
+          });
         }
       },
     );
