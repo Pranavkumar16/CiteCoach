@@ -273,9 +273,14 @@ class PdfProcessor {
         chunkIndex++;
       }
 
-      // Move start position with overlap
-      startOffset = endOffset - overlapChars;
-      if (startOffset < 0) startOffset = 0;
+      // The final chunk already includes the page tail. Applying overlap here
+      // would revisit that same tail forever when it is >= minChunkSize.
+      if (endOffset == text.length) break;
+
+      // Keep overlap, but always advance even if a boundary is unexpectedly
+      // closer than the requested overlap.
+      final nextStart = endOffset - overlapChars;
+      startOffset = nextStart > startOffset ? nextStart : endOffset;
       
       // Prevent infinite loop
       if (startOffset >= text.length - minChunkSize) break;
