@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/constants/constants.dart';
 import '../features/chat/presentation/chat_screen.dart';
+import '../features/home/presentation/home_screen.dart';
 import '../features/library/presentation/library_screen.dart';
 import '../features/processing/presentation/document_ready_screen.dart';
 import '../features/processing/presentation/processing_screen.dart';
@@ -30,6 +31,7 @@ abstract final class AppRoutes {
   static const String setupComplete = '/setup/complete';
 
   // Main app
+  static const String home = '/home';
   static const String library = '/library';
   static const String settings = '/settings';
   static const String modelInfo = '/settings/model-info';
@@ -81,7 +83,7 @@ GoRouter createRouter(Ref ref) {
       final isSetupPath = setupPaths.contains(currentPath);
       final isSetupCompleted = setupState.currentStep == SetupStep.done;
 
-      if (isSetupCompleted && isSetupPath) return AppRoutes.library;
+      if (isSetupCompleted && isSetupPath) return AppRoutes.home;
       if (!isSetupCompleted && !isSetupPath) return setupState.currentStep.routePath;
 
       return null;
@@ -120,6 +122,11 @@ GoRouter createRouter(Ref ref) {
           return _MainShell(child: child);
         },
         routes: [
+          GoRoute(
+            path: AppRoutes.home,
+            name: 'home',
+            builder: (context, state) => const HomeScreen(),
+          ),
           GoRoute(
             path: AppRoutes.library,
             name: 'library',
@@ -215,14 +222,19 @@ class _MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    final currentIndex = location.startsWith('/settings') ? 1 : 0;
+    final currentIndex = location.startsWith('/settings')
+        ? 2
+        : location.startsWith('/library') ? 1 : 0;
 
     return Scaffold(
       body: child,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
+        type: BottomNavigationBarType.fixed,
         onTap: (index) {
           if (index == 0) {
+            context.go(AppRoutes.home);
+          } else if (index == 1) {
             context.go(AppRoutes.library);
           } else {
             context.go(AppRoutes.settings);
@@ -230,6 +242,10 @@ class _MainShell extends StatelessWidget {
         },
         selectedItemColor: AppColors.primaryIndigo,
         items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.library_books_rounded),
             label: 'Library',
