@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
+import '../theme/app_theme_data.dart';
 
 /// Bottom navigation bar with 2 tabs: Library and Settings.
 class AppBottomNavBar extends StatelessWidget {
@@ -15,12 +16,13 @@ class AppBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = _theme(context);
     return Container(
       height: AppDimensions.bottomNavHeight + MediaQuery.of(context).padding.bottom,
-      decoration: const BoxDecoration(
-        color: AppColors.zinc900,
+      decoration: BoxDecoration(
+        color: theme.surface,
         border: Border(
-          top: BorderSide(color: AppColors.zinc700, width: 0.5),
+          top: BorderSide(color: theme.border, width: 0.5),
         ),
       ),
       child: SafeArea(
@@ -61,7 +63,8 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? AppColors.accent : AppColors.textTertiary;
+    final theme = _theme(context);
+    final color = isSelected ? theme.accentSolid : theme.textTertiary;
 
     return Expanded(
       child: Material(
@@ -122,3 +125,7 @@ class AppShell extends StatelessWidget {
     );
   }
 }
+
+
+AppThemeData _theme(BuildContext context) =>
+    Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();
