@@ -44,7 +44,7 @@ class EmptyLibraryView extends StatelessWidget {
         color: _theme(context).accentSolid.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.library_books_rounded,
         size: AppDimensions.iconSizeLg + 8,
         color: _theme(context).accentSolid,
