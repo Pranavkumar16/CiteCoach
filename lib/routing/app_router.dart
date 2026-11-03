@@ -232,13 +232,12 @@ class _MainShell extends StatelessWidget {
         currentIndex: currentIndex,
         type: BottomNavigationBarType.fixed,
         onTap: (index) {
-          switch (index) {
-            case 0:
-              context.go(AppRoutes.home);
-            case 1:
-              context.go(AppRoutes.library);
-            case 2:
-              context.go(AppRoutes.settings);
+          if (index == 0) {
+            context.go(AppRoutes.home);
+          } else if (index == 1) {
+            context.go(AppRoutes.library);
+          } else {
+            context.go(AppRoutes.settings);
           }
         },
         selectedItemColor: AppColors.primaryIndigo,
