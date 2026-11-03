@@ -158,7 +158,7 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
     llama_sampler_chain_add(smpl, llama_sampler_init_temp(temperature));
     llama_sampler_chain_add(smpl, llama_sampler_init_top_p(top_p, 1));
     llama_sampler_chain_add(smpl, llama_sampler_init_penalties(
-        64, repeat_penalty, 0.0f, 0.0f));
+        llama_vocab_n_tokens(vocab), 64, repeat_penalty, 0.0f, 0.0f));
     llama_sampler_chain_add(smpl, llama_sampler_init_dist(42));
 
     // Generate tokens
