@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/constants.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../../core/theme/app_theme_data.dart';
 
 /// Empty state view for when the library has no documents.
 class EmptyLibraryView extends StatelessWidget {
@@ -40,13 +41,13 @@ class EmptyLibraryView extends StatelessWidget {
       width: AppDimensions.iconSizeSetup,
       height: AppDimensions.iconSizeSetup,
       decoration: BoxDecoration(
-        color: AppColors.accent.withOpacity(0.15),
+        color: _theme(context).accentSolid.withOpacity(0.15),
         borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
       ),
       child: const Icon(
         Icons.library_books_rounded,
         size: AppDimensions.iconSizeLg + 8,
-        color: AppColors.accent,
+        color: _theme(context).accentSolid,
       ),
     );
   }
@@ -56,7 +57,7 @@ class EmptyLibraryView extends StatelessWidget {
       AppStrings.noDocumentsTitle,
       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: _theme(context).textPrimary,
           ),
       textAlign: TextAlign.center,
     );
@@ -70,7 +71,7 @@ class EmptyLibraryView extends StatelessWidget {
       child: Text(
         AppStrings.noDocumentsDescription,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppColors.textSecondary,
+              color: _theme(context).textSecondary,
             ),
         textAlign: TextAlign.center,
       ),
@@ -86,3 +87,7 @@ class EmptyLibraryView extends StatelessWidget {
     );
   }
 }
+
+
+AppThemeData _theme(BuildContext context) =>
+    Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();
