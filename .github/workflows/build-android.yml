@@ -40,6 +40,12 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Generate CiteCoach launcher icons
+        run: |
+          python3 -m pip install --user Pillow
+          python3 scripts/generate_launcher_icons.py
+          dart run flutter_launcher_icons
+
       - name: Run tests
         run: flutter test --no-pub
 
