@@ -473,7 +473,7 @@ _PdfPagesResult _extractPdfPagesInBackground(Uint8List bytes) {
     for (var i = 0; i < count; i++) {
       try {
         final text = extractor.extractText(startPageIndex: i, endPageIndex: i)
-            .replaceAll(RegExp(r'\\s+'), ' ').trim();
+            .replaceAll(RegExp(r'\s+'), ' ').trim();
         if (text.length > 20) pages[i + 1] = text;
       } catch (e) {
         debugPrint('PDF page ${i + 1} extraction failed: $e');
