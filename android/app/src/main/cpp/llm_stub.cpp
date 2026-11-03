@@ -8,6 +8,10 @@
 // All methods return error states so the Dart side can handle gracefully.
 
 extern "C" {
+JNIEXPORT void JNICALL
+Java_com_citecoach_citecoach_LlmPlugin_nativeResetCancellation(JNIEnv *, jobject) {}
+JNIEXPORT void JNICALL
+Java_com_citecoach_citecoach_LlmPlugin_nativeStopGeneration(JNIEnv *, jobject) {}
 
 JNIEXPORT jlong JNICALL
 Java_com_citecoach_citecoach_LlmPlugin_nativeLoadModel(

@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart' show getApplicationDocumentsDirectory;
+import 'package:path_provider/path_provider.dart'
+    show getApplicationDocumentsDirectory;
 
 import '../../setup/data/model_downloader.dart';
 import '../domain/chat_message.dart';
@@ -48,11 +49,12 @@ class LlmService {
 
   static const _channel = MethodChannel('com.citecoach/llm');
   static const _streamChannel = EventChannel('com.citecoach/llm_stream');
+
   /// Default model file name. The actual model loaded is selected at runtime
   /// based on device RAM via [ModelDownloader.selectedVariant]. This constant
   /// refers to the primary (1.5B) model file.
   static const String modelName = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
-  static const int maxOutputTokens = 512;
+  static const int maxOutputTokens = 192;
   static const double temperature = 0.3;
   static const double topP = 0.9;
 
@@ -60,6 +62,8 @@ class LlmService {
   bool get isModelLoaded => _isModelLoaded;
 
   StreamSubscription<dynamic>? _streamSubscription;
+  Completer<String>? _pendingResponse;
+  int _requestId = 0;
 
   /// Initialize the LLM model via platform channel.
   Future<bool> initialize() async {
@@ -111,6 +115,12 @@ class LlmService {
     List<ChatMessage> conversationHistory = const [],
     StreamCallback? onToken,
   }) async {
+    if (_pendingResponse != null) {
+      return GenerationResult.error(
+        'Another answer is still running. Please wait.',
+      );
+    }
+    final requestId = ++_requestId;
     if (!retrievalResult.isSuccess || retrievalResult.context.isEmpty) {
       return GenerationResult.error(
         'No relevant information found in the document.',
@@ -126,7 +136,10 @@ class LlmService {
     );
 
     if (!_isModelLoaded) {
-      final initialized = await initialize();
+      final initialized = await initialize().timeout(
+        const Duration(seconds: 60),
+        onTimeout: () => false,
+      );
       if (!initialized) {
         return GenerationResult.error(
           'AI model is not available. Please download the model first.',
@@ -134,15 +147,20 @@ class LlmService {
       }
     }
 
+    if (requestId != _requestId) {
+      return GenerationResult.error('Answer cancelled.');
+    }
     try {
       debugPrint('LlmService: Generating response...');
 
       final completer = Completer<String>();
+      _pendingResponse = completer;
       final responseBuffer = StringBuffer();
 
       // Listen to the EventChannel for streamed tokens
       _streamSubscription = _streamChannel.receiveBroadcastStream().listen(
         (event) {
+          if (completer.isCompleted || requestId != _requestId) return;
           final token = event as String;
           if (token == '[DONE]') {
             if (!completer.isCompleted) {
@@ -170,16 +188,24 @@ class LlmService {
       );
 
       // Start generation via MethodChannel
-      await _channel.invokeMethod('startGeneration', {
+      final start = _channel.invokeMethod('startGeneration', {
         'prompt': prompt,
         'maxTokens': maxOutputTokens,
         'temperature': temperature,
         'topP': topP,
         'repeatPenalty': 1.1,
       });
+      // Attach the completion listener immediately, including start failures.
+      unawaited(
+        start.catchError((Object error) {
+          if (!completer.isCompleted) completer.completeError(error);
+        }),
+      );
 
       // Wait for generation to complete
-      final responseText = await completer.future;
+      final responseText = await completer.future.timeout(
+        const Duration(seconds: 120),
+      );
 
       // Clean up stream
       await _streamSubscription?.cancel();
@@ -196,6 +222,13 @@ class LlmService {
         response: parsed.cleanedText,
         citations: parsed.matchedCitations,
       );
+    } on TimeoutException {
+      unawaited(
+        _channel.invokeMethod<void>('stopGeneration').catchError((_) {}),
+      );
+      return GenerationResult.error(
+        'The on-device model took too long. Try a shorter question.',
+      );
     } on PlatformException catch (e) {
       debugPrint('LlmService: Generation error: $e');
       await _streamSubscription?.cancel();
@@ -206,16 +239,25 @@ class LlmService {
       await _streamSubscription?.cancel();
       _streamSubscription = null;
       return GenerationResult.error('Failed to generate response: $e');
+    } finally {
+      await _streamSubscription?.cancel();
+      _streamSubscription = null;
+      _pendingResponse = null;
     }
   }
 
   /// Stop an in-progress generation.
   Future<void> stopGeneration() async {
+    ++_requestId;
+    final pending = _pendingResponse;
+    if (pending != null && !pending.isCompleted) {
+      pending.complete('');
+    }
     try {
-      await _channel.invokeMethod('stopGeneration');
+      await _channel
+          .invokeMethod<void>('stopGeneration')
+          .timeout(const Duration(seconds: 2));
     } catch (_) {}
-    await _streamSubscription?.cancel();
-    _streamSubscription = null;
   }
 
   /// Build a citation-grounded prompt for the on-device LLM.
@@ -229,25 +271,35 @@ class LlmService {
 
     // ChatML format (used by Qwen)
     buffer.writeln('<|im_start|>system');
-    buffer.writeln('You are CiteCoach, a document analysis assistant. '
-        'Answer questions ONLY using the provided document excerpts. '
-        'Always cite your sources using [Page X] format. '
-        'If the answer is not in the excerpts, say "I could not find this information in the document."');
+    buffer.writeln(
+      'You are CiteCoach, a document analysis assistant. '
+      'Answer questions ONLY using the provided document excerpts. '
+      'Always cite your sources using [Page X] format. '
+      'If the answer is not in the excerpts, say "I could not find this information in the document."',
+    );
     buffer.writeln('<|im_end|>');
 
-    // Add recent conversation history (last 4 exchanges)
-    final recentHistory = history.length > 8
-        ? history.sublist(history.length - 8)
+    // Keep history short for the mobile context window.
+    final recentHistory = history.length > 2
+        ? history.sublist(history.length - 2)
         : history;
 
     for (final msg in recentHistory) {
       if (msg.isUser) {
         buffer.writeln('<|im_start|>user');
-        buffer.writeln(msg.content);
+        buffer.writeln(
+          msg.content.length > 200
+              ? msg.content.substring(0, 200)
+              : msg.content,
+        );
         buffer.writeln('<|im_end|>');
       } else if (msg.isAssistant) {
         buffer.writeln('<|im_start|>assistant');
-        buffer.writeln(msg.content);
+        buffer.writeln(
+          msg.content.length > 200
+              ? msg.content.substring(0, 200)
+              : msg.content,
+        );
         buffer.writeln('<|im_end|>');
       }
     }
@@ -260,8 +312,10 @@ class LlmService {
     buffer.writeln();
     buffer.writeln('Question: $query');
     buffer.writeln();
-    buffer.writeln('Answer using ONLY the excerpts above. '
-        'Include [Page X] citations for every claim.');
+    buffer.writeln(
+      'Answer using ONLY the excerpts above. '
+      'Include [Page X] citations for every claim.',
+    );
     buffer.writeln('<|im_end|>');
     buffer.writeln('<|im_start|>assistant');
 

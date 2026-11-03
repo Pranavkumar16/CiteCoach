@@ -1,6 +1,8 @@
 #include <jni.h>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <algorithm>
 #include <android/log.h>
 
 #include "llama.h"
@@ -33,7 +35,21 @@ static void batch_add(llama_batch & batch, llama_token id, llama_pos pos,
 // JNI Bridge: Kotlin LlmPlugin <-> llama.cpp
 // ============================================================
 
+static std::atomic<bool> stop_requested{false};
+static void inference_error(JNIEnv *env, const char *message) {
+    env->ThrowNew(env->FindClass("java/lang/IllegalStateException"), message);
+}
+
 extern "C" {
+JNIEXPORT void JNICALL
+Java_com_citecoach_citecoach_LlmPlugin_nativeResetCancellation(JNIEnv *, jobject) {
+    stop_requested.store(false);
+}
+
+JNIEXPORT void JNICALL
+Java_com_citecoach_citecoach_LlmPlugin_nativeStopGeneration(JNIEnv *, jobject) {
+    stop_requested.store(true);
+}
 
 // ---- Model Loading ----
 
@@ -79,7 +95,8 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeCreateContext(
     auto ctx_params = llama_context_default_params();
     ctx_params.n_ctx = context_size;
     ctx_params.n_threads = 4;  // Use 4 threads for mobile
-    ctx_params.n_batch = 512;
+    ctx_params.n_threads_batch = 4;
+    ctx_params.n_batch = 256;
 
     llama_context *ctx = llama_init_from_model(model, ctx_params);
     if (ctx == nullptr) {
@@ -121,26 +138,33 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
     int n_tokens = llama_tokenize(vocab, prompt.c_str(), prompt.length(),
                                    tokens.data(), n_prompt_max, true, true);
     if (n_tokens < 0) {
-        LOGE("Failed to tokenize prompt");
+        inference_error(env, "Could not tokenize the question. Try a shorter question.");
         return;
     }
     tokens.resize(n_tokens);
     LOGI("Tokenized prompt: %d tokens", n_tokens);
 
+    const int capacity = static_cast<int>(llama_n_ctx(ctx));
+    if (n_tokens == 0 || n_tokens + max_tokens >= capacity) {
+        inference_error(env, "Question and evidence exceed the model context. Start a new chat or ask a shorter question.");
+        return;
+    }
+
     // Clear memory (KV cache)
     llama_memory_clear(llama_get_memory(ctx), true);
 
     // Process prompt in batches
-    llama_batch batch = llama_batch_init(512, 0, 1);
+    llama_batch batch = llama_batch_init(256, 0, 1);
 
     for (int i = 0; i < n_tokens; i++) {
+        if (stop_requested.load()) { llama_batch_free(batch); return; }
         batch_add(batch, tokens[i], i, {0}, false);
-        if (batch.n_tokens >= 512 || i == n_tokens - 1) {
+        if (batch.n_tokens >= 256 || i == n_tokens - 1) {
             if (i == n_tokens - 1) {
                 batch.logits[batch.n_tokens - 1] = true;
             }
             if (llama_decode(ctx, batch) != 0) {
-                LOGE("Failed to decode prompt batch");
+                inference_error(env, "AI could not process document evidence. Try a shorter question.");
                 llama_batch_free(batch);
                 return;
             }
@@ -165,7 +189,7 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
     int n_generated = 0;
     int n_pos = n_tokens;
 
-    while (n_generated < max_tokens) {
+    while (n_generated < max_tokens && !stop_requested.load()) {
         // Sample next token
         llama_token new_token = llama_sampler_sample(smpl, ctx, -1);
 
