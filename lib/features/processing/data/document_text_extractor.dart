@@ -184,50 +184,25 @@ class DocumentTextExtractor {
     ProgressCallback? onProgress,
   }) async {
     try {
+      onProgress?.call(0, 1, 'Reading PDF...');
       final bytes = await File(filePath).readAsBytes();
-      final document = PdfDocument(inputBytes: bytes);
-      final pageCount = document.pages.count;
-      final pages = <int, String>{};
-      int scannedPageCount = 0;
-      bool isScanned = false;
-
-      for (int i = 0; i < pageCount; i++) {
-        final pageNumber = i + 1;
-        onProgress?.call(pageNumber, pageCount, 'Extracting page $pageNumber');
-
-        try {
-          final extractor = PdfTextExtractor(document);
-          final text = extractor.extractText(startPageIndex: i, endPageIndex: i);
-          final cleaned = _cleanText(text);
-
-          if (cleaned.length > 20) {
-            pages[pageNumber] = cleaned;
-          } else {
-            // Page has little/no text — likely scanned, try OCR
-            scannedPageCount++;
-            onProgress?.call(pageNumber, pageCount, 'OCR page $pageNumber');
-            final ocrText = await _ocrPdfPage(document, i);
-            if (ocrText.isNotEmpty) {
-              pages[pageNumber] = ocrText;
-              isScanned = true;
-            }
-          }
-        } catch (e) {
-          debugPrint('DocumentTextExtractor: Page $pageNumber error: $e');
-        }
-        await Future.delayed(const Duration(milliseconds: 10));
+      // Syncfusion PDF parsing is CPU intensive. Keep it off the UI isolate,
+      // otherwise large textbooks can freeze Android and trigger an ANR.
+      final extracted = await compute(_extractPdfPagesInBackground, bytes);
+      final pageCount = extracted.pageCount;
+      onProgress?.call(pageCount, pageCount == 0 ? 1 : pageCount, 'Extracted PDF');
+      if (extracted.pages.isEmpty) {
+        return ExtractionResult.error(
+          'No selectable text found in this PDF. Scanned PDF OCR is not yet supported.',
+        );
       }
-
-      document.dispose();
-      debugPrint('DocumentTextExtractor: PDF extracted. ${pages.length}/$pageCount pages. '
-          'Scanned pages: $scannedPageCount');
-
       return ExtractionResult(
-        documentType: isScanned ? DocumentType.scannedPdf : DocumentType.pdf,
+        documentType: DocumentType.pdf,
         pageCount: pageCount,
-        pages: pages,
+        pages: extracted.pages,
       );
     } catch (e) {
+      debugPrint('DocumentTextExtractor: PDF extraction failed: $e');
       return ExtractionResult.error('PDF extraction failed: $e');
     }
   }
@@ -479,5 +454,33 @@ class DocumentTextExtractor {
   void dispose() {
     _textRecognizer?.close();
     _textRecognizer = null;
+  }
+}
+
+class _PdfPagesResult {
+  const _PdfPagesResult(this.pageCount, this.pages);
+  final int pageCount;
+  final Map<int, String> pages;
+}
+
+/// Top-level function required by Flutter compute() for background parsing.
+_PdfPagesResult _extractPdfPagesInBackground(Uint8List bytes) {
+  final document = PdfDocument(inputBytes: bytes);
+  try {
+    final count = document.pages.count;
+    final pages = <int, String>{};
+    final extractor = PdfTextExtractor(document);
+    for (var i = 0; i < count; i++) {
+      try {
+        final text = extractor.extractText(startPageIndex: i, endPageIndex: i)
+            .replaceAll(RegExp(r'\\s+'), ' ').trim();
+        if (text.length > 20) pages[i + 1] = text;
+      } catch (e) {
+        debugPrint('PDF page ${i + 1} extraction failed: $e');
+      }
+    }
+    return _PdfPagesResult(count, pages);
+  } finally {
+    document.dispose();
   }
 }
