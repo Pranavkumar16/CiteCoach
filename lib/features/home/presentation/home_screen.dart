@@ -67,7 +67,7 @@ class HomeScreen extends ConsumerWidget {
                   background: theme.surface,
                   foreground: theme.textPrimary,
                   border: theme.border,
-                  isPlanned: true,
+                  onTap: () => context.go(AppRoutes.compare),
                 ),
                 _FeatureCard(
                   title: 'Learn',
