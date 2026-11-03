@@ -108,7 +108,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.sort_rounded,
               size: AppDimensions.iconSizeSm,
               color: _theme(context).textSecondary,
@@ -134,7 +134,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           child: Row(
             children: [
               if (option == state.sortOption)
-                const Icon(
+                Icon(
                   Icons.check_rounded,
                   size: AppDimensions.iconSizeSm,
                   color: _theme(context).accentSolid,
@@ -202,7 +202,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline_rounded,
               size: AppDimensions.iconSizeXxl,
               color: _theme(context).error,
