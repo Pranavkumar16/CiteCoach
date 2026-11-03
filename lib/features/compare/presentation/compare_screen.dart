@@ -97,8 +97,8 @@ class _CompareScreenState extends ConsumerState<CompareScreen> {
                 final question = _question.text.trim();
                 if (question.isEmpty) return;
                 setState(() => _request = (
-                  leftId: leftId,
-                  rightId: rightId,
+                  leftId: leftId!,
+                  rightId: rightId!,
                   question: question,
                 ));
               },
