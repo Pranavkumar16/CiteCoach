@@ -34,9 +34,7 @@ void main() {
       right: [citation('The delivery address may be updated online.')],
     );
     expect(result.status, ComparisonStatus.differingWording);
-    expect(result.explanation, contains('not automatically') == false
-        ? contains('Inspect both sources')
-        : isNotEmpty);
+    expect(result.explanation, contains('Inspect both sources'));
   });
 
   test('does not treat blank citation text as evidence', () {
