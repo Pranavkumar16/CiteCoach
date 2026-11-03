@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme_data.dart';
 import '../../../routing/app_router.dart';
 import '../../library/providers/library_provider.dart';
 import '../domain/evidence_assessment.dart';
+import '../domain/claim_verification.dart';
 import '../providers/verify_provider.dart';
 
 /// Phase 1 evidence inspection: inspect retrieved passages without
@@ -21,6 +22,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
   final _controller = TextEditingController();
   int? _documentId;
   String? _submittedClaim;
+  bool _useAi = true;
 
   @override
   void dispose() {
@@ -47,7 +49,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                 color: theme.textPrimary, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
-            'Find matching and related source passages. This first version does not prove or disprove claims.',
+            'Check up to six statements against your document using the offline AI model. Results are AI assessments, not guaranteed facts.',
             style: TextStyle(color: theme.textSecondary),
           ),
           const SizedBox(height: 24),
@@ -80,13 +82,22 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
             TextField(
               controller: _controller,
               maxLines: 4,
-              maxLength: 600,
+              maxLength: 1500,
               decoration: const InputDecoration(
-                labelText: 'Claim to challenge',
+                labelText: 'Answer or claims to challenge',
                 hintText: 'Paste a sentence from an answer...',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(),
               ),
+            ),
+            SwitchListTile.adaptive(
+              title: const Text('AI evidence assessment'),
+              subtitle: const Text('Off: lexical passage screening only'),
+              value: _useAi,
+              onChanged: (value) => setState(() {
+                _useAi = value;
+                _submittedClaim = null;
+              }),
             ),
             const SizedBox(height: 12),
             FilledButton.icon(
@@ -100,7 +111,22 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
             ),
             if (_submittedClaim != null && selected != null) ...[
               const SizedBox(height: 24),
-              ref.watch(verifyClaimProvider((
+              (_useAi
+                  ? ref.watch(verifyAnswerProvider((
+                      documentId: selected,
+                      answer: _submittedClaim!,
+                    ))).when(
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (error, stack) => Text('AI assessment failed. Please retry.',
+                          style: TextStyle(color: theme.error)),
+                      data: (results) => Column(
+                        children: [
+                          for (final result in results)
+                            _ClaimResultCard(result: result, documentId: selected),
+                        ],
+                      ),
+                    )
+                  : ref.watch(verifyClaimProvider((
                 documentId: selected,
                 claim: _submittedClaim!,
               ))).when(
@@ -113,7 +139,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                   assessment: assessment,
                   documentId: selected,
                 ),
-              ),
+              )),
             ],
           ],
         ],
@@ -179,6 +205,63 @@ class _AssessmentView extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: theme.textTertiary)),
       ],
+    );
+  }
+}
+
+class _ClaimResultCard extends StatelessWidget {
+  const _ClaimResultCard({required this.result, required this.documentId});
+
+  final ClaimVerification result;
+  final int documentId;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).extension<AppThemeData>() ??
+        AppThemeData.midnight();
+    final label = switch (result.verdict) {
+      ClaimVerdict.supported => 'Supported by retrieved evidence',
+      ClaimVerdict.contradicted => 'Contradicted by retrieved evidence',
+      ClaimVerdict.insufficientEvidence => 'Insufficient evidence',
+    };
+    final color = switch (result.verdict) {
+      ClaimVerdict.supported => theme.success,
+      ClaimVerdict.contradicted => theme.error,
+      ClaimVerdict.insufficientEvidence => theme.warning,
+    };
+    return Card(
+      color: theme.surface,
+      margin: const EdgeInsets.only(bottom: 14),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(result.claim, style: TextStyle(color: theme.textPrimary,
+                fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            Text(label, style: TextStyle(color: color,
+                fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(result.explanation,
+                style: TextStyle(color: theme.textSecondary)),
+            for (final citation in result.citations)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Page ${citation.pageNumber}',
+                    style: TextStyle(color: theme.textPrimary)),
+                subtitle: Text(citation.text,
+                    style: TextStyle(color: theme.textSecondary)),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () => context.push(
+                  '${AppRoutes.documentReader(documentId.toString())}?page=${citation.pageNumber}',
+                ),
+              ),
+            Text('AI-generated assessment — check the cited source.',
+                style: TextStyle(fontSize: 12, color: theme.textTertiary)),
+          ],
+        ),
+      ),
     );
   }
 }
