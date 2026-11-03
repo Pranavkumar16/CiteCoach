@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/constants.dart';
 import '../../setup/data/model_downloader.dart';
-import '../../setup/providers/setup_provider.dart';
 
 /// Screen showing AI model details, storage usage, and management options.
 class ModelInfoScreen extends ConsumerStatefulWidget {
@@ -17,6 +16,7 @@ class ModelInfoScreen extends ConsumerStatefulWidget {
 class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
   int _modelSizeBytes = 0;
   bool _modelExists = false;
+  bool _checkingModel = true;
 
   @override
   void initState() {
@@ -32,14 +32,13 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
       setState(() {
         _modelSizeBytes = size;
         _modelExists = exists;
+        _checkingModel = false;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final setupState = ref.watch(setupProvider);
-
     return Scaffold(
       appBar: AppBar(title: const Text('AI Model')),
       body: ListView(
@@ -76,7 +75,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                               ),
                             ),
                             Text(
-                              _modelExists ? 'Downloaded & Ready' : 'Not Downloaded',
+                              _checkingModel ? 'Checking model...' : (_modelExists ? 'Downloaded (inference not yet verified)' : 'Not Downloaded'),
                               style: TextStyle(
                                 color: _modelExists
                                     ? AppColors.success
