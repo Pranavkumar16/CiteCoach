@@ -215,7 +215,7 @@ class DocumentCard extends StatelessWidget {
 
   Widget _buildMoreButton(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(
+      icon: Icon(
         Icons.more_vert_rounded,
         color: _theme(context).textTertiary,
       ),
@@ -313,7 +313,7 @@ class DocumentCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
             color: _theme(context).error,
             size: AppDimensions.iconSizeSm,
