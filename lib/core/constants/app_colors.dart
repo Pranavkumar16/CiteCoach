@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 /// Oxblood ink, warm parchment, acid citron and signal vermilion.
 abstract final class AppColors {
   // Primary Accent — Acid Citron
-  static const Color accent = Color(0xFFD9EF57); // Emerald-500
-  static const Color accentLight = Color(0xFFE8F6A0); // Emerald-300
-  static const Color accentDark = Color(0xFFA6BC32); // Emerald-600
+  static const Color accent = Color(0xFFD9EF57); // Signature citron
+  static const Color accentLight = Color(0xFFE8F6A0); // Soft citron
+  static const Color accentDark = Color(0xFFA6BC32); // Deep citron
 
   // Secondary accent — Signal Vermilion
-  static const Color accentCyan = Color(0xFFD85B43); // Cyan-500
+  static const Color accentCyan = Color(0xFFD85B43); // Signal vermilion
 
   // Brand gradient — Citron → Vermilion (use sparingly)
   static const LinearGradient primaryGradient = LinearGradient(
@@ -92,19 +92,19 @@ abstract final class AppColors {
   static const Color primaryPurple = accentLight;
 
   // Chat specific colors
-  static const Color userMessageBackground = Color(0xFF493840); // dark teal
+  static const Color userMessageBackground = Color(0xFF493840); // deep oxblood
   static const Color aiMessageBackground = zinc800;
   static const Color citationBadge = accent;
 
   // Voice overlay colors
   static const Color voiceOverlayStart = zinc950;
-  static const Color voiceOverlayEnd = Color(0xFF271B21); // very dark green
+  static const Color voiceOverlayEnd = Color(0xFF271B21); // warm oxblood
   static const LinearGradient voiceOverlayGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xF809090B), // 97% zinc950
-      Color(0xF80D2818), // 97% dark green
+      Color(0xF81A1117), // 97% zinc950
+      Color(0xF8271B21), // 97% dark green
     ],
   );
 
@@ -113,7 +113,7 @@ abstract final class AppColors {
   static const Color micInactive = zinc500;
 
   // Shadow colors
-  static const Color shadowPrimary = Color(0x3310B981); // 20% accent
+  static const Color shadowPrimary = Color(0x33D9EF57); // 20% citron
   static const Color shadowDark = Color(0x33000000); // 20% black
 
   // Accent variations for UI elements
@@ -123,5 +123,5 @@ abstract final class AppColors {
   static const Color indigo600 = Color(0xFFA6BC32);
 
   // Highlight color for citations in PDF
-  static const Color highlightYellow = Color(0xFF422006);
+  static const Color highlightYellow = Color(0x66D9EF57);
 }
