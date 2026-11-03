@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/constants.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../core/theme/app_theme_data.dart';
 import '../../../routing/app_router.dart';
 import '../domain/document.dart';
 import '../providers/library_provider.dart';
@@ -40,7 +41,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundPrimary,
+      backgroundColor: _theme(context).background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -77,14 +78,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 AppStrings.libraryTitle,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: _theme(context).textPrimary,
                     ),
               ),
               if (state.documents.isNotEmpty)
                 Text(
                   '${state.documentCount} document${state.documentCount == 1 ? '' : 's'}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: _theme(context).textSecondary,
                       ),
                 ),
             ],
@@ -100,9 +101,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       icon: Container(
         padding: const EdgeInsets.all(AppDimensions.spacingSm),
         decoration: BoxDecoration(
-          color: AppColors.surfacePrimary,
+          color: _theme(context).surfaceElevated,
           borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-          border: Border.all(color: AppColors.borderLight),
+          border: Border.all(color: _theme(context).border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -110,13 +111,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             const Icon(
               Icons.sort_rounded,
               size: AppDimensions.iconSizeSm,
-              color: AppColors.textSecondary,
+              color: _theme(context).textSecondary,
             ),
             const SizedBox(width: AppDimensions.spacingXs),
             Text(
               'Sort',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: _theme(context).textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
             ),
@@ -136,7 +137,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 const Icon(
                   Icons.check_rounded,
                   size: AppDimensions.iconSizeSm,
-                  color: AppColors.accent,
+                  color: _theme(context).accentSolid,
                 )
               else
                 const SizedBox(width: AppDimensions.iconSizeSm),
@@ -169,7 +170,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     return RefreshIndicator(
       onRefresh: () => ref.read(libraryProvider.notifier).refresh(),
-      color: AppColors.accent,
+      color: _theme(context).accentSolid,
       child: ListView.builder(
         padding: const EdgeInsets.only(
           top: AppDimensions.spacingSm,
@@ -204,13 +205,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             const Icon(
               Icons.error_outline_rounded,
               size: AppDimensions.iconSizeXxl,
-              color: AppColors.errorRed,
+              color: _theme(context).error,
             ),
             const SizedBox(height: AppDimensions.spacingMd),
             Text(
               state.error ?? 'Something went wrong',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: _theme(context).textSecondary,
                   ),
               textAlign: TextAlign.center,
             ),
@@ -228,15 +229,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Widget _buildFAB(BuildContext context, LibraryState state) {
     return FloatingActionButton.extended(
       onPressed: state.isImporting ? null : _importPdf,
-      backgroundColor: AppColors.accent,
-      foregroundColor: AppColors.textOnPrimary,
+      backgroundColor: _theme(context).accentSolid,
+      foregroundColor: Theme.of(context).colorScheme.onPrimary,
       icon: state.isImporting
           ? const SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppColors.white,
+                color: Colors.white,
               ),
             )
           : const Icon(Icons.add_rounded),
@@ -289,7 +290,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               ref.read(libraryProvider.notifier).deleteDocument(document.id);
             },
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.errorRed,
+              foregroundColor: _theme(context).error,
             ),
             child: const Text('Delete'),
           ),
@@ -302,14 +303,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.errorRed,
+        backgroundColor: _theme(context).error,
         behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
           label: 'Dismiss',
-          textColor: AppColors.white,
+          textColor: Colors.white,
           onPressed: () {},
         ),
       ),
     );
   }
 }
+
+
+AppThemeData _theme(BuildContext context) =>
+    Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();
