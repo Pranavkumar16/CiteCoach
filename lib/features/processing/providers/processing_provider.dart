@@ -62,6 +62,11 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
   final DocumentTextExtractor _textExtractor;
 
   bool _isCancelled = false;
+  bool _isRunning = false;
+
+  void _reportProgress(ProcessingState next) {
+    if (mounted && !_isCancelled) state = next;
+  }
 
   /// Start processing the document.
   Future<bool> startProcessing() async {
@@ -70,6 +75,8 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       return false;
     }
 
+    if (_isRunning) return false;
+    _isRunning = true;
     _isCancelled = false;
 
     try {
@@ -86,33 +93,33 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       await _documentRepository.updateStatus(documentId, DocumentStatus.processing);
 
       // Step 1: Load PDF
-      state = state.copyWith(
+      _reportProgress(state.copyWith(
         currentPhase: ProcessingPhase.loading,
         overallProgress: 0.05,
         stepProgress: 0.0,
-      );
+      ));
 
       if (_isCancelled) return false;
 
       // Step 2: Extract text (supports all formats: PDF, DOCX, TXT, EPUB, images, scanned PDFs)
-      state = state.copyWith(
+      _reportProgress(state.copyWith(
         currentPhase: ProcessingPhase.extractingText,
         overallProgress: 0.1,
         stepProgress: 0.0,
-      );
+      ));
 
       final extractionResult = await _textExtractor.extractText(
         document.filePath,
         onProgress: (current, total, status) {
-          if (!_isCancelled) {
+          if (!_isCancelled && mounted && total > 0) {
             final stepProgress = current / total;
             final overallProgress = 0.1 + (stepProgress * 0.3); // 10-40%
-            state = state.copyWith(
+            _reportProgress(state.copyWith(
               stepProgress: stepProgress,
               overallProgress: overallProgress,
               pageCount: total,
               pagesProcessed: current,
-            );
+            ));
           }
         },
       );
@@ -130,25 +137,25 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       await _savePages(extractionResult.pages);
 
       // Step 3: Chunk text
-      state = state.copyWith(
+      _reportProgress(state.copyWith(
         currentPhase: ProcessingPhase.chunking,
         overallProgress: 0.4,
         stepProgress: 0.0,
         pageCount: extractionResult.pageCount,
-      );
+      ));
 
       if (_isCancelled) return false;
 
       final chunkingResult = await _pdfProcessor.chunkText(
         extractionResult.pages,
         onProgress: (current, total, status) {
-          if (!_isCancelled) {
+          if (!_isCancelled && mounted && total > 0) {
             final stepProgress = current / total;
             final overallProgress = 0.4 + (stepProgress * 0.2); // 40-60%
-            state = state.copyWith(
+            _reportProgress(state.copyWith(
               stepProgress: stepProgress,
               overallProgress: overallProgress,
-            );
+            ));
           }
         },
       );
@@ -165,29 +172,29 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       // Save chunks to database
       await _saveChunks(chunkingResult.chunks);
 
-      state = state.copyWith(
+      _reportProgress(state.copyWith(
         chunksCreated: chunkingResult.chunks.length,
-      );
+      ));
 
       // Step 4: Generate embeddings
-      state = state.copyWith(
+      _reportProgress(state.copyWith(
         currentPhase: ProcessingPhase.embedding,
         overallProgress: 0.6,
         stepProgress: 0.0,
-      );
+      ));
 
       if (_isCancelled) return false;
 
       final embeddingResult = await _embeddingService.generateEmbeddings(
         chunkingResult.chunks,
         onProgress: (current, total) {
-          if (!_isCancelled) {
+          if (!_isCancelled && mounted && total > 0) {
             final stepProgress = current / total;
             final overallProgress = 0.6 + (stepProgress * 0.3); // 60-90%
-            state = state.copyWith(
+            _reportProgress(state.copyWith(
               stepProgress: stepProgress,
               overallProgress: overallProgress,
-            );
+            ));
           }
         },
       );
@@ -205,11 +212,11 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       await _saveEmbeddings(chunkingResult.chunks, embeddingResult.embeddings);
 
       // Step 5: Finalize
-      state = state.copyWith(
+      _reportProgress(state.copyWith(
         currentPhase: ProcessingPhase.finalizing,
         overallProgress: 0.95,
         stepProgress: 0.0,
-      );
+      ));
 
       if (_isCancelled) return false;
 
@@ -217,7 +224,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       await _documentRepository.markReady(documentId, extractionResult.pageCount);
 
       // Complete
-      state = ProcessingState.completed(
+      if (mounted && !_isCancelled) state = ProcessingState.completed(
         documentId,
         extractionResult.pageCount,
         chunkingResult.chunks.length,
@@ -227,8 +234,12 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
       return true;
     } catch (e) {
       debugPrint('ProcessingNotifier: Error during processing: $e');
-      await _setError('Processing failed: ${e.toString()}');
+      if (mounted && !_isCancelled) {
+        await _setError('Processing failed: ${e.toString()}');
+      }
       return false;
+    } finally {
+      _isRunning = false;
     }
   }
 
@@ -301,7 +312,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
   /// Set error state.
   Future<void> _setError(String message) async {
     await _documentRepository.setError(documentId, message);
-    state = ProcessingState.error(documentId, message);
+    if (mounted && !_isCancelled) state = ProcessingState.error(documentId, message);
   }
 
   /// Cancel processing.
@@ -312,6 +323,7 @@ class ProcessingNotifier extends StateNotifier<ProcessingState> {
 
   /// Retry processing after an error.
   Future<bool> retry() async {
+    if (_isRunning || !mounted) return false;
     state = ProcessingState.initial(documentId);
     return startProcessing();
   }
