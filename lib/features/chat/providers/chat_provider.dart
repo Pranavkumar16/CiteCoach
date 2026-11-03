@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,28 +73,29 @@ class ChatState extends Equatable {
 
   @override
   List<Object?> get props => [
-        documentId,
-        messages,
-        isLoading,
-        isGenerating,
-        streamingContent,
-        error,
-      ];
+    documentId,
+    messages,
+    isLoading,
+    isGenerating,
+    streamingContent,
+    error,
+  ];
 }
 
 /// Provider for the chat notifier, scoped to a document.
-final chatProvider =
-    StateNotifierProvider.autoDispose<ChatNotifier, ChatState>((ref) {
-  final repository = ref.watch(chatRepositoryProvider);
-  final ragService = ref.watch(ragServiceProvider);
-  final llmService = ref.watch(llmServiceProvider);
+final chatProvider = StateNotifierProvider.autoDispose<ChatNotifier, ChatState>(
+  (ref) {
+    final repository = ref.watch(chatRepositoryProvider);
+    final ragService = ref.watch(ragServiceProvider);
+    final llmService = ref.watch(llmServiceProvider);
 
-  return ChatNotifier(
-    repository: repository,
-    ragService: ragService,
-    llmService: llmService,
-  );
-});
+    return ChatNotifier(
+      repository: repository,
+      ragService: ragService,
+      llmService: llmService,
+    );
+  },
+);
 
 /// Notifier for managing chat state and interactions.
 class ChatNotifier extends StateNotifier<ChatState> {
@@ -101,19 +103,37 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required ChatRepository repository,
     required RagService ragService,
     required LlmService llmService,
-  })  : _repository = repository,
-        _ragService = ragService,
-        _llmService = llmService,
-        super(const ChatState());
+  }) : _repository = repository,
+       _ragService = ragService,
+       _llmService = llmService,
+       super(const ChatState());
 
   final ChatRepository _repository;
   final RagService _ragService;
   final LlmService _llmService;
 
+  int _requestId = 0;
+  bool _isCurrent(int requestId) => mounted && requestId == _requestId;
+
+  void cancelGeneration() {
+    ++_requestId;
+    unawaited(_llmService.stopGeneration());
+    if (mounted) {
+      state = state.copyWith(isGenerating: false, streamingContent: '');
+    }
+  }
+
+  @override
+  void dispose() {
+    if (state.isGenerating) unawaited(_llmService.stopGeneration());
+    ++_requestId;
+    super.dispose();
+  }
+
   /// Initialize chat for a document.
   Future<void> initialize(int documentId) async {
     debugPrint('ChatNotifier: Initializing for document $documentId');
-    
+
     state = state.copyWith(
       documentId: documentId,
       isLoading: true,
@@ -123,14 +143,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
     try {
       // Load existing messages
       final messages = await _repository.getMessages(documentId);
-      
-      state = state.copyWith(
-        messages: messages,
-        isLoading: false,
-      );
+      if (!mounted) return;
+
+      state = state.copyWith(messages: messages, isLoading: false);
 
       debugPrint('ChatNotifier: Loaded ${messages.length} messages');
     } catch (e) {
+      if (!mounted) return;
       debugPrint('ChatNotifier: Failed to load messages: $e');
       state = state.copyWith(
         isLoading: false,
@@ -145,48 +164,57 @@ class ChatNotifier extends StateNotifier<ChatState> {
     InputMethod inputMethod = InputMethod.text,
   }) async {
     final documentId = state.documentId;
-    if (documentId == null || content.trim().isEmpty) return;
-
-    debugPrint('ChatNotifier: Sending message: "${content.substring(0, content.length.clamp(0, 50))}..."');
-
-    // Create and save user message
-    final userMessage = ChatMessage.user(
-      documentId: documentId,
-      content: content.trim(),
-      inputMethod: inputMethod,
-    );
-
-    final savedUserMessage = await _repository.saveMessage(userMessage);
-    if (savedUserMessage == null) {
-      state = state.copyWith(error: 'Failed to save message');
+    if (documentId == null || content.trim().isEmpty || state.isInputDisabled)
       return;
-    }
-
-    // Add user message to state
-    state = state.copyWith(
-      messages: [...state.messages, savedUserMessage],
-      isGenerating: true,
-      streamingContent: '',
-      clearError: true,
-    );
+    final requestId = ++_requestId;
+    state = state.copyWith(isGenerating: true, clearError: true);
 
     try {
+      debugPrint(
+        'ChatNotifier: Sending message: "${content.substring(0, content.length.clamp(0, 50))}..."',
+      );
+
+      // Create and save user message
+      final userMessage = ChatMessage.user(
+        documentId: documentId,
+        content: content.trim(),
+        inputMethod: inputMethod,
+      );
+
+      final savedUserMessage = await _repository.saveMessage(userMessage);
+      if (!_isCurrent(requestId)) return;
+      if (savedUserMessage == null) {
+        state = state.copyWith(
+          isGenerating: false,
+          error: 'Failed to save message',
+        );
+        return;
+      }
+
+      // Add user message to state
+      state = state.copyWith(
+        messages: [...state.messages, savedUserMessage],
+        isGenerating: true,
+        streamingContent: '',
+        clearError: true,
+      );
+
       // Check cache first
       final cachedAnswer = await _repository.getCachedAnswer(
         documentId,
         content.trim(),
       );
+      if (!_isCurrent(requestId)) return;
 
       if (cachedAnswer != null) {
         debugPrint('ChatNotifier: Cache hit!');
-        
+
         // Convert page numbers to Citation objects
         final citations = cachedAnswer.citations
-            .map((pageNum) => Citation(
-                  pageNumber: pageNum,
-                  chunkIndex: 0,
-                  text: '',
-                ))
+            .map(
+              (pageNum) =>
+                  Citation(pageNumber: pageNum, chunkIndex: 0, text: ''),
+            )
             .toList();
 
         final assistantMessage = ChatMessage.assistant(
@@ -196,6 +224,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         );
 
         final savedAssistant = await _repository.saveMessage(assistantMessage);
+        if (!_isCurrent(requestId)) return;
         if (savedAssistant != null) {
           state = state.copyWith(
             messages: [...state.messages, savedAssistant],
@@ -211,6 +240,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         documentId,
         content.trim(),
       );
+      if (!_isCurrent(requestId)) return;
 
       if (!retrievalResult.isSuccess) {
         debugPrint('ChatNotifier: Retrieval failed: ${retrievalResult.error}');
@@ -226,16 +256,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final generationResult = await _llmService.generate(
         query: content.trim(),
         retrievalResult: retrievalResult,
-        conversationHistory: state.messages,
+        conversationHistory: state.messages.sublist(
+          0,
+          state.messages.length - 1,
+        ),
         onToken: (token) {
+          if (!_isCurrent(requestId)) return;
           state = state.copyWith(
             streamingContent: state.streamingContent + token,
           );
         },
       );
 
+      if (!_isCurrent(requestId)) return;
       if (!generationResult.isSuccess) {
-        debugPrint('ChatNotifier: Generation failed: ${generationResult.error}');
+        debugPrint(
+          'ChatNotifier: Generation failed: ${generationResult.error}',
+        );
         state = state.copyWith(
           isGenerating: false,
           error: generationResult.error ?? 'Failed to generate response',
@@ -251,6 +288,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       );
 
       final savedAssistant = await _repository.saveMessage(assistantMessage);
+      if (!_isCurrent(requestId)) return;
       if (savedAssistant != null) {
         state = state.copyWith(
           messages: [...state.messages, savedAssistant],
@@ -270,11 +308,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       debugPrint('ChatNotifier: Response generated successfully');
     } catch (e) {
+      if (!_isCurrent(requestId)) return;
       debugPrint('ChatNotifier: Error during message processing: $e');
       state = state.copyWith(
         isGenerating: false,
         error: 'An error occurred: ${e.toString()}',
       );
+    } finally {
+      if (_isCurrent(requestId)) {
+        state = state.copyWith(isGenerating: false, streamingContent: '');
+      }
     }
   }
 
@@ -283,9 +326,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final documentId = state.documentId;
     if (documentId == null) return;
 
+    cancelGeneration();
     debugPrint('ChatNotifier: Clearing conversation');
 
     await _repository.clearMessages(documentId);
+    if (!mounted) return;
     state = state.copyWith(
       messages: [],
       streamingContent: '',
@@ -307,10 +352,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final messages = state.messages.toList();
     if (messages.isNotEmpty && messages.last.isUser) {
       messages.removeLast();
-      state = state.copyWith(
-        messages: messages,
-        clearError: true,
-      );
+      state = state.copyWith(messages: messages, clearError: true);
     }
 
     await sendMessage(lastUser.content, inputMethod: lastUser.inputMethod);

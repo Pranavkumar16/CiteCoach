@@ -21,10 +21,7 @@ import 'widgets/message_bubble.dart';
 
 /// Main chat screen for document Q&A.
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({
-    super.key,
-    required this.documentId,
-  });
+  const ChatScreen({super.key, required this.documentId});
 
   /// The ID of the document to chat about.
   final int documentId;
@@ -43,7 +40,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(chatProvider.notifier).initialize(widget.documentId);
+      if (mounted)
+        ref.read(chatProvider.notifier).initialize(widget.documentId);
     });
   }
 
@@ -57,7 +55,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     // Show FAB when user has scrolled up >150px from the bottom.
-    final distanceFromBottom = _scrollController.position.maxScrollExtent -
+    final distanceFromBottom =
+        _scrollController.position.maxScrollExtent -
         _scrollController.position.pixels;
     final shouldShow = distanceFromBottom > 150;
     if (shouldShow != _showScrollToBottom) {
@@ -72,6 +71,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
+    }
+  }
+
+  void _handleBack() {
+    ref.read(chatProvider.notifier).cancelGeneration();
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.library);
     }
   }
 
@@ -119,11 +127,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       '${AppRoutes.voiceInput}?documentId=${widget.documentId}',
     );
 
-    if (result != null && result.isNotEmpty) {
-      ref.read(chatProvider.notifier).sendMessage(
-            result,
-            inputMethod: InputMethod.voice,
-          );
+    if (mounted && result != null && result.isNotEmpty) {
+      ref
+          .read(chatProvider.notifier)
+          .sendMessage(result, inputMethod: InputMethod.voice);
       Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
     }
   }
@@ -211,57 +218,82 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: _buildAppBar(context, document),
-      floatingActionButton: _showScrollToBottom
-          ? _buildScrollToBottomFab(theme)
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: SafeArea(
-        child: Row(
-          children: [
-            // Main chat column
-            Expanded(
-              child: Column(
-                children: [
-                  if (chatState.error != null)
-                    _buildErrorBanner(theme, chatState.error!),
-                  Expanded(
-                    child: chatState.isLoading
-                        ? const Center(
-                            child: LoadingIndicator(useGradient: true))
-                        : chatState.messages.isEmpty
-                            ? EmptyChatView(
-                                documentTitle: document?.title ?? 'Document',
-                                onSampleQuestion: _handleSend,
-                              )
-                            : _buildMessageList(chatState, document),
-                  ),
-                  LivingChatInput(
-                    onSend: _handleSend,
-                    onVoiceStart: _handleVoiceStart,
-                    suggestions: chatState.messages.isEmpty
-                        ? _suggestedQuestions(document)
-                        : const [],
-                    isDisabled: chatState.isInputDisabled,
-                  ),
-                ],
-              ),
-            ),
-            // Document DNA strip — only if the document has pages and
-            // there's at least one citation.
-            if (document != null &&
-                document.pageCount > 0 &&
-                citationCounts.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                child: DocumentDnaStrip(
-                  pageCount: document.pageCount,
-                  citationCounts: citationCounts,
-                  onPageTap: (p) => _handleDnaPageTap(p, document),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          ref.read(chatProvider.notifier).cancelGeneration();
+        } else {
+          _handleBack();
+        }
+      },
+      child: Scaffold(
+        appBar: _buildAppBar(context, document),
+        floatingActionButton: _showScrollToBottom
+            ? _buildScrollToBottomFab(theme)
+            : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        body: SafeArea(
+          child: Row(
+            children: [
+              // Main chat column
+              Expanded(
+                child: Column(
+                  children: [
+                    if (chatState.error != null)
+                      _buildErrorBanner(theme, chatState.error!),
+                    Expanded(
+                      child: chatState.isLoading
+                          ? const Center(
+                              child: LoadingIndicator(useGradient: true),
+                            )
+                          : chatState.messages.isEmpty
+                          ? EmptyChatView(
+                              documentTitle: document?.title ?? 'Document',
+                              onSampleQuestion: _handleSend,
+                            )
+                          : _buildMessageList(chatState, document),
+                    ),
+                    if (chatState.isGenerating)
+                      TextButton.icon(
+                        onPressed: () =>
+                            ref.read(chatProvider.notifier).cancelGeneration(),
+                        icon: const Icon(Icons.stop_circle_outlined),
+                        label: Text(
+                          chatState.streamingContent.isEmpty
+                              ? 'Preparing answer on this device… Stop'
+                              : 'Stop answer',
+                        ),
+                      ),
+                    LivingChatInput(
+                      onSend: _handleSend,
+                      onVoiceStart: _handleVoiceStart,
+                      suggestions: chatState.messages.isEmpty
+                          ? _suggestedQuestions(document)
+                          : const [],
+                      isDisabled: chatState.isInputDisabled,
+                    ),
+                  ],
                 ),
               ),
-          ],
+              // Document DNA strip — only if the document has pages and
+              // there's at least one citation.
+              if (document != null &&
+                  document.pageCount > 0 &&
+                  citationCounts.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 4,
+                  ),
+                  child: DocumentDnaStrip(
+                    pageCount: document.pageCount,
+                    citationCounts: citationCounts,
+                    onPageTap: (p) => _handleDnaPageTap(p, document),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -271,7 +303,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.pop(),
+        onPressed: _handleBack,
       ),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,7 +332,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ? () {
                   ref.read(appHapticsProvider).light();
                   context.push(
-                      AppRoutes.documentReader(document.id.toString()));
+                    AppRoutes.documentReader(document.id.toString()),
+                  );
                 }
               : null,
         ),

@@ -70,7 +70,7 @@ class RagService {
 
   /// Configuration
   static const int topKChunks = 5;
-  static const int maxContextTokens = 3000; // ~12000 chars
+  static const int maxContextTokens = 400; // ~1600 chars; reserve room for instructions and answer
   static const double minScoreThreshold = 0.1;
 
   /// Cache for BM25 indexes per document.

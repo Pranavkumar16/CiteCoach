@@ -141,9 +141,15 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
                     return@execute
                 }
 
-                // Create inference context (1024 tokens - balanced for mobile)
-                contextHandle = nativeCreateContext(modelHandle, 1024)
+                // Compact mobile context with room for evidence and a short answer.
+                contextHandle = nativeCreateContext(modelHandle, 2048)
 
+                if (contextHandle == 0L) {
+                    nativeFreeModel(modelHandle)
+                    modelHandle = 0
+                    mainHandler.post { result.error("CONTEXT_FAILED", "Could not allocate AI context", null) }
+                    return@execute
+                }
                 mainHandler.post { result.success(true) }
             } catch (e: UnsatisfiedLinkError) {
                 mainHandler.post {
@@ -180,6 +186,7 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
             return
         }
 
+        nativeResetCancellation()
         isGenerating = true
         shouldStop = false
         result.success(null) // Acknowledge start, tokens come via EventChannel
@@ -217,6 +224,7 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
 
     private fun stopGeneration(result: MethodChannel.Result) {
         shouldStop = true
+        if (contextHandle != 0L) nativeStopGeneration()
         result.success(null)
     }
 
@@ -274,6 +282,8 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
     // These are implemented in the native C++ bridge (llm_bridge.cpp)
     // that links against llama.cpp
 
+    private external fun nativeResetCancellation()
+    private external fun nativeStopGeneration()
     private external fun nativeLoadModel(modelPath: String): Long
     private external fun nativeCreateContext(modelHandle: Long, contextSize: Int): Long
     private external fun nativeGenerate(
