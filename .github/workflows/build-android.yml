@@ -3,6 +3,8 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -40,7 +42,6 @@ jobs:
 
       - name: Run tests
         run: flutter test --no-pub
-        continue-on-error: true
 
       - name: Build APK
         run: flutter build apk --release --verbose
