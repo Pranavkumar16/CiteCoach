@@ -24,7 +24,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     super.initState();
     // Refresh library when screen is shown
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(libraryProvider.notifier).refresh();
+      if (mounted) ref.read(libraryProvider.notifier).refresh();
     });
   }
 
