@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/constants/constants.dart';
 import '../features/chat/presentation/chat_screen.dart';
+import '../features/compare/presentation/compare_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/verify/presentation/verify_screen.dart';
 import '../features/library/presentation/library_screen.dart';
@@ -34,6 +35,7 @@ abstract final class AppRoutes {
   // Main app
   static const String home = '/home';
   static const String verify = '/verify';
+  static const String compare = '/compare';
   static const String library = '/library';
   static const String settings = '/settings';
   static const String modelInfo = '/settings/model-info';
@@ -128,6 +130,11 @@ GoRouter createRouter(Ref ref) {
             path: AppRoutes.home,
             name: 'home',
             builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.compare,
+            name: 'compare',
+            builder: (context, state) => const CompareScreen(),
           ),
           GoRoute(
             path: AppRoutes.verify,
