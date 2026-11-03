@@ -225,13 +225,13 @@ class DocumentCard extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'delete',
           child: Row(
             children: [
               Icon(Icons.delete_outline_rounded, color: _theme(context).error),
-              SizedBox(width: AppDimensions.spacingSm),
-              Text('Delete'),
+              const SizedBox(width: AppDimensions.spacingSm),
+              const Text('Delete'),
             ],
           ),
         ),
