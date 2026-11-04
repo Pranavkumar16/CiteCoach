@@ -134,7 +134,7 @@ class ModelDownloader {
       'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx';
   static const int _embeddingModelSize = 22 * 1024 * 1024; // 22 MB
 
-  late final Dio _dio;
+  late Dio _dio;
   StreamController<DownloadProgress>? _progressController;
   CancelToken? _cancelToken;
   Future<void>? _activeDownload;
@@ -159,11 +159,6 @@ class ModelDownloader {
   Future<String> _getEmbeddingModelPath() async {
     final appDir = await getApplicationDocumentsDirectory();
     return '${appDir.path}/models/embedding_model.tflite';
-  }
-
-  Future<String> _getTempPath() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    return '${appDir.path}/models/.download_temp';
   }
 
   /// Check if model is fully downloaded and verified.
@@ -211,7 +206,7 @@ class ModelDownloader {
   Future<bool> hasEnoughStorage() async {
     try {
       final appDir = await getApplicationDocumentsDirectory();
-      final stat = await appDir.stat();
+      await appDir.stat();
       // Need ~2GB free (model + temp + buffer)
       // stat doesn't give free space; we'll try the download and handle errors
       return true;
