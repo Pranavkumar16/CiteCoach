@@ -16,6 +16,7 @@ import 'package:citecoach/features/chat/presentation/widgets/living_chat_input.d
 import 'package:citecoach/features/compare/presentation/compare_screen.dart';
 import 'package:citecoach/features/home/presentation/home_screen.dart';
 import 'package:citecoach/features/learn/presentation/learn_screen.dart';
+import 'package:citecoach/features/learn/providers/chapter_provider.dart';
 import 'package:citecoach/features/library/data/document_repository.dart';
 import 'package:citecoach/features/library/data/pdf_import_service.dart';
 import 'package:citecoach/features/library/domain/document.dart';
@@ -68,6 +69,7 @@ void main() {
     await tester.pumpWidget(ProviderScope(overrides: [
       libraryProvider.overrideWith((ref) => _Library(docs ?? _docs)),
       sharedPreferencesProvider.overrideWithValue(prefs),
+      chaptersProvider.overrideWith((ref, id) async => []),
     ], child: MaterialApp(theme: AppTheme.fromExtension(theme ?? AppThemeData.midnight()),
       home: MediaQuery(data: MediaQueryData(size: Size(width, height), highContrast: highContrast, textScaler: TextScaler.linear(scale)),
         child: RepaintBoundary(key: boundary, child: screen)),

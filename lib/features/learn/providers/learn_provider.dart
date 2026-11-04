@@ -1,3 +1,4 @@
+import '../domain/study_chapter.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,11 +10,14 @@ final studyCardParserProvider = Provider<StudyCardParser>(
     (ref) => const StudyCardParser());
 
 final generateStudyCardsProvider = FutureProvider.autoDispose.family<
-    List<StudyCard>, ({int documentId, String topic})>((ref, request) async {
+    List<StudyCard>, StudyRequest>((ref, request) async {
+  final llm = ref.read(llmServiceProvider);
+  llm.activity.value = 'Finding evidence in your PDF…';
   final cancellation = GenerationCancellation();
   ref.onDispose(cancellation.cancel);
   final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
-  final cacheKey = 'learn.cards.v2.${request.documentId}.${Uri.encodeComponent(request.topic.trim().toLowerCase())}';
+  final cacheKey = 'learn.cards.v3.${request.documentId}.${request.startPage ?? 0}-${request.endPage ?? 0}.${Uri.encodeComponent(request.topic.trim().toLowerCase())}';
+  if (cancellation.isCancelled) return [];
   final cached = prefs.getString(cacheKey);
   if (cached != null) {
     try {
@@ -28,8 +32,10 @@ final generateStudyCardsProvider = FutureProvider.autoDispose.family<
       await prefs.remove(cacheKey);
     }
   }
-  final retrieval = await ref.read(ragServiceProvider)
-      .retrieve(request.documentId, request.topic).timeout(
+  final retrieval = await (request.startPage == null || request.endPage == null
+      ? ref.read(ragServiceProvider).retrieve(request.documentId, request.topic)
+      : ref.read(ragServiceProvider).retrievePages(request.documentId, request.topic,
+          request.startPage!, request.endPage!)).timeout(
         const Duration(seconds: 20),
         onTimeout: () => throw Exception('PDF search took too long. Retry with a specific topic.'),
       );
@@ -38,7 +44,7 @@ final generateStudyCardsProvider = FutureProvider.autoDispose.family<
     throw Exception('No matching passages found. Choose a topic covered in this PDF.');
   }
   final pages = retrieval.citations.map((c) => c.pageNumber).toSet();
-  final result = await ref.read(llmServiceProvider).generate(
+  final result = await llm.generate(
     query: '''
 Create three short study flashcards about "${request.topic}" using ONLY the supplied excerpts.
 Each card must be exactly one line in this format:
@@ -55,6 +61,8 @@ Do not include headings, markdown or invented facts.
   if (!result.isSuccess) {
     throw Exception(result.error ?? 'The AI returned no cards. Please retry.');
   }
+  if (cancellation.isCancelled) return [];
+  llm.activity.value = 'Checking flashcards and source pages…';
   final cards = ref.read(studyCardParserProvider).parse(result.response, pages);
   if (cards.isNotEmpty) {
     await prefs.setString(cacheKey, jsonEncode(cards.map((card) => {

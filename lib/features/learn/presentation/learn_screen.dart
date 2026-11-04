@@ -11,6 +11,10 @@ import '../domain/study_card.dart';
 import '../providers/learn_provider.dart';
 import '../providers/quiz_provider.dart';
 import 'quiz_session.dart';
+import 'chapter_selector.dart';
+import '../domain/study_chapter.dart';
+import '../../chat/data/llm_service.dart';
+import '../../../core/widgets/generation_progress.dart';
 
 class LearnScreen extends ConsumerStatefulWidget {
   const LearnScreen({super.key});
@@ -23,37 +27,39 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
   final _topic = TextEditingController();
   final _store = const StudyProgressStore();
   int? _documentId;
-  ({int documentId, String topic})? _request;
+  StudyRequest? _request;
+  StudyChapter? _chapter;
   final Set<int> _revealed = {};
   Set<String> _known = {};
   bool _progressLoading = false;
   bool _quiz = false;
 
+  String _progressTopic(StudyRequest request) =>
+      '${request.topic} [PDF ${request.startPage ?? 0}-${request.endPage ?? 0}]';
+
   String _cardKey(StudyCard card) => '${card.page}:${card.question}';
 
   Future<void> _start(int documentId, String topic) async {
     FocusScope.of(context).unfocus();
-    ref.invalidate(generateStudyCardsProvider((documentId: documentId, topic: topic)));
-    ref.invalidate(generateQuizProvider((documentId: documentId, topic: topic)));
+    final request = (documentId: documentId, topic: topic,
+      startPage: _chapter?.startPage, endPage: _chapter?.endPage);
+    ref.invalidate(generateStudyCardsProvider(request));
+    ref.invalidate(generateQuizProvider(request));
     setState(() {
-      _request = (documentId: documentId, topic: topic);
+      _request = request;
       _revealed.clear();
       _known = {};
       _progressLoading = true;
     });
     try {
-      final saved = await _store.load(documentId, topic).timeout(
+      final saved = await _store.load(documentId, _progressTopic(request)).timeout(
         const Duration(seconds: 5), onTimeout: () => <String>{});
-      if (!mounted ||
-          _request?.documentId != documentId ||
-          _request?.topic != topic) {
+      if (!mounted || _request != request) {
         return;
       }
       setState(() => _known = saved);
     } finally {
-      if (mounted &&
-          _request?.documentId == documentId &&
-          _request?.topic == topic) {
+      if (mounted && _request == request) {
         setState(() => _progressLoading = false);
       }
     }
@@ -69,13 +75,13 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
         _known.remove(_cardKey(card));
       }
     });
-    await _store.save(request.documentId, request.topic, _known);
+    await _store.save(request.documentId, _progressTopic(request), _known);
   }
 
   Future<void> _clear() async {
     final request = _request;
     if (request == null) return;
-    await _store.clear(request.documentId, request.topic);
+    await _store.clear(request.documentId, _progressTopic(request));
     if (mounted && _request == request) {
       setState(() => _known.clear());
     }
@@ -162,6 +168,18 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                             .toList(),
                         onChanged: (id) => setState(() {
                           _documentId = id;
+                          _chapter = null;
+                          _request = null;
+                        }),
+                      ),
+                      const SizedBox(height: 16),
+                      if (selected != null) ChapterSelector(
+                        key: ValueKey('chapters-$selected'),
+                        documentId: selected,
+                        pageCount: docs.firstWhere((d) => d.id == selected).pageCount,
+                        enabled: !busy,
+                        onChanged: (chapter) => setState(() {
+                          _chapter = chapter;
                           _request = null;
                         }),
                       ),
@@ -197,12 +215,14 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                 ),
                 if (_request != null) ...[
                   const SizedBox(height: 20),
+                  GenerationProgress(
+                    key: ValueKey((_request, _quiz)),
+                    running: busy,
+                    activity: ref.watch(llmServiceProvider).activity,
+                  ),
                   if (_quiz)
                     ref.watch(generateQuizProvider(_request!)).when(
-                      loading: () => const Column(children: [
-                        CircularProgressIndicator(), SizedBox(height: 12),
-                        Text('Creating your quiz with offline AI…'),
-                      ]),
+                      loading: () => const SizedBox.shrink(),
                       error: (error, stack) => Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -219,15 +239,10 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                       ),
                     )
                   else if (_progressLoading)
-                    const Center(child: CircularProgressIndicator())
+                    const SizedBox.shrink()
                   else
                     ref.watch(generateStudyCardsProvider(_request!)).when(
-                          loading: () =>
-                              const Center(child: Column(children: [
-                                CircularProgressIndicator(),
-                                SizedBox(height: 12),
-                                Text('Reading your PDF and running offline AI…'),
-                              ])),
+                          loading: () => const SizedBox.shrink(),
                           error: (error, stack) => Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

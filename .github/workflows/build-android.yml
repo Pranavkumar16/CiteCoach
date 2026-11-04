@@ -59,6 +59,10 @@ jobs:
           lib/features/verify/presentation/verify_screen.dart
           lib/features/compare/presentation/compare_screen.dart
           lib/features/learn/presentation/learn_screen.dart
+          lib/features/learn/presentation/chapter_selector.dart
+          lib/features/learn/providers/chapter_provider.dart
+          lib/features/learn/domain/study_chapter.dart
+          lib/core/widgets/generation_progress.dart
           lib/features/learn/presentation/quiz_session.dart
           lib/features/learn/providers/quiz_provider.dart
           lib/features/learn/domain/quiz_question.dart

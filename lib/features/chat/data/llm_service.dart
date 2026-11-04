@@ -61,6 +61,7 @@ class LlmService {
     : _generationTimeout = generationTimeout;
 
   final Duration _generationTimeout;
+  final activity = ValueNotifier<String>('Finding evidence in your PDF…');
 
   static const _channel = MethodChannel('com.citecoach/llm');
   static const _streamChannel = EventChannel('com.citecoach/llm_stream');
@@ -165,6 +166,7 @@ class LlmService {
     );
 
     if (!_isModelLoaded) {
+      activity.value = 'Loading offline model…';
       final initialized = await initialize().timeout(
         const Duration(seconds: 60),
         onTimeout: () => false,
@@ -181,6 +183,7 @@ class LlmService {
       return GenerationResult.error('Answer cancelled.');
     }
     try {
+      activity.value = 'Generating on your device…';
       debugPrint('LlmService: Generating response...');
 
       final completer = Completer<String>();
@@ -203,6 +206,7 @@ class LlmService {
               completer.completeError(token.substring(7));
             }
           } else {
+            activity.value = 'Writing the response…';
             responseBuffer.write(token);
             onToken?.call(token);
           }

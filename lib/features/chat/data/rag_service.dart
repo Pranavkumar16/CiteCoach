@@ -70,7 +70,15 @@ class RagService {
   final Map<int, BM25Index> _indexCache = {};
 
   /// Retrieve relevant context for a query.
-  Future<RetrievalResult> retrieve(int documentId, String query) async {
+  Future<RetrievalResult> retrieve(int documentId, String query) =>
+      _retrieve(documentId, query);
+
+  Future<RetrievalResult> retrievePages(int documentId, String query,
+      int startPage, int endPage) => _retrieve(documentId, query,
+        startPage: startPage, endPage: endPage);
+
+  Future<RetrievalResult> _retrieve(int documentId, String query,
+      {int? startPage, int? endPage}) async {
     if (_db == null) {
       return RetrievalResult.error('Database not available');
     }
@@ -81,7 +89,10 @@ class RagService {
       );
 
       // Get or build BM25 index for this document
-      final index = await _getOrBuildIndex(documentId);
+      var index = await _getOrBuildIndex(documentId);
+      if (index != null && startPage != null && endPage != null) {
+        index = restrictToPages(index, startPage, endPage);
+      }
       if (index == null || index.chunkCount == 0) {
         return RetrievalResult.error(
           'No indexed content found for this document',
@@ -119,6 +130,11 @@ class RagService {
       return RetrievalResult.error('Retrieval failed: ${e.toString()}');
     }
   }
+
+  @visibleForTesting
+  BM25Index restrictToPages(BM25Index index, int startPage, int endPage) =>
+      _bm25Service.buildIndex(index.chunks.values.where(
+        (c) => c.pageNumber >= startPage && c.pageNumber <= endPage).toList());
 
   /// Get cached index or build a new one.
   Future<BM25Index?> _getOrBuildIndex(int documentId) async {
