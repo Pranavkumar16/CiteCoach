@@ -105,7 +105,8 @@ class HomeScreen extends ConsumerWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                mainAxisExtent: 190 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.5),
+                childAspectRatio: ((MediaQuery.sizeOf(context).width - 52) / 2) /
+                    (190 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.5)),
                 children: [
                   _ToolTile(
                     title: 'Verify',

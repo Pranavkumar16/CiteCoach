@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import '../../../core/constants/constants.dart';
-import '../../../routing/app_router.dart';
 import '../../library/domain/document.dart';
 import '../../library/providers/library_provider.dart';
 

@@ -5,8 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/constants.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../../routing/app_router.dart';
-import '../../setup/data/model_downloader.dart';
 import '../../setup/providers/setup_provider.dart';
 
 /// Screen shown when user tries to access chat without the model downloaded.
