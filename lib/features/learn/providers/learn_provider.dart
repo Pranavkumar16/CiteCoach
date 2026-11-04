@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,7 +11,7 @@ final studyCardParserProvider = Provider<StudyCardParser>(
 
 final generateStudyCardsProvider = FutureProvider.autoDispose.family<
     List<StudyCard>, ({int documentId, String topic})>((ref, request) async {
-  final prefs = await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
   final cacheKey = 'learn.cards.v2.${request.documentId}.${Uri.encodeComponent(request.topic.trim().toLowerCase())}';
   final cached = prefs.getString(cacheKey);
   if (cached != null) {
@@ -27,7 +28,10 @@ final generateStudyCardsProvider = FutureProvider.autoDispose.family<
     }
   }
   final retrieval = await ref.read(ragServiceProvider)
-      .retrieve(request.documentId, request.topic);
+      .retrieve(request.documentId, request.topic).timeout(
+        const Duration(seconds: 20),
+        onTimeout: () => throw Exception('PDF search took too long. Retry with a specific topic.'),
+      );
   if (!retrieval.isSuccess || retrieval.citations.isEmpty) {
     throw Exception('No matching passages found. Choose a topic covered in this PDF.');
   }

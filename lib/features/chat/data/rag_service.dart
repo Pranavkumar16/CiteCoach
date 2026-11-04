@@ -113,7 +113,7 @@ class RagService {
       debugPrint('RagService: Found ${filtered.length} relevant chunks');
 
       // Build context and citations within token limit
-      return _buildResult(filtered);
+      return _buildResult(filtered, query);
     } catch (e) {
       debugPrint('RagService: Retrieval error: $e');
       return RetrievalResult.error('Retrieval failed: ${e.toString()}');
@@ -214,7 +214,7 @@ class RagService {
   }
 
   /// Build the final result with context and citations, respecting token limit.
-  RetrievalResult _buildResult(List<BM25Result> results) {
+  RetrievalResult _buildResult(List<BM25Result> results, String query) {
     final contextParts = <String>[];
     final citations = <Citation>[];
     int totalChars = 0;
@@ -228,7 +228,7 @@ class RagService {
         // Truncate if needed to fit within limit
         final remaining = maxChars - totalChars;
         if (remaining > 100) {
-          final truncated = chunkText.substring(0, remaining);
+          final truncated = relevantExcerpt(chunkText, query, remaining);
           contextParts.add('[Page ${chunk.pageNumber}] $truncated...');
           citations.add(
             Citation(
@@ -261,6 +261,36 @@ class RagService {
     );
 
     return RetrievalResult(context: context, citations: citations);
+  }
+
+  /// Preserve the matched passage when a long chunk must fit the prompt.
+  @visibleForTesting
+  static String relevantExcerpt(String text, String query, int maxChars) {
+    if (text.length <= maxChars) return text;
+    final terms = query.toLowerCase().split(RegExp(r'\W+'))
+        .where((t) => t.length > 2 && !const {
+          'what', 'the', 'how', 'does', 'explain', 'are', 'this', 'about',
+          'and', 'for', 'with',
+        }.contains(t)).toSet();
+    final lower = text.toLowerCase();
+    var bestStart = 0;
+    var bestScore = -1;
+    for (final term in terms) {
+      var position = lower.indexOf(term);
+      var checked = 0;
+      while (position >= 0 && checked++ < 50) {
+        final start = (position - maxChars ~/ 4)
+            .clamp(0, text.length - maxChars).toInt();
+        final window = lower.substring(start, start + maxChars);
+        final score = terms.where(window.contains).length;
+        if (score > bestScore) {
+          bestScore = score;
+          bestStart = start;
+        }
+        position = lower.indexOf(term, position + term.length);
+      }
+    }
+    return text.substring(bestStart, bestStart + maxChars);
   }
 
   /// Create a short snippet from chunk text.

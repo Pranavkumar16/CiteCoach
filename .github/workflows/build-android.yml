@@ -62,6 +62,8 @@ jobs:
           lib/features/learn/providers/learn_provider.dart
           lib/features/learn/domain/study_card.dart
           lib/features/chat/data/llm_service.dart
+          lib/features/chat/data/rag_service.dart
+          lib/features/chat/providers/chat_provider.dart
           lib/features/chat/presentation/chat_screen.dart
           lib/features/chat/presentation/widgets/living_chat_input.dart
           lib/routing/app_router.dart lib/features/library/providers/library_provider.dart

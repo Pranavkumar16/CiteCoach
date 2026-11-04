@@ -255,7 +255,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final retrievalResult = await _ragService.retrieve(
         documentId,
         content.trim(),
-      );
+      ).timeout(const Duration(seconds: 20), onTimeout: () =>
+          RetrievalResult.error('PDF search took too long. Please retry.'));
       if (!_isCurrent(requestId)) return;
 
       if (!retrievalResult.isSuccess) {

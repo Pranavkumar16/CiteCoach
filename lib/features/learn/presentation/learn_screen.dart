@@ -37,7 +37,8 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
       _progressLoading = true;
     });
     try {
-      final saved = await _store.load(documentId, topic);
+      final saved = await _store.load(documentId, topic).timeout(
+        const Duration(seconds: 5), onTimeout: () => <String>{});
       if (!mounted ||
           _request?.documentId != documentId ||
           _request?.topic != topic) {
@@ -180,7 +181,11 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                   else
                     ref.watch(generateStudyCardsProvider(_request!)).when(
                           loading: () =>
-                              const Center(child: CircularProgressIndicator()),
+                              const Center(child: Column(children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: 12),
+                                Text('Reading your PDF and running offline AI…'),
+                              ])),
                           error: (error, stack) => Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
