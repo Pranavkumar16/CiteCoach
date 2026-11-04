@@ -13,6 +13,7 @@ class LivingChatInput extends StatefulWidget {
     this.suggestions = const [],
     this.isDisabled = false,
     this.isRecording = false,
+    this.initialDraft = '',
     this.placeholder = 'Ask about this document…',
   });
   final ValueChanged<String> onSend;
@@ -21,6 +22,7 @@ class LivingChatInput extends StatefulWidget {
   final bool isDisabled;
   final bool isRecording;
   final String placeholder;
+  final String initialDraft;
 
   @override
   State<LivingChatInput> createState() => _LivingChatInputState();
@@ -33,6 +35,7 @@ class _LivingChatInputState extends State<LivingChatInput> {
   @override
   void initState() {
     super.initState();
+    _controller.text = widget.initialDraft;
     _controller.addListener(_changed);
   }
 

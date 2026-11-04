@@ -135,6 +135,19 @@ GoRouter createRouter(Ref ref) {
             builder: (context, state) => const HomeScreen(),
           ),
           GoRoute(
+            path: AppRoutes.library,
+            name: 'library',
+            builder: (context, state) => const LibraryScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.settings,
+            name: 'settings',
+            builder: (context, state) => const SettingsScreen(),
+          ),
+        ],
+      ),
+
+          GoRoute(
             path: AppRoutes.learn,
             name: 'learn',
             builder: (context, state) => const LearnScreen(),
@@ -149,18 +162,6 @@ GoRouter createRouter(Ref ref) {
             name: 'verify',
             builder: (context, state) => const VerifyScreen(),
           ),
-          GoRoute(
-            path: AppRoutes.library,
-            name: 'library',
-            builder: (context, state) => const LibraryScreen(),
-          ),
-          GoRoute(
-            path: AppRoutes.settings,
-            name: 'settings',
-            builder: (context, state) => const SettingsScreen(),
-          ),
-        ],
-      ),
 
       // Settings sub-routes
       GoRoute(
@@ -206,7 +207,7 @@ GoRouter createRouter(Ref ref) {
           if (!setupState.isModelDownloaded) {
             return const DownloadRequiredScreen();
           }
-          return ChatScreen(documentId: documentId);
+          return ChatScreen(documentId: documentId, initialQuestion: state.uri.queryParameters['question']);
         },
       ),
 

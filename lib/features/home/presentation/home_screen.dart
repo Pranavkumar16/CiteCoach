@@ -60,7 +60,16 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 22),
               _AskHero(
                 readyCount: library.readyDocuments.length,
-                onTap: () => context.go(AppRoutes.library),
+                onSubmit: (question) {
+                  final ready = recentDocuments(library.readyDocuments, limit: 1);
+                  if (ready.isEmpty) {
+                    context.go(AppRoutes.library);
+                    return;
+                  }
+                  final document = ready.first;
+                  ref.read(libraryProvider.notifier).markDocumentOpened(document.id);
+                  context.push(Uri(path: AppRoutes.documentChat(document.id.toString()), queryParameters: {'question': question}).toString());
+                },
               ),
               const SizedBox(height: 28),
               GlassSectionLabel(
@@ -102,19 +111,19 @@ class HomeScreen extends ConsumerWidget {
                     title: 'Verify',
                     subtitle: 'Challenge claims with evidence',
                     icon: Icons.verified_user_outlined,
-                    onTap: () => context.go(AppRoutes.verify),
+                    onTap: () => context.push(AppRoutes.verify),
                   ),
                   _ToolTile(
                     title: 'Compare',
                     subtitle: 'Find changes and differences',
                     icon: Icons.layers_outlined,
-                    onTap: () => context.go(AppRoutes.compare),
+                    onTap: () => context.push(AppRoutes.compare),
                   ),
                   _ToolTile(
                     title: 'Learn',
                     subtitle: 'Study with cited flashcards',
                     icon: Icons.school_outlined,
-                    onTap: () => context.go(AppRoutes.learn),
+                    onTap: () => context.push(AppRoutes.learn),
                   ),
                   _ToolTile(
                     title: 'Library',
@@ -137,107 +146,65 @@ class HomeScreen extends ConsumerWidget {
 
 /// Primary call to action. It scrolls with the page, so it follows the
 /// GlassSurface rule and uses tint plus an accent glow instead of blur.
-class _AskHero extends StatelessWidget {
-  const _AskHero({required this.readyCount, required this.onTap});
+class _AskHero extends StatefulWidget {
+  const _AskHero({required this.readyCount, required this.onSubmit});
   final int readyCount;
-  final VoidCallback onTap;
+  final ValueChanged<String> onSubmit;
+
+  @override
+  State<_AskHero> createState() => _AskHeroState();
+}
+
+class _AskHeroState extends State<_AskHero> {
+  final _question = TextEditingController();
+
+  @override
+  void dispose() {
+    _question.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final question = _question.text.trim();
+    if (question.isNotEmpty) widget.onSubmit(question);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).extension<AppThemeData>()!;
     final text = Theme.of(context).textTheme;
-    return Semantics(
-      button: true,
-      label: 'Ask a question about your documents',
-      child: GlassSurface(
-        blur: false,
-        radius: 28,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: onTap,
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -40,
-                  top: -50,
-                  child: IgnorePointer(
-                    child: Container(
-                      width: 180,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(colors: [
-                          theme.accentStart.withOpacity(0.22),
-                          theme.accentStart.withOpacity(0),
-                        ]),
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const GlassIconBadge(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        filled: true,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Ask your documents',
-                        style: text.titleLarge?.copyWith(
-                          color: theme.textPrimary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        readyCount == 0
-                            ? 'Import a PDF and get answers with page citations.'
-                            : '$readyCount ready · answers cite the exact page.',
-                        style: text.bodyMedium
-                            ?.copyWith(color: theme.textSecondary),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: theme.background
-                              .withOpacity(theme.isDark ? 0.45 : 0.55),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: theme.border),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.search_rounded,
-                                size: 20, color: theme.textTertiary),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'What does the document say about…',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: text.bodyMedium
-                                    ?.copyWith(color: theme.textTertiary),
-                              ),
-                            ),
-                            Icon(Icons.arrow_forward_rounded,
-                                size: 20, color: theme.accentSolid),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return GlassSurface(
+      blur: false,
+      radius: 28,
+      padding: const EdgeInsets.all(20),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const GlassIconBadge(icon: Icons.chat_bubble_outline_rounded, filled: true, size: 48),
+        const SizedBox(height: 18),
+        Text('Ask your documents', style: text.titleLarge?.copyWith(color: theme.textPrimary, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text(widget.readyCount == 0 ? 'Import a PDF to ask your first question.' : 'Ask your most recent ready document.', style: text.bodyMedium?.copyWith(color: theme.textSecondary)),
+        const SizedBox(height: 16),
+        TextField(
+          key: const ValueKey('home-question'),
+          controller: _question,
+          textInputAction: TextInputAction.send,
+          textCapitalization: TextCapitalization.sentences,
+          onSubmitted: (_) => _submit(),
+          onChanged: (_) => setState(() {}),
+          style: TextStyle(color: theme.textPrimary),
+          decoration: InputDecoration(
+            labelText: 'Your question',
+            hintText: 'What is this document about?',
+            hintStyle: TextStyle(color: theme.textTertiary),
+            border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              tooltip: 'Open question in chat',
+              onPressed: _question.text.trim().isEmpty ? null : _submit,
+              icon: const Icon(Icons.arrow_forward_rounded),
             ),
           ),
         ),
-      ),
+      ]),
     );
   }
 }

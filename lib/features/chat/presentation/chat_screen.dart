@@ -23,10 +23,11 @@ import 'widgets/message_bubble.dart';
 
 /// Main chat screen for document Q&A.
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key, required this.documentId});
+  const ChatScreen({super.key, required this.documentId, this.initialQuestion});
 
   /// The ID of the document to chat about.
   final int documentId;
+  final String? initialQuestion;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -268,6 +269,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 .cancelGeneration(),
                           ),
                         LivingChatInput(
+                          initialDraft: widget.initialQuestion ?? '',
                           onSend: _handleSend,
                           onVoiceStart: _handleVoiceStart,
                           suggestions: chatState.messages.isEmpty
