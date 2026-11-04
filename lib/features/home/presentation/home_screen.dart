@@ -3,172 +3,400 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme_data.dart';
+import '../../../core/widgets/glass_surface.dart';
 import '../../../routing/app_router.dart';
+import '../../library/domain/document.dart';
 import '../../library/providers/library_provider.dart';
 
 /// The evidence-first landing screen for CiteCoach.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
+  /// Most recently touched documents first: opened beats merely imported.
+  static List<Document> recentDocuments(List<Document> documents,
+      {int limit = 6}) {
+    final sorted = [...documents]..sort((a, b) =>
+        (b.lastOpenedAt ?? b.importedAt)
+            .compareTo(a.lastOpenedAt ?? a.importedAt));
+    return sorted.take(limit).toList();
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context).extension<AppThemeData>() ??
-        AppThemeData.midnight();
+    final theme =
+        Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();
     final library = ref.watch(libraryProvider);
-    final textTheme = Theme.of(context).textTheme;
+    final recent = recentDocuments(library.documents);
+
+    void open(Document document) {
+      final id = document.id.toString();
+      if (document.isReady) {
+        ref.read(libraryProvider.notifier).markDocumentOpened(document.id);
+        context.goToChat(id);
+      } else if (document.isPending || document.hasError) {
+        context.goToProcessing(id);
+      } else {
+        context.go(AppRoutes.library);
+      }
+    }
 
     return Scaffold(
       backgroundColor: theme.background,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(22, 24, 22, 32),
-          children: [
-            Text('CiteCoach',
-                style: textTheme.headlineMedium?.copyWith(
-                  color: theme.textPrimary, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text('Every answer. Backed by evidence.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: theme.textSecondary)),
-            const SizedBox(height: 36),
-            Text('What would you like to do?',
-                style: textTheme.headlineSmall?.copyWith(
-                  color: theme.textPrimary, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.94,
-              children: [
-                _FeatureCard(
-                  title: 'Ask',
-                  subtitle: 'Get answers from your documents',
-                  icon: Icons.chat_bubble_outline_rounded,
-                  background: theme.accentSolid,
-                  foreground: Theme.of(context).colorScheme.onPrimary,
-                  onTap: () => context.go(AppRoutes.library),
+      body: GlassBackdrop(
+        child: SafeArea(
+          bottom: false,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+            children: [
+              GlassPageHeader(
+                eyebrow: 'CiteCoach',
+                title: 'Every answer,\nbacked by evidence.',
+                trailing: GlassIconBadge(
+                  icon: Icons.lock_outline_rounded,
+                  size: 40,
+                  color: theme.success,
                 ),
-                _FeatureCard(
-                  title: 'Verify',
-                  subtitle: 'Challenge claims with evidence',
-                  icon: Icons.verified_user_outlined,
-                  background: theme.surface,
-                  foreground: theme.textPrimary,
-                  border: theme.border,
-                  onTap: () => context.go(AppRoutes.verify),
-                ),
-                _FeatureCard(
-                  title: 'Compare',
-                  subtitle: 'Find changes and differences',
-                  icon: Icons.layers_outlined,
-                  background: theme.surface,
-                  foreground: theme.textPrimary,
-                  border: theme.border,
-                  onTap: () => context.go(AppRoutes.compare),
-                ),
-                _FeatureCard(
-                  title: 'Learn',
-                  subtitle: 'Study with cited flashcards',
-                  icon: Icons.school_outlined,
-                  background: theme.surface,
-                  foreground: theme.textPrimary,
-                  border: theme.border,
-                  onTap: () => context.go(AppRoutes.learn),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Your library',
-                    style: textTheme.titleLarge?.copyWith(
-                      color: theme.textPrimary, fontWeight: FontWeight.w700)),
-                TextButton(
-                  onPressed: () => context.go(AppRoutes.library),
-                  child: const Text('View all'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Card(
-              color: theme.surface,
-              child: ListTile(
-                leading: Icon(Icons.menu_book_outlined,
-                    color: theme.accentSolid),
-                title: Text(library.documents.isEmpty
-                    ? 'No documents yet'
-                    : '${library.documentCount} documents ready to explore'),
-                subtitle: Text(library.documents.isEmpty
-                    ? 'Import a PDF to ask your first question.'
-                    : 'Open your library to read or ask questions.'),
-                trailing: const Icon(Icons.chevron_right_rounded),
+              ),
+              const SizedBox(height: 22),
+              _AskHero(
+                readyCount: library.readyDocuments.length,
                 onTap: () => context.go(AppRoutes.library),
               ),
-            ),
-          ],
+              const SizedBox(height: 28),
+              GlassSectionLabel(
+                'Recent',
+                trailing: recent.isEmpty
+                    ? null
+                    : TextButton(
+                        onPressed: () => context.go(AppRoutes.library),
+                        child: const Text('View all'),
+                      ),
+              ),
+              if (recent.isEmpty)
+                _EmptyRecent(onTap: () => context.go(AppRoutes.library))
+              else
+                SizedBox(
+                  height: 148,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    clipBehavior: Clip.none,
+                    itemCount: recent.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, i) => _RecentCard(
+                      document: recent[i],
+                      onTap: () => open(recent[i]),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 28),
+              const GlassSectionLabel('Tools'),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.08,
+                children: [
+                  _ToolTile(
+                    title: 'Verify',
+                    subtitle: 'Challenge claims with evidence',
+                    icon: Icons.verified_user_outlined,
+                    onTap: () => context.go(AppRoutes.verify),
+                  ),
+                  _ToolTile(
+                    title: 'Compare',
+                    subtitle: 'Find changes and differences',
+                    icon: Icons.layers_outlined,
+                    onTap: () => context.go(AppRoutes.compare),
+                  ),
+                  _ToolTile(
+                    title: 'Learn',
+                    subtitle: 'Study with cited flashcards',
+                    icon: Icons.school_outlined,
+                    onTap: () => context.go(AppRoutes.learn),
+                  ),
+                  _ToolTile(
+                    title: 'Library',
+                    subtitle: library.documents.isEmpty
+                        ? 'Import your first PDF'
+                        : '${library.documentCount} document'
+                            '${library.documentCount == 1 ? '' : 's'}',
+                    icon: Icons.menu_book_outlined,
+                    onTap: () => context.go(AppRoutes.library),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _FeatureCard extends StatelessWidget {
-  const _FeatureCard({
+/// Primary call to action. It scrolls with the page, so it follows the
+/// GlassSurface rule and uses tint plus an accent glow instead of blur.
+class _AskHero extends StatelessWidget {
+  const _AskHero({required this.readyCount, required this.onTap});
+  final int readyCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).extension<AppThemeData>()!;
+    final text = Theme.of(context).textTheme;
+    return Semantics(
+      button: true,
+      label: 'Ask a question about your documents',
+      child: GlassSurface(
+        blur: false,
+        radius: 28,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -40,
+                  top: -50,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 180,
+                      height: 180,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(colors: [
+                          theme.accentStart.withOpacity(0.22),
+                          theme.accentStart.withOpacity(0),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const GlassIconBadge(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        filled: true,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        'Ask your documents',
+                        style: text.titleLarge?.copyWith(
+                          color: theme.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        readyCount == 0
+                            ? 'Import a PDF and get answers with page citations.'
+                            : '$readyCount ready · answers cite the exact page.',
+                        style: text.bodyMedium
+                            ?.copyWith(color: theme.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: theme.background
+                              .withOpacity(theme.isDark ? 0.45 : 0.55),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: theme.border),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.search_rounded,
+                                size: 20, color: theme.textTertiary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'What does the document say about…',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.bodyMedium
+                                    ?.copyWith(color: theme.textTertiary),
+                              ),
+                            ),
+                            Icon(Icons.arrow_forward_rounded,
+                                size: 20, color: theme.accentSolid),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentCard extends StatelessWidget {
+  const _RecentCard({required this.document, required this.onTap});
+  final Document document;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).extension<AppThemeData>()!;
+    final text = Theme.of(context).textTheme;
+    final (label, colour) = document.isReady
+        ? ('Ready', theme.success)
+        : document.isProcessing
+            ? ('Processing', theme.warning)
+            : document.hasError
+                ? ('Needs attention', theme.error)
+                : ('Queued', theme.textTertiary);
+    final meta = [
+      if (document.pageCount > 0)
+        '${document.pageCount} page${document.pageCount == 1 ? '' : 's'}',
+      document.addedTimeAgo,
+    ].join(' · ');
+
+    return SizedBox(
+      width: 200,
+      child: GlassSurface(
+        blur: false,
+        radius: 22,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const GlassIconBadge(
+                          icon: Icons.description_outlined, size: 36),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: colour.withOpacity(0.14),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color: colour,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    document.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleSmall?.copyWith(
+                      color: theme.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    meta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.bodySmall?.copyWith(color: theme.textTertiary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyRecent extends StatelessWidget {
+  const _EmptyRecent({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).extension<AppThemeData>()!;
+    return GlassSurface(
+      blur: false,
+      radius: 22,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading:
+            const GlassIconBadge(icon: Icons.upload_file_rounded, size: 40),
+        title: Text('No documents yet',
+            style: TextStyle(
+                color: theme.textPrimary, fontWeight: FontWeight.w700)),
+        subtitle: Text('Import a PDF to ask your first question.',
+            style: TextStyle(color: theme.textSecondary)),
+        trailing: Icon(Icons.chevron_right_rounded, color: theme.textTertiary),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _ToolTile extends StatelessWidget {
+  const _ToolTile({
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.background,
-    required this.foreground,
-    this.border,
-    this.onTap,
-    this.isPlanned = false,
+    required this.onTap,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
-  final Color background;
-  final Color foreground;
-  final Color? border;
-  final VoidCallback? onTap;
-  final bool isPlanned;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: border == null ? BorderSide.none : BorderSide(color: border!),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: foreground, size: 30),
-              const Spacer(),
-              Text(title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: foreground, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 5),
-              Text(subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: foreground)),
-              if (isPlanned) ...[
-                const SizedBox(height: 6),
-                Text('Coming soon',
-                    style: TextStyle(color: foreground, fontSize: 11,
-                        fontWeight: FontWeight.w700)),
+    final theme = Theme.of(context).extension<AppThemeData>()!;
+    final text = Theme.of(context).textTheme;
+    return GlassSurface(
+      blur: false,
+      radius: 22,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GlassIconBadge(icon: icon, size: 40),
+                const Spacer(),
+                Text(title,
+                    style: text.titleMedium?.copyWith(
+                        color: theme.textPrimary, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 3),
+                Text(subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        text.bodySmall?.copyWith(color: theme.textSecondary)),
               ],
-            ],
+            ),
           ),
         ),
       ),
