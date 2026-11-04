@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'resumable_download.dart';
 
 import 'package:dio/dio.dart';
 import 'package:crypto/crypto.dart';
@@ -136,6 +137,7 @@ class ModelDownloader {
   late final Dio _dio;
   StreamController<DownloadProgress>? _progressController;
   CancelToken? _cancelToken;
+  Future<void>? _activeDownload;
   DownloadStatus _status = DownloadStatus.idle;
   double _progress = 0.0;
   int _downloadedBytes = 0;
@@ -229,13 +231,13 @@ class ModelDownloader {
 
     _dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(minutes: 60),
+      receiveTimeout: const Duration(seconds: 45),
       sendTimeout: const Duration(seconds: 30),
     ));
 
     _status = DownloadStatus.downloading;
     _cancelToken = CancelToken();
-    _startDownloadSequence();
+    _activeDownload = _startDownloadSequence();
 
     return _progressController!.stream;
   }
@@ -308,7 +310,7 @@ class ModelDownloader {
     }
   }
 
-  /// Download a file with retries; interrupted transfers restart.
+  /// Retry interrupted transfers using the bytes retained in the partial file.
   Future<bool> _downloadFileWithRetry({
     required List<String> urls,
     required String savePath,
@@ -321,26 +323,20 @@ class ModelDownloader {
         try {
           final tempPath = '$savePath.tmp';
           final tempFile = File(tempPath);
-          const existingBytes = 0;
-          if (await tempFile.exists()) await tempFile.delete();
-
-          // Restart interrupted transfers; Dio.download does not append ranges.
-          await _dio.download(
-            url,
-            tempPath,
+          final completePartial = savePath.endsWith(modelFileName) &&
+              await tempFile.exists() && await tempFile.length() == modelSizeBytes;
+          if (!completePartial) await downloadResumable(
+            dio: _dio,
+            url: url,
+            partial: tempFile,
+            expectedSize: expectedSize,
             cancelToken: _cancelToken,
-            deleteOnError: false,
-            options: Options(
-              headers: existingBytes > 0
-                  ? {'Range': 'bytes=$existingBytes-'}
-                  : null,
-            ),
-            onReceiveProgress: (received, total) {
+            onProgress: (received, total) {
               if (_status != DownloadStatus.downloading) return;
 
-              final actualReceived = received + existingBytes;
+              final actualReceived = received;
               final actualTotal =
-                  total > 0 ? total + existingBytes : expectedSize;
+                  total > 0 ? total : expectedSize;
 
               _downloadedBytes = actualReceived;
               final fileProgress =
@@ -468,9 +464,11 @@ class ModelDownloader {
       return;
     }
 
+    await _activeDownload;
+    if (_status != DownloadStatus.paused) return;
     _status = DownloadStatus.downloading;
     _cancelToken = CancelToken();
-    _startDownloadSequence();
+    _activeDownload = _startDownloadSequence();
     debugPrint('ModelDownloader: Resumed');
   }
 

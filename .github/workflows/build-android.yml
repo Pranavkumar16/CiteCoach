@@ -64,6 +64,9 @@ jobs:
           lib/routing/app_router.dart lib/features/library/providers/library_provider.dart
           test/features/home/glass_tools_test.dart
           test/core/theme/glass_contrast_test.dart
+          lib/features/setup/data/model_downloader.dart
+          lib/features/setup/data/resumable_download.dart
+          test/features/setup/resumable_download_test.dart
 
       - name: Run tests
         timeout-minutes: 5
