@@ -133,7 +133,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
     final docs = ref.watch(libraryProvider).readyDocuments;
     final selected = docs.any((d) => d.id == _documentId) ? _documentId : (docs.length == 1 ? docs.first.id : null);
     return Scaffold(
-      appBar: AppBar(title: const Text('Flashcards')),
+      appBar: AppBar(title: const Text('Flashcards'), actions: [TextButton.icon(onPressed: () => context.push(AppRoutes.quiz), icon: const Icon(Icons.quiz_outlined), label: const Text('Quiz'))]),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

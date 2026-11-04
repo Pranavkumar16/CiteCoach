@@ -71,7 +71,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 _FeatureCard(
                   title: 'Learn',
-                  subtitle: 'Study with cited flashcards',
+                  subtitle: 'Flashcards and practice quizzes',
                   icon: Icons.school_outlined,
                   background: theme.surface,
                   foreground: theme.textPrimary,
