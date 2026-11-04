@@ -92,6 +92,7 @@ class LlmService {
   }
 
   void warmUp() {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     unawaited(initialize().timeout(const Duration(seconds: 60), onTimeout: () => false)
         .catchError((Object _) => false));
   }
