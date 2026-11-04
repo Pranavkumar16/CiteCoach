@@ -28,7 +28,7 @@ abstract final class AppStrings {
   static const String modelName = 'CiteCoach AI';
   static const String modelDescription =
       'Offline assistance for understanding your documents';
-  static const String modelSize = '900 MB';
+  static const String modelSize = '242 MB';
   static const String modelNetwork = 'Wi-Fi recommended';
   static const String modelTime = '~3-5 minutes';
   static const String downloadSizeLabel = 'Download Size';

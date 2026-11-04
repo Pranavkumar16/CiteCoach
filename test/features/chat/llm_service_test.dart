@@ -36,6 +36,25 @@ void main() {
     messenger.setMockMethodCallHandler(channel, null);
   });
 
+  testWidgets('Gemma prompt uses user/model turns and keeps evidence instructions', (tester) async {
+    String? prompt;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'startGeneration') {
+        prompt = (call.arguments as Map)['prompt'] as String;
+        throw PlatformException(code: 'TEST', message: 'Captured prompt');
+      }
+      return null;
+    });
+    final pending = llm.generate(query: 'Main topic?', retrievalResult: retrieval);
+    await tester.pump();
+    await pending;
+    expect(prompt, startsWith('<start_of_turn>user\n'));
+    expect(prompt, endsWith('<end_of_turn>\n<start_of_turn>model\n'));
+    expect(prompt, contains('Machine learning learns from data.'));
+    expect(prompt, contains('Cite every claim using [Page X]'));
+    expect(prompt, isNot(contains('<|im_start|>')));
+  });
+
   testWidgets('cancel settles a request even if native start never replies', (
     tester,
   ) async {

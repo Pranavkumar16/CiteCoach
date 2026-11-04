@@ -70,9 +70,9 @@ class LlmPlugin: NSObject {
 
         case "getModelInfo":
             let info: [String: Any] = [
-                "name": "Gemma 2B Instruct",
+                "name": "CiteCoach AI",
                 "quantization": "Q4_K_M",
-                "parameters": "2B",
+                "parameters": "270M",
                 "isLoaded": model != nil
             ]
             result(info)
@@ -316,7 +316,7 @@ class LlmPlugin: NSObject {
             in: .userDomainMask
         ).first!
         return documentsDir.appendingPathComponent(
-            "models/gemma-2-2b-it-Q4_K_M.gguf"
+            "models/google_gemma-3-270m-it-Q4_K_M.gguf"
         ).path
     }
 
