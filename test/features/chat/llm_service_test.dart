@@ -5,6 +5,7 @@ import 'package:citecoach/features/chat/data/llm_service.dart';
 import 'package:citecoach/features/chat/data/rag_service.dart';
 
 class ReadyLlm extends LlmService {
+  ReadyLlm() : super(generationTimeout: const Duration(milliseconds: 50));
   @override
   Future<bool> initialize() async => true;
 }
@@ -36,39 +37,57 @@ void main() {
     messenger.setMockMethodCallHandler(channel, null);
   });
 
-  testWidgets('cancel settles a request even if native start never replies', (
-    tester,
-  ) async {
+  test('Qwen3 prompt disables thinking and retains grounded evidence', () {
+    final prompt = llm.buildGroundedPrompt(
+      query: 'Main topic?',
+      context: retrieval.context,
+      citations: [],
+      history: [],
+    );
+    expect(prompt, startsWith('<|im_start|>user\n'));
+    expect(prompt, endsWith('<|im_start|>assistant\n<think>\n\n</think>\n\n'));
+    expect(prompt, contains('/no_think'));
+    expect(prompt, contains('Machine learning learns from data.'));
+    expect(prompt, contains('Cite every claim using [Page X]'));
+    expect(prompt, isNot(contains('<start_of_turn>')));
+  });
+
+  test('cancel settles a request even if native start never replies', () async {
+    final started = Completer<void>();
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call.method);
-      if (call.method == 'startGeneration') return Completer<void>().future;
+      if (call.method == 'startGeneration') {
+        started.complete();
+        return Completer<void>().future;
+      }
       return null;
     });
     final pending = llm.generate(
       query: 'Main topic?',
       retrievalResult: retrieval,
     );
-    await tester.pump();
+    await started.future.timeout(const Duration(seconds: 2));
     await llm.stopGeneration();
-    await tester.pump();
-    expect((await pending).isSuccess, isFalse);
+    expect(
+      (await pending.timeout(const Duration(seconds: 3))).isSuccess,
+      isFalse,
+    );
     expect(calls, contains('stopGeneration'));
   });
 
-  testWidgets('silent native generation times out and requests stop', (
-    tester,
-  ) async {
+  test('silent native generation times out and requests stop', () async {
     final pending = llm.generate(
       query: 'Main topic?',
       retrievalResult: retrieval,
     );
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 121));
-    expect((await pending).error, contains('took too long'));
+    expect(
+      (await pending.timeout(const Duration(seconds: 3))).error,
+      contains('took too long'),
+    );
     expect(calls, contains('stopGeneration'));
   });
 
-  testWidgets('native context errors become actionable errors', (tester) async {
+  test('native context errors become actionable errors', () async {
     messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == 'startGeneration') {
         throw PlatformException(
@@ -82,7 +101,9 @@ void main() {
       query: 'Main topic?',
       retrievalResult: retrieval,
     );
-    await tester.pump();
-    expect((await pending).error, contains('Question exceeds model context'));
+    expect(
+      (await pending.timeout(const Duration(seconds: 3))).error,
+      contains('Try a shorter question'),
+    );
   });
 }

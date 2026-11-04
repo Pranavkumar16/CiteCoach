@@ -63,10 +63,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final appTheme = Theme.of(context).extension<AppThemeData>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        centerTitle: false,
-      ),
+      appBar: AppBar(title: const Text('Settings'), centerTitle: false),
       body: ListView(
         children: [
           // ========== APPEARANCE ==========
@@ -125,8 +122,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ? 'Downloaded'
                 : 'Not downloaded',
             trailing: setupState.isModelDownloaded
-                ? Icon(Icons.check_circle,
-                    color: appTheme?.success ?? AppColors.success, size: 20)
+                ? Icon(
+                    Icons.check_circle,
+                    color: appTheme?.success ?? AppColors.success,
+                    size: 20,
+                  )
                 : TextButton(
                     onPressed: () => context.push(AppRoutes.downloadRequired),
                     child: const Text('Download'),
@@ -151,7 +151,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SwitchListTile(
             secondary: const Icon(Icons.battery_saver),
             title: const Text('Low Power Mode'),
-            subtitle: const Text('Reduce model quality for longer battery life'),
+            subtitle: const Text('Prefer longer battery life'),
             value: _lowPowerMode,
             onChanged: (v) {
               haptics.selection();
@@ -247,7 +247,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildTile(
             icon: Icons.privacy_tip_outlined,
             title: 'Privacy',
-            subtitle: '100% offline — your data never leaves your device',
+            subtitle: 'Your documents are processed on your device',
             onTap: () => _showPrivacyInfo(context),
           ),
           _buildTile(
@@ -266,14 +266,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: OutlinedButton.icon(
-              icon: Icon(Icons.restart_alt,
-                  color: appTheme?.error ?? AppColors.errorRed),
-              label: Text('Reset App',
-                  style: TextStyle(
-                      color: appTheme?.error ?? AppColors.errorRed)),
+              icon: Icon(
+                Icons.restart_alt,
+                color: appTheme?.error ?? AppColors.errorRed,
+              ),
+              label: Text(
+                'Reset App',
+                style: TextStyle(color: appTheme?.error ?? AppColors.errorRed),
+              ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                    color: appTheme?.error ?? AppColors.errorRed),
+                side: BorderSide(color: appTheme?.error ?? AppColors.errorRed),
               ),
               onPressed: () {
                 haptics.medium();
@@ -410,8 +412,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('CiteCoach is designed with privacy as the foundation.',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                'CiteCoach is designed with privacy as the foundation.',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               SizedBox(height: 12),
               Text('• All AI processing happens on your device'),
               SizedBox(height: 4),
@@ -423,8 +427,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SizedBox(height: 4),
               Text('• Your conversations stay on your device'),
               SizedBox(height: 12),
-              Text('The only network request CiteCoach makes is the '
-                  'initial offline AI download.'),
+              Text(
+                'The only network request CiteCoach makes is the '
+                'initial offline AI download.',
+              ),
             ],
           ),
         ),
@@ -466,4 +472,3 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 }
-

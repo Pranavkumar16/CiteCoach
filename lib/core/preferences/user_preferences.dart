@@ -19,14 +19,15 @@ enum FontScale {
 
   static FontScale fromValue(double v) {
     // Snap to the closest bucket.
-    return FontScale.values
-        .reduce((a, b) => (a.value - v).abs() < (b.value - v).abs() ? a : b);
+    return FontScale.values.reduce(
+      (a, b) => (a.value - v).abs() < (b.value - v).abs() ? a : b,
+    );
   }
 }
 
 /// Chat bubble rendering style.
 enum ChatStyle {
-  modern('Modern', 'Rounded bubbles with gradient'),
+  modern('Modern', 'Soft cards with clear contrast'),
   classic('Classic', 'Flat cards, no gradient'),
   compact('Compact', 'Denser, less padding');
 
@@ -171,8 +172,8 @@ class UserPreferencesNotifier extends StateNotifier<UserPreferences> {
 
 final userPreferencesProvider =
     StateNotifierProvider<UserPreferencesNotifier, UserPreferences>(
-  (ref) => UserPreferencesNotifier(ref.watch(sharedPreferencesProvider)),
-);
+      (ref) => UserPreferencesNotifier(ref.watch(sharedPreferencesProvider)),
+    );
 
 // ==================== HAPTIC HELPER ====================
 

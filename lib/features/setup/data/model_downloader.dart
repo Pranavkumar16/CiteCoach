@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -36,38 +36,19 @@ final modelDownloaderProvider = Provider<ModelDownloader>((ref) {
 
 enum DownloadStatus { idle, downloading, paused, completed, failed }
 
-/// Available on-device model variants.
-/// The app auto-selects based on device RAM.
+/// Internal package identity; product UI uses CiteCoach AI.
 enum ModelVariant {
-  /// Qwen 2.5 1.5B Instruct — primary, for devices with >=4GB RAM.
-  qwen15b(
-    fileName: 'qwen2.5-1.5b-instruct-q4_k_m.gguf',
-    sizeBytes: 900 * 1024 * 1024,
-    displayName: 'Qwen 2.5 1.5B Instruct',
+  qwen317b(
+    fileName: 'Qwen3-1.7B-Q4_K_M.gguf',
+    sizeBytes: 1107409472,
+    displayName: 'CiteCoach AI',
     urls: [
-      'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf',
-      'https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf',
-    ],
-  ),
-
-  /// Qwen 2.5 0.5B Instruct — compact fallback, for devices with <4GB RAM.
-  qwen05b(
-    fileName: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
-    sizeBytes: 398 * 1024 * 1024,
-    displayName: 'Qwen 2.5 0.5B Instruct',
-    urls: [
-      'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
-      'https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf',
+      'https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/d7f544eead698dbd1f15126ef60b45a1e1933222/Qwen3-1.7B-Q4_K_M.gguf',
     ],
   );
 
-  const ModelVariant({
-    required this.fileName,
-    required this.sizeBytes,
-    required this.displayName,
-    required this.urls,
-  });
-
+  const ModelVariant({required this.fileName, required this.sizeBytes,
+    required this.displayName, required this.urls});
   final String fileName;
   final int sizeBytes;
   final String displayName;
@@ -125,10 +106,10 @@ class DownloadProgress {
   }
 }
 
-/// Production model downloader with HTTP resume support.
+/// Model downloader with pinned package verification.
 ///
 /// Features:
-/// - Chunked download with resume via HTTP Range headers
+/// - Retry interrupted downloads from the beginning
 /// - Speed tracking and ETA estimation
 /// - Pause/resume support
 /// - SHA-256 integrity verification
@@ -136,69 +117,15 @@ class DownloadProgress {
 class ModelDownloader {
   ModelDownloader();
 
-  static const String modelVersion = '3.0.0';
+  static const String modelVersion = '4.1.0';
+  static const ModelVariant defaultVariant = ModelVariant.qwen317b;
+  static const String modelFileName = 'Qwen3-1.7B-Q4_K_M.gguf';
+  static const int modelSizeBytes = 1107409472;
+  static const String modelSha256 =
+      'b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897';
 
-  /// Default (primary) model. Auto-selected based on device RAM at runtime
-  /// via [selectedVariant], but this is the constant for UI that needs a
-  /// stable value.
-  static const ModelVariant defaultVariant = ModelVariant.qwen15b;
-
-  /// Display name of the default model (used by most UI).
-  static const String modelFileName = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
-
-  /// Size of the default model in bytes (~900 MB for Qwen 2.5 1.5B).
-  static const int modelSizeBytes = 900 * 1024 * 1024;
-
-  /// Cached RAM-selected variant (resolved once per app launch).
-  ModelVariant? _selectedVariant;
-
-  /// Detect total device RAM (in MB) and pick the best model variant.
-  ///
-  /// - Devices with >= 4 GB RAM get the 1.5B model (~900 MB, higher quality).
-  /// - Devices with < 4 GB RAM get the 0.5B model (~400 MB, fits comfortably).
-  Future<ModelVariant> selectedVariant() async {
-    if (_selectedVariant != null) return _selectedVariant!;
-
-    int totalRamMb = 0;
-    try {
-      if (Platform.isAndroid) {
-        // Read MemTotal from /proc/meminfo (standard Linux interface).
-        final memInfo = File('/proc/meminfo');
-        if (await memInfo.exists()) {
-          final content = await memInfo.readAsString();
-          final match =
-              RegExp(r'MemTotal:\s+(\d+)\s+kB').firstMatch(content);
-          if (match != null) {
-            final kb = int.tryParse(match.group(1) ?? '') ?? 0;
-            totalRamMb = kb ~/ 1024;
-          }
-        }
-
-        // Also fetch basic device info for logging.
-        try {
-          final android = await DeviceInfoPlugin().androidInfo;
-          debugPrint(
-              'ModelDownloader: Android ${android.version.release} on ${android.model}');
-        } catch (_) {}
-      } else if (Platform.isIOS) {
-        // iOS doesn't expose total RAM via device_info_plus. Assume modern
-        // iPhones have >= 4 GB RAM (iPhone 11 and newer) and pick 1.5B.
-        totalRamMb = 4096;
-      }
-    } catch (_) {
-      totalRamMb = 0;
-    }
-
-    // Threshold: 4 GB (4096 MB). Below that, use the compact model.
-    final variant = totalRamMb >= 3584 // ~3.5 GB buffer for OS overhead
-        ? ModelVariant.qwen15b
-        : ModelVariant.qwen05b;
-
-    debugPrint(
-        'ModelDownloader: Device RAM ~${totalRamMb}MB, selected ${variant.displayName}');
-    _selectedVariant = variant;
-    return variant;
-  }
+  /// Use the evaluated balanced package consistently on supported devices.
+  Future<ModelVariant> selectedVariant() async => defaultVariant;
 
   /// Embedding model URL (MiniLM-L6-v2 ONNX → TFLite, ~22MB).
   /// TF-IDF fallback works without this, so it's optional.
@@ -249,15 +176,14 @@ class ModelDownloader {
       if (!await modelFile.exists()) return false;
 
       final size = await modelFile.length();
-      // Allow 5% variance for different quantization formats
-      return size > variant.sizeBytes * 0.90;
+      // The default package is pinned to an exact revision and size.
+      return size == variant.sizeBytes;
     } catch (_) {
       return false;
     }
   }
 
   /// Delete obsolete model files from previous versions to reclaim storage.
-  /// Also removes the non-selected Qwen variant to avoid keeping two LLMs.
   Future<void> _cleanupLegacyModels() async {
     try {
       final appDir = await getApplicationDocumentsDirectory();
@@ -268,14 +194,6 @@ class ModelDownloader {
       final legacyFileNames = <String>[
         'gemma-2-2b-it-Q4_K_M.gguf',
       ];
-
-      // Also clean up the Qwen variant we're NOT using
-      final selected = await selectedVariant();
-      for (final v in ModelVariant.values) {
-        if (v != selected) {
-          legacyFileNames.add(v.fileName);
-        }
-      }
 
       for (final name in legacyFileNames) {
         final f = File('${modelsDir.path}/$name');
@@ -390,7 +308,7 @@ class ModelDownloader {
     }
   }
 
-  /// Download a file with retry and resume support.
+  /// Download a file with retries; interrupted transfers restart.
   Future<bool> _downloadFileWithRetry({
     required List<String> urls,
     required String savePath,
@@ -403,15 +321,10 @@ class ModelDownloader {
         try {
           final tempPath = '$savePath.tmp';
           final tempFile = File(tempPath);
-          int existingBytes = 0;
+          const existingBytes = 0;
+          if (await tempFile.exists()) await tempFile.delete();
 
-          // Check for partial download to resume
-          if (await tempFile.exists()) {
-            existingBytes = await tempFile.length();
-            debugPrint('ModelDownloader: Resuming from $existingBytes bytes');
-          }
-
-          // Download with range header for resume
+          // Restart interrupted transfers; Dio.download does not append ranges.
           await _dio.download(
             url,
             tempPath,
@@ -454,6 +367,16 @@ class ModelDownloader {
               ));
             },
           );
+
+          // Verify the pinned package before replacing any installed file.
+          if (savePath.endsWith(modelFileName)) {
+            final digest = await sha256.bind(tempFile.openRead()).first;
+            if (await tempFile.length() != modelSizeBytes ||
+                digest.toString() != modelSha256) {
+              await tempFile.delete();
+              throw const FormatException('AI download verification failed. Please retry.');
+            }
+          }
 
           // Move temp to final path
           final finalFile = File(savePath);

@@ -8,20 +8,16 @@ import '../domain/voice_state.dart';
 /// Provider for voice state management.
 final voiceProvider =
     StateNotifierProvider.autoDispose<VoiceNotifier, VoiceState>((ref) {
-  final sttService = ref.watch(sttServiceProvider);
-  final ttsService = ref.watch(ttsServiceProvider);
+      final sttService = ref.watch(sttServiceProvider);
+      final ttsService = ref.watch(ttsServiceProvider);
 
-  final notifier = VoiceNotifier(
-    sttService: sttService,
-    ttsService: ttsService,
-  );
+      final notifier = VoiceNotifier(
+        sttService: sttService,
+        ttsService: ttsService,
+      );
 
-  ref.onDispose(() {
-    notifier.dispose();
-  });
-
-  return notifier;
-});
+      return notifier;
+    });
 
 /// Callback when voice input is complete.
 typedef VoiceInputCallback = void Function(String text);
@@ -31,15 +27,16 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   VoiceNotifier({
     required SttService sttService,
     required TtsService ttsService,
-  })  : _sttService = sttService,
-        _ttsService = ttsService,
-        super(const VoiceState()) {
-    _initialize();
+  }) : _sttService = sttService,
+       _ttsService = ttsService,
+       super(const VoiceState()) {
+    _initialization = _initialize();
   }
 
   final SttService _sttService;
   final TtsService _ttsService;
 
+  late final Future<void> _initialization;
   VoiceInputCallback? _onInputComplete;
 
   /// Initialize voice services.
@@ -49,20 +46,27 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     final sttAvailable = await _sttService.initialize();
     final ttsAvailable = await _ttsService.initialize();
 
+    if (!mounted) return;
     state = state.copyWith(
       isSttAvailable: sttAvailable,
       isTtsAvailable: ttsAvailable,
     );
 
-    debugPrint('VoiceNotifier: STT available: $sttAvailable, TTS available: $ttsAvailable');
+    debugPrint(
+      'VoiceNotifier: STT available: $sttAvailable, TTS available: $ttsAvailable',
+    );
   }
 
   /// Start listening for voice input.
   Future<void> startListening({VoiceInputCallback? onComplete}) async {
+    await _initialization;
+    if (!mounted) return;
     if (!state.isSttAvailable) {
       state = state.copyWith(
         mode: VoiceMode.error,
-        error: 'Speech recognition is not available',
+        error:
+            _sttService.initializationError ??
+            'Enable microphone access and a speech recognition service in your phone settings. You can still type your question.',
       );
       return;
     }
@@ -88,10 +92,13 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       onSoundLevel: _handleSoundLevel,
     );
 
+    if (!mounted) return;
     if (!success) {
       state = state.copyWith(
         mode: VoiceMode.error,
-        error: 'Failed to start listening',
+        error:
+            state.error ??
+            'Could not start voice input. You can still type your question.',
       );
     }
   }
@@ -101,6 +108,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     if (!state.isListening) return;
 
     await _sttService.stopListening();
+    if (!mounted) return;
 
     // If we have transcribed text, transition to processing
     if (state.transcribedText.isNotEmpty) {
@@ -109,16 +117,14 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       // Use partial text if no final result
       _completeInput(state.partialText);
     } else {
-      state = state.copyWith(
-        mode: VoiceMode.idle,
-        soundLevel: 0.0,
-      );
+      state = state.copyWith(mode: VoiceMode.idle, soundLevel: 0.0);
     }
   }
 
   /// Cancel listening without processing.
   Future<void> cancelListening() async {
     await _sttService.cancelListening();
+    if (!mounted) return;
 
     state = state.copyWith(
       mode: VoiceMode.idle,
@@ -145,7 +151,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
 
     // Transition to idle after a short delay
     Future.delayed(const Duration(milliseconds: 500), () {
-      if (state.mode == VoiceMode.processing) {
+      if (mounted && state.mode == VoiceMode.processing) {
         state = state.copyWith(mode: VoiceMode.idle);
       }
     });
@@ -174,22 +180,14 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     await _ttsService.speak(
       text,
       onComplete: () {
-        state = state.copyWith(
-          mode: VoiceMode.idle,
-          speakingProgress: 1.0,
-        );
+        state = state.copyWith(mode: VoiceMode.idle, speakingProgress: 1.0);
       },
       onError: (error) {
-        state = state.copyWith(
-          mode: VoiceMode.error,
-          error: error,
-        );
+        state = state.copyWith(mode: VoiceMode.error, error: error);
       },
       onProgress: (_, start, end) {
         if (text.isNotEmpty) {
-          state = state.copyWith(
-            speakingProgress: end / text.length,
-          );
+          state = state.copyWith(speakingProgress: end / text.length);
         }
       },
     );
@@ -201,9 +199,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
 
     await _ttsService.stop();
 
-    state = state.copyWith(
-      mode: VoiceMode.idle,
-    );
+    state = state.copyWith(mode: VoiceMode.idle);
   }
 
   /// Toggle auto-speak setting.
@@ -241,21 +237,18 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
 
   /// Handle STT results.
   void _handleSttResult(String text, bool isFinal) {
+    if (!mounted) return;
     if (isFinal) {
-      state = state.copyWith(
-        transcribedText: text,
-        partialText: '',
-      );
+      state = state.copyWith(transcribedText: text, partialText: '');
       _completeInput(text);
     } else {
-      state = state.copyWith(
-        partialText: text,
-      );
+      state = state.copyWith(partialText: text);
     }
   }
 
   /// Handle STT errors.
   void _handleSttError(String error) {
+    if (!mounted) return;
     debugPrint('VoiceNotifier: STT error: $error');
     state = state.copyWith(
       mode: VoiceMode.error,
@@ -266,6 +259,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
 
   /// Handle sound level changes.
   void _handleSoundLevel(double level) {
+    if (!mounted) return;
     // Normalize level to 0.0 - 1.0
     // Sound levels from speech_to_text can range from -2 to 10 dB
     final normalized = ((level + 2) / 12).clamp(0.0, 1.0);

@@ -24,6 +24,9 @@ class SttService {
 
   final SpeechToText _speech;
 
+  SttErrorCallback? _onError;
+  String? _initializationError;
+  String? get initializationError => _initializationError;
   bool _isInitialized = false;
   bool _isListening = false;
   String _currentLocaleId = 'en_US';
@@ -49,7 +52,7 @@ class SttService {
 
     try {
       debugPrint('SttService: Initializing...');
-      
+
       _isInitialized = await _speech.initialize(
         onError: _handleError,
         onStatus: _handleStatus,
@@ -57,6 +60,7 @@ class SttService {
       );
 
       if (_isInitialized) {
+        _initializationError = null;
         // Get system locale
         final systemLocale = await _speech.systemLocale();
         if (systemLocale != null) {
@@ -64,6 +68,8 @@ class SttService {
         }
         debugPrint('SttService: Initialized with locale: $_currentLocaleId');
       } else {
+        _initializationError ??=
+            'Allow microphone access and enable your phone’s speech recognition service in Settings. You can still type your question.';
         debugPrint('SttService: Failed to initialize');
       }
 
@@ -83,10 +89,14 @@ class SttService {
     Duration? listenFor,
     Duration? pauseFor,
   }) async {
+    _onError = onError;
     if (!_isInitialized) {
       final initialized = await initialize();
       if (!initialized) {
-        onError?.call('Speech recognition not available');
+        onError?.call(
+          _initializationError ??
+              'Voice input is unavailable. You can still type your question.',
+        );
         return false;
       }
     }
@@ -98,7 +108,7 @@ class SttService {
 
     try {
       debugPrint('SttService: Starting to listen...');
-      
+
       _isListening = true;
 
       await _speech.listen(
@@ -118,7 +128,9 @@ class SttService {
     } catch (e) {
       debugPrint('SttService: Listen error: $e');
       _isListening = false;
-      onError?.call('Failed to start listening: ${e.toString()}');
+      onError?.call(
+        'Could not start voice input. Check microphone access in phone Settings.',
+      );
       return false;
     }
   }
@@ -128,7 +140,7 @@ class SttService {
     if (!_isListening) return;
 
     debugPrint('SttService: Stopping...');
-    
+
     try {
       await _speech.stop();
     } catch (e) {
@@ -143,7 +155,7 @@ class SttService {
     if (!_isListening) return;
 
     debugPrint('SttService: Cancelling...');
-    
+
     try {
       await _speech.cancel();
     } catch (e) {
@@ -160,10 +172,15 @@ class SttService {
   }
 
   /// Handle speech recognition results.
-  void _handleResult(SpeechRecognitionResult result, SttResultCallback callback) {
-    debugPrint('SttService: Result: "${result.recognizedWords}" (final: ${result.finalResult})');
+  void _handleResult(
+    SpeechRecognitionResult result,
+    SttResultCallback callback,
+  ) {
+    debugPrint(
+      'SttService: Result: "${result.recognizedWords}" (final: ${result.finalResult})',
+    );
     callback(result.recognizedWords, result.finalResult);
-    
+
     if (result.finalResult) {
       _isListening = false;
     }
@@ -171,8 +188,20 @@ class SttService {
 
   /// Handle speech recognition errors.
   void _handleError(SpeechRecognitionError error) {
-    debugPrint('SttService: Error: ${error.errorMsg} (permanent: ${error.permanent})');
-    
+    debugPrint(
+      'SttService: Error: ${error.errorMsg} (permanent: ${error.permanent})',
+    );
+
+    final message = error.errorMsg.contains('permission')
+        ? 'Allow microphone access for CiteCoach in your phone Settings.'
+        : error.errorMsg.contains('network')
+        ? 'Your phone’s speech service needs a connection. You can still type your question.'
+        : error.errorMsg.contains('no_match') ||
+              error.errorMsg.contains('speech_timeout')
+        ? 'No speech was detected. Tap the microphone to try again, or type your question.'
+        : 'Voice input stopped. Try again or type your question.';
+    _initializationError = message;
+    _onError?.call(message);
     if (error.permanent) {
       _isListening = false;
     }
@@ -181,7 +210,7 @@ class SttService {
   /// Handle speech recognition status changes.
   void _handleStatus(String status) {
     debugPrint('SttService: Status: $status');
-    
+
     if (status == 'done' || status == 'notListening') {
       _isListening = false;
     }
@@ -201,6 +230,7 @@ class SttService {
       _speech.cancel();
     }
     _isListening = false;
+    _onError = null;
     debugPrint('SttService: Disposed');
   }
 }

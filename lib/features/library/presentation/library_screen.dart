@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/constants.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../core/widgets/glass_surface.dart';
 import '../../../core/theme/app_theme_data.dart';
 import '../../../routing/app_router.dart';
 import '../domain/document.dart';
@@ -34,7 +35,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     // Show error snackbar if import failed
     ref.listen<LibraryState>(libraryProvider, (previous, next) {
-      if (next.importError != null && previous?.importError != next.importError) {
+      if (next.importError != null &&
+          previous?.importError != next.importError) {
         _showErrorSnackBar(next.importError!);
         ref.read(libraryProvider.notifier).clearImportError();
       }
@@ -42,15 +44,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     return Scaffold(
       backgroundColor: _theme(context).background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(context, state),
-            Expanded(
-              child: _buildContent(context, state),
-            ),
-          ],
+      body: GlassBackdrop(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(context, state),
+              Expanded(child: _buildContent(context, state)),
+            ],
+          ),
         ),
       ),
       floatingActionButton: state.documents.isNotEmpty
@@ -77,16 +79,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               Text(
                 AppStrings.libraryTitle,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: _theme(context).textPrimary,
-                    ),
+                  fontWeight: FontWeight.w700,
+                  color: _theme(context).textPrimary,
+                ),
               ),
               if (state.documents.isNotEmpty)
                 Text(
                   '${state.documentCount} document${state.documentCount == 1 ? '' : 's'}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: _theme(context).textSecondary,
-                      ),
+                    color: _theme(context).textSecondary,
+                  ),
                 ),
             ],
           ),
@@ -117,9 +119,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             Text(
               'Sort',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _theme(context).textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                color: _theme(context).textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -152,9 +154,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   Widget _buildContent(BuildContext context, LibraryState state) {
     if (state.isLoading && state.documents.isEmpty) {
-      return const Center(
-        child: LoadingIndicator(),
-      );
+      return const Center(child: LoadingIndicator());
     }
 
     if (state.hasError && state.documents.isEmpty) {
@@ -182,12 +182,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           return DocumentCard(
             document: document,
             onTap: () => _onDocumentTap(document),
-            onChatTap: document.isReady
-                ? () => _onChatTap(document)
-                : null,
-            onReadTap: document.isReady
-                ? () => _onReadTap(document)
-                : null,
+            onChatTap: document.isReady ? () => _onChatTap(document) : null,
+            onReadTap: document.isReady ? () => _onReadTap(document) : null,
             onDeleteTap: () => _onDeleteTap(document),
           );
         },
@@ -211,8 +207,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             Text(
               state.error ?? 'Something went wrong',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: _theme(context).textSecondary,
-                  ),
+                color: _theme(context).textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimensions.spacingLg),
@@ -241,9 +237,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               ),
             )
           : const Icon(Icons.add_rounded),
-      label: Text(
-        state.isImporting ? 'Importing...' : 'Import PDF',
-      ),
+      label: Text(state.isImporting ? 'Importing...' : 'Import PDF'),
     );
   }
 
@@ -289,9 +283,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               Navigator.of(context).pop();
               ref.read(libraryProvider.notifier).deleteDocument(document.id);
             },
-            style: TextButton.styleFrom(
-              foregroundColor: _theme(context).error,
-            ),
+            style: TextButton.styleFrom(foregroundColor: _theme(context).error),
             child: const Text('Delete'),
           ),
         ],
@@ -314,7 +306,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 }
-
 
 AppThemeData _theme(BuildContext context) =>
     Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();

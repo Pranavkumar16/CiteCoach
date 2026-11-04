@@ -46,8 +46,23 @@ jobs:
           python3 scripts/generate_launcher_icons.py
           dart run flutter_launcher_icons
 
+      - name: Test native text streaming
+        run: |
+          g++ -std=c++17 -Wall -Wextra -fsanitize=address,undefined test/native/utf8_stream_test.cpp -o /tmp/citecoach-utf8-test
+          /tmp/citecoach-utf8-test
+
       - name: Run tests
+        timeout-minutes: 5
         run: flutter test --no-pub
+
+      - name: Upload glass UI previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: citecoach-glass-ui-previews
+          path: build/ui-previews/*.png
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Build APK
         run: flutter build apk --release --verbose

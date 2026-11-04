@@ -1,12 +1,13 @@
 name: citecoach
 description: "CiteCoach - Offline Document Intelligence with Evidence-Based Answers"
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.0.2+3
 
 environment:
   sdk: ^3.5.0
 
 dependencies:
+  crypto: ^3.0.6
   flutter:
     sdk: flutter
 
@@ -82,7 +83,7 @@ flutter_icons:
   android: true
   ios: true
   image_path: "assets/icons/app_icon.png"
-  adaptive_icon_background: "#6366F1"
+  adaptive_icon_background: "#271B21"
   adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
   min_sdk_android: 24
   remove_alpha_ios: true
@@ -94,6 +95,7 @@ flutter:
   
   assets:
     - assets/
+    - assets/licenses/
     - assets/icons/
 
   fonts:

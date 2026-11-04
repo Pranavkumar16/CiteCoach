@@ -52,15 +52,16 @@ class CiteCoachApp extends ConsumerWidget {
       routerConfig: router,
       builder: (context, child) {
         // Apply user-chosen font scale (and respect system reduce-animations).
-        final systemScale =
-            MediaQuery.of(context).textScaler.scale(1.0).clamp(0.8, 1.3);
+        final systemScale = MediaQuery.of(
+          context,
+        ).textScaler.scale(1.0).clamp(0.8, 1.3);
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(
-              systemScale * prefs.fontScale.value,
-            ),
-            disableAnimations: prefs.reduceMotion ||
-                MediaQuery.of(context).disableAnimations,
+            textScaler: TextScaler.linear(systemScale * prefs.fontScale.value),
+            highContrast:
+                prefs.highContrast || MediaQuery.of(context).highContrast,
+            disableAnimations:
+                prefs.reduceMotion || MediaQuery.of(context).disableAnimations,
           ),
           child: child ?? const SizedBox.shrink(),
         );

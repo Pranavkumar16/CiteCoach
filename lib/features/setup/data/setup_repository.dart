@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/storage_service.dart';
 import '../domain/setup_state.dart';
+import 'model_downloader.dart';
 
 /// Provider for the setup repository.
 final setupRepositoryProvider = Provider<SetupRepository>((ref) {
@@ -22,9 +23,12 @@ class SetupRepository {
     }
 
     final isPrivacyAccepted = _storage.isPrivacyAccepted;
-    final isModelDownloaded = _storage.isModelDownloaded;
+    final isModelDownloaded = _storage.isModelDownloaded &&
+        _storage.modelVersion == ModelDownloader.modelVersion;
     final isSetupCompleted = _storage.isSetupCompleted;
-    final downloadProgress = _storage.modelDownloadProgress;
+    final downloadProgress = isModelDownloaded ? 1.0 :
+        (_storage.modelVersion == ModelDownloader.modelVersion
+            ? _storage.modelDownloadProgress : 0.0);
 
     // Determine current step based on saved state
     SetupStep currentStep;
@@ -92,7 +96,8 @@ class SetupRepository {
   bool get isPrivacyAccepted => _storage.isPrivacyAccepted;
 
   /// Check if model is downloaded.
-  bool get isModelDownloaded => _storage.isModelDownloaded;
+  bool get isModelDownloaded => _storage.isModelDownloaded &&
+      _storage.modelVersion == ModelDownloader.modelVersion;
 
   /// Get model version.
   String? get modelVersion => _storage.modelVersion;

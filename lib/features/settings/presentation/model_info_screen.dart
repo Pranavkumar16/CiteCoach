@@ -60,7 +60,10 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                           color: AppColors.accent,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.smart_toy, color: AppColors.textOnPrimary),
+                        child: const Icon(
+                          Icons.smart_toy,
+                          color: AppColors.textOnPrimary,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -75,7 +78,11 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                               ),
                             ),
                             Text(
-                              _checkingModel ? 'Checking offline AI...' : (_modelExists ? 'Downloaded (inference not yet verified)' : 'Not Downloaded'),
+                              _checkingModel
+                                  ? 'Checking offline AI...'
+                                  : (_modelExists
+                                        ? 'Downloaded'
+                                        : 'Not Downloaded'),
                               style: TextStyle(
                                 color: _modelExists
                                     ? AppColors.success
@@ -87,7 +94,10 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                         ),
                       ),
                       if (_modelExists)
-                        const Icon(Icons.check_circle, color: AppColors.success),
+                        const Icon(
+                          Icons.check_circle,
+                          color: AppColors.success,
+                        ),
                     ],
                   ),
                 ],
@@ -105,12 +115,12 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                 const Divider(height: 1),
                 _infoRow('Optimized For', 'Document Q&A'),
                 const Divider(height: 1),
-                _infoRow('Storage Used',
-                    _modelSizeBytes > 0
-                        ? '${(_modelSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB'
-                        : '—'),
-                const Divider(height: 1),
-                _infoRow('AI package version', ModelDownloader.modelVersion),
+                _infoRow(
+                  'Storage Used',
+                  _modelSizeBytes > 0
+                      ? '${(_modelSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB'
+                      : '—',
+                ),
                 const Divider(height: 1),
                 _infoRow('Processing', '100% On-Device'),
               ],
@@ -131,7 +141,10 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
-                  _capabilityRow(Icons.question_answer, 'Document Q&A with citations'),
+                  _capabilityRow(
+                    Icons.question_answer,
+                    'Document Q&A with citations',
+                  ),
                   _capabilityRow(Icons.summarize, 'Context-aware answers'),
                   _capabilityRow(Icons.security, 'Fully offline & private'),
                   _capabilityRow(Icons.speed, 'Optimized for mobile devices'),
@@ -146,8 +159,10 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
           if (_modelExists)
             OutlinedButton.icon(
               icon: const Icon(Icons.delete_outline, color: AppColors.errorRed),
-              label: const Text('Remove offline AI',
-                  style: TextStyle(color: AppColors.errorRed)),
+              label: const Text(
+                'Remove offline AI',
+                style: TextStyle(color: AppColors.errorRed),
+              ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.errorRed),
               ),

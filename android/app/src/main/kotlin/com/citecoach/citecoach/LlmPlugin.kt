@@ -1,6 +1,7 @@
 package com.citecoach.citecoach
 
 import android.content.Context
+import android.app.ActivityManager
 import android.os.Handler
 import android.os.Looper
 import io.flutter.embedding.engine.FlutterEngine
@@ -47,6 +48,10 @@ import java.util.concurrent.Executors
  *    target_link_libraries(citecoach_llm llama common)
  *    ```
  */
+fun interface NativeTokenCallback {
+    fun onToken(token: String): Boolean
+}
+
 class LlmPlugin : MethodChannel.MethodCallHandler {
 
     private var methodChannel: MethodChannel? = null
@@ -127,6 +132,20 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
                     return@execute
                 }
 
+                // Reuse an already loaded engine instead of allocating a second
+                // model/context when multiple features initialize concurrently.
+                if (modelHandle != 0L && contextHandle != 0L) {
+                    mainHandler.post { result.success(true) }
+                    return@execute
+                }
+                val memoryInfo = ActivityManager.MemoryInfo()
+                val manager = context?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                manager?.getMemoryInfo(memoryInfo)
+                val requiredBytes = file.length() + 256L * 1024 * 1024
+                if (manager != null && (memoryInfo.lowMemory || memoryInfo.availMem < requiredBytes)) {
+                    mainHandler.post { result.error("LOW_MEMORY", "Not enough available memory for offline AI. Close other apps and try again.", null) }
+                    return@execute
+                }
                 // Load native library
                 System.loadLibrary("citecoach_llm")
 
@@ -151,6 +170,8 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
                     return@execute
                 }
                 mainHandler.post { result.success(true) }
+            } catch (e: OutOfMemoryError) {
+                mainHandler.post { result.error("LOW_MEMORY", "Not enough available memory for offline AI. Close other apps and try again.", null) }
             } catch (e: UnsatisfiedLinkError) {
                 mainHandler.post {
                     result.error("NATIVE_LIB_MISSING",
@@ -199,19 +220,23 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
                     maxTokens,
                     temperature,
                     topP,
-                    repeatPenalty
-                ) { token ->
-                    if (shouldStop) return@nativeGenerate false
+                    repeatPenalty,
+                    NativeTokenCallback { token ->
+                    if (shouldStop) return@NativeTokenCallback false
 
                     mainHandler.post {
                         eventSink?.success(token)
                     }
                     true // Continue generating
-                }
+                })
 
                 mainHandler.post {
                     eventSink?.success("[DONE]")
                 }
+            } catch (e: OutOfMemoryError) {
+                mainHandler.post { eventSink?.success("[ERROR]Not enough available memory. Close other apps and try again.") }
+            } catch (e: LinkageError) {
+                mainHandler.post { eventSink?.success("[ERROR]Offline AI could not start. Please update CiteCoach.") }
             } catch (e: Exception) {
                 mainHandler.post {
                     eventSink?.success("[ERROR]${e.message}")
@@ -251,15 +276,15 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
 
     private fun getModelInfo(result: MethodChannel.Result) {
         val info = HashMap<String, Any>()
-        info["name"] = "Qwen 2.5 1.5B Instruct"
-        info["parameters"] = "1.5B"
+        info["name"] = "CiteCoach AI"
+        info["parameters"] = "1.7B"
         info["isLoaded"] = modelHandle != 0L
         result.success(info)
     }
 
     private fun getDefaultModelPath(): String {
         val appDir = context?.filesDir?.absolutePath ?: ""
-        return "$appDir/models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+        return "$appDir/models/Qwen3-1.7B-Q4_K_M.gguf"
     }
 
     fun dispose() {
@@ -293,7 +318,7 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
         temperature: Float,
         topP: Float,
         repeatPenalty: Float,
-        tokenCallback: (String) -> Boolean
+        tokenCallback: NativeTokenCallback
     )
     private external fun nativeFreeContext(contextHandle: Long)
     private external fun nativeFreeModel(modelHandle: Long)

@@ -1,0 +1,62 @@
+{
+  "date": "2026-11-04",
+  "runtime_commit": "149f5641b931aaf33697d70f9abc90c3e5300247",
+  "cpu": "AMD EPYC 9V74 (x86_64 host), 4 inference and 4 batch threads",
+  "context_tokens": 2048,
+  "batch": 256,
+  "gpu_layers": 0,
+  "temperature": 0.3,
+  "top_p": 0.9,
+  "top_k": 40,
+  "repeat_penalty": 1.1,
+  "max_output_tokens": 192,
+  "seed": 42,
+  "prompt_cache": false,
+  "rows": [
+    {
+      "model": "gemma270m",
+      "factual_passes": 7,
+      "questions": 20,
+      "correct_abstentions": 0,
+      "median_first_text_seconds": 0.779,
+      "median_total_seconds": 0.959,
+      "median_generation_tokens_per_second": 77.35
+    },
+    {
+      "model": "qwen05b",
+      "factual_passes": 9,
+      "questions": 20,
+      "correct_abstentions": 2,
+      "median_first_text_seconds": 2.423,
+      "median_total_seconds": 2.862,
+      "median_generation_tokens_per_second": 48.19
+    },
+    {
+      "model": "qwen3",
+      "factual_passes": 15,
+      "questions": 20,
+      "correct_abstentions": 4,
+      "median_first_text_seconds": 1.809,
+      "median_total_seconds": 2.185,
+      "median_generation_tokens_per_second": 48.61
+    },
+    {
+      "model": "qwen15b",
+      "factual_passes": 16,
+      "questions": 20,
+      "correct_abstentions": 4,
+      "median_first_text_seconds": 4.535,
+      "median_total_seconds": 5.312,
+      "median_generation_tokens_per_second": 27.87
+    },
+    {
+      "model": "qwen3_17b",
+      "factual_passes": 20,
+      "questions": 20,
+      "correct_abstentions": 4,
+      "median_first_text_seconds": 4.657,
+      "median_total_seconds": 5.365,
+      "median_generation_tokens_per_second": 24.85
+    }
+  ]
+}

@@ -1,175 +1,78 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_theme_data.dart';
+import '../../../../core/widgets/glass_surface.dart';
 
-import '../../../../core/constants/constants.dart';
-import '../../../../core/widgets/widgets.dart';
-
-/// Displayed when a chat session has no messages.
+/// One quiet welcome, with conversation starters kept in the composer.
 class EmptyChatView extends StatelessWidget {
   const EmptyChatView({
     super.key,
     required this.documentTitle,
     this.onSampleQuestion,
   });
-
   final String documentTitle;
-  final void Function(String question)? onSampleQuestion;
-
-  static const _sampleQuestions = [
-    'What is the main topic?',
-    'Summarize this document',
-    'What are the key points?',
-    'Explain the conclusions',
-  ];
+  final ValueChanged<String>? onSampleQuestion;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppDimensions.spacingLg),
-      child: Column(
-        children: [
-          const SizedBox(height: 32),
-          const KineticLogo(
-            size: AppDimensions.logoSizeSm,
-          ),
-          SizedBox(height: AppDimensions.spacingLg),
-          Text(
-            'Ask about your document',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-          ),
-          SizedBox(height: AppDimensions.spacingSm),
-          Text(
-            'I can help you understand, summarize, and find specific information in your document.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-          ),
-          const SizedBox(height: 32),
-          _buildFeatures(context),
-          const SizedBox(height: 32),
-          Text(
-            'Try asking',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-          ),
-          SizedBox(height: AppDimensions.spacingMd),
-          _buildSampleQuestions(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatures(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildFeatureItem(
-          context,
-          icon: Icons.search_rounded,
-          label: 'Find Info',
-        ),
-        SizedBox(width: AppDimensions.spacingLg),
-        _buildFeatureItem(
-          context,
-          icon: Icons.summarize_rounded,
-          label: 'Summarize',
-        ),
-        SizedBox(width: AppDimensions.spacingLg),
-        _buildFeatureItem(
-          context,
-          icon: Icons.lightbulb_outline_rounded,
-          label: 'Explain',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeatureItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-  }) {
-    return Column(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppColors.accent.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            color: AppColors.accent,
-            size: 24,
-          ),
-        ),
-        SizedBox(height: AppDimensions.spacingSm),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
+    final theme = Theme.of(context).extension<AppThemeData>()!;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GlassSurface(
+              blur: false,
+              radius: 26,
+              padding: const EdgeInsets.all(22),
+              child: Icon(
+                Icons.auto_stories_rounded,
+                size: 38,
+                color: theme.accentSolid,
               ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSampleQuestions(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: AppDimensions.spacingSm,
-      runSpacing: AppDimensions.spacingSm,
-      children: _sampleQuestions.map((question) {
-        return _SampleQuestionChip(
-          question: question,
-          onTap: onSampleQuestion != null ? () => onSampleQuestion!(question) : null,
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _SampleQuestionChip extends StatelessWidget {
-  const _SampleQuestionChip({
-    required this.question,
-    this.onTap,
-  });
-
-  final String question;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppDimensions.spacingMd,
-          vertical: AppDimensions.spacingSm,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.zinc800,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-          border: Border.all(
-            color: AppColors.zinc600,
-            width: 1,
-          ),
-        ),
-        child: Text(
-          question,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Your document.\nA little clearer.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 27,
+                height: 1.25,
+                fontWeight: FontWeight.w700,
+                color: theme.textPrimary,
+                letterSpacing: -0.7,
               ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              documentTitle,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: theme.textSecondary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 22),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: 15,
+                  color: theme.textSecondary,
+                ),
+                Text(
+                  'Private · Offline · Sources you can open',
+                  style: TextStyle(color: theme.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

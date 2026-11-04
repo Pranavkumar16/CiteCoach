@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/tables/documents_table.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../../core/widgets/glass_surface.dart';
 import '../../../../core/theme/app_theme_data.dart';
 import '../../domain/document.dart';
 
@@ -27,27 +28,23 @@ class DocumentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.spacingMd,
           vertical: AppDimensions.spacingSm,
         ),
-        decoration: BoxDecoration(
-          color: _theme(context).surfaceElevated,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-          border: Border.all(
-            color: _theme(context).border,
-            width: 1,
+        child: GlassSurface(
+          blur: false,
+          radius: 24,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildContent(context),
+              if (document.isReady) _buildActions(context),
+              if (document.isProcessing) _buildProgressBar(context),
+              if (document.hasError) _buildErrorBadge(context),
+            ],
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildContent(context),
-            if (document.isReady) _buildActions(context),
-            if (document.isProcessing) _buildProgressBar(context),
-            if (document.hasError) _buildErrorBadge(context),
-          ],
         ),
       ),
     );
@@ -79,7 +76,10 @@ class DocumentCard extends StatelessWidget {
             : _theme(context).border,
         borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
         border: document.isReady
-            ? Border.all(color: _theme(context).accentSolid.withOpacity(0.3), width: 1)
+            ? Border.all(
+                color: _theme(context).accentSolid.withOpacity(0.3),
+                width: 1,
+              )
             : null,
       ),
       child: Stack(
@@ -109,9 +109,9 @@ class DocumentCard extends StatelessWidget {
                 child: Text(
                   '${document.pageCount}p',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: _theme(context).textSecondary,
-                        fontSize: 10,
-                      ),
+                    color: _theme(context).textSecondary,
+                    fontSize: 10,
+                  ),
                 ),
               ),
             ),
@@ -127,9 +127,9 @@ class DocumentCard extends StatelessWidget {
         Text(
           document.title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: _theme(context).textPrimary,
-              ),
+            fontWeight: FontWeight.w600,
+            color: _theme(context).textPrimary,
+          ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
@@ -141,8 +141,8 @@ class DocumentCard extends StatelessWidget {
             Text(
               document.addedTimeAgo,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _theme(context).textTertiary,
-                  ),
+                color: _theme(context).textTertiary,
+              ),
             ),
           ],
         ),
@@ -151,8 +151,8 @@ class DocumentCard extends StatelessWidget {
           Text(
             document.fileSizeFormatted,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: _theme(context).textTertiary,
-                ),
+              color: _theme(context).textTertiary,
+            ),
           ),
         ],
       ],
@@ -204,9 +204,9 @@ class DocumentCard extends StatelessWidget {
           Text(
             badgeText,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: badgeColor,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: badgeColor,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -215,10 +215,7 @@ class DocumentCard extends StatelessWidget {
 
   Widget _buildMoreButton(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: Icon(
-        Icons.more_vert_rounded,
-        color: _theme(context).textTertiary,
-      ),
+      icon: Icon(Icons.more_vert_rounded, color: _theme(context).textTertiary),
       onSelected: (value) {
         if (value == 'delete') {
           onDeleteTap?.call();
@@ -282,16 +279,13 @@ class DocumentCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GradientProgressBar(
-            progress: document.processingProgress,
-            height: 6,
-          ),
+          GradientProgressBar(progress: document.processingProgress, height: 6),
           const SizedBox(height: AppDimensions.spacingXs),
           Text(
             '${(document.processingProgress * 100).toInt()}% processed',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: _theme(context).textSecondary,
-                ),
+              color: _theme(context).textSecondary,
+            ),
           ),
         ],
       ),
@@ -322,9 +316,9 @@ class DocumentCard extends StatelessWidget {
           Expanded(
             child: Text(
               document.errorMessage ?? 'Processing failed',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _theme(context).error,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: _theme(context).error),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -334,7 +328,6 @@ class DocumentCard extends StatelessWidget {
     );
   }
 }
-
 
 AppThemeData _theme(BuildContext context) =>
     Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();

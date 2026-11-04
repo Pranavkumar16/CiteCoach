@@ -45,19 +45,21 @@ typedef StreamCallback = void Function(String token);
 /// The service constructs prompts that force the model to ground answers
 /// in provided context with page-level citations.
 class LlmService {
-  LlmService();
+  LlmService({Duration generationTimeout = const Duration(seconds: 120)})
+    : _generationTimeout = generationTimeout;
+
+  final Duration _generationTimeout;
 
   static const _channel = MethodChannel('com.citecoach/llm');
   static const _streamChannel = EventChannel('com.citecoach/llm_stream');
 
-  /// Default model file name. The actual model loaded is selected at runtime
-  /// based on device RAM via [ModelDownloader.selectedVariant]. This constant
-  /// refers to the primary (1.5B) model file.
-  static const String modelName = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
+  /// Must match the package selected by the downloader.
+  static const String modelName = ModelDownloader.modelFileName;
   static const int maxOutputTokens = 192;
   static const double temperature = 0.3;
   static const double topP = 0.9;
 
+  String? _initializationError;
   bool _isModelLoaded = false;
   bool get isModelLoaded => _isModelLoaded;
 
@@ -88,6 +90,9 @@ class LlmService {
       return _isModelLoaded;
     } on PlatformException catch (e) {
       debugPrint('LlmService: Platform error: $e');
+      _initializationError = e.code == 'LOW_MEMORY'
+          ? 'Not enough available memory for offline AI. Close other apps and try again.'
+          : 'CiteCoach AI could not start. Try again from Settings.';
       return false;
     } catch (e) {
       debugPrint('LlmService: Init error: $e');
@@ -128,7 +133,7 @@ class LlmService {
     }
 
     // Build the grounded prompt
-    final prompt = _buildPrompt(
+    final prompt = buildGroundedPrompt(
       query: query,
       context: retrievalResult.context,
       citations: retrievalResult.citations,
@@ -142,7 +147,8 @@ class LlmService {
       );
       if (!initialized) {
         return GenerationResult.error(
-          'AI model is not available. Please download the model first.',
+          _initializationError ??
+              'Offline AI is not available. Download CiteCoach AI in Settings.',
         );
       }
     }
@@ -203,16 +209,16 @@ class LlmService {
       );
 
       // Wait for generation to complete
-      final responseText = await completer.future.timeout(
-        const Duration(seconds: 120),
-      );
+      final responseText = await completer.future.timeout(_generationTimeout);
 
       // Clean up stream
       await _streamSubscription?.cancel();
       _streamSubscription = null;
 
       if (responseText.isEmpty) {
-        return GenerationResult.error('Model returned empty response');
+        return GenerationResult.error(
+          'CiteCoach AI returned no answer. Please try again.',
+        );
       }
 
       // Parse citations from response and clean up
@@ -233,12 +239,18 @@ class LlmService {
       debugPrint('LlmService: Generation error: $e');
       await _streamSubscription?.cancel();
       _streamSubscription = null;
-      return GenerationResult.error('Model inference failed: ${e.message}');
+      return GenerationResult.error(
+        e.code == 'CONTEXT'
+            ? 'The question and evidence are too long. Try a shorter question.'
+            : 'CiteCoach AI could not finish this answer. Please try again.',
+      );
     } catch (e) {
       debugPrint('LlmService: Error: $e');
       await _streamSubscription?.cancel();
       _streamSubscription = null;
-      return GenerationResult.error('Failed to generate response: $e');
+      return GenerationResult.error(
+        'CiteCoach AI could not finish this answer. Please try again.',
+      );
     } finally {
       await _streamSubscription?.cancel();
       _streamSubscription = null;
@@ -261,63 +273,43 @@ class LlmService {
   }
 
   /// Build a citation-grounded prompt for the on-device LLM.
-  String _buildPrompt({
+  @visibleForTesting
+  String buildGroundedPrompt({
     required String query,
     required String context,
     required List<Citation> citations,
     required List<ChatMessage> history,
   }) {
+    // Qwen3 ChatML with explicit non-thinking assistant prefill.
+    // Keep each question self-contained so excerpt grounding is unambiguous.
     final buffer = StringBuffer();
-
-    // ChatML format (used by Qwen)
-    buffer.writeln('<|im_start|>system');
+    buffer.writeln('<|im_start|>user');
     buffer.writeln(
-      'You are CiteCoach, a document analysis assistant. '
-      'Answer questions ONLY using the provided document excerpts. '
-      'Always cite your sources using [Page X] format. '
-      'If the answer is not in the excerpts, say "I could not find this information in the document."',
+      'You are CiteCoach. Answer briefly using ONLY the document excerpts. '
+      'Cite every claim using [Page X]. If the excerpts do not answer the '
+      'question, say "I could not find this information in the document."',
     );
-    buffer.writeln('<|im_end|>');
-
-    // Keep history short for the mobile context window.
     final recentHistory = history.length > 2
         ? history.sublist(history.length - 2)
         : history;
-
-    for (final msg in recentHistory) {
-      if (msg.isUser) {
-        buffer.writeln('<|im_start|>user');
-        buffer.writeln(
-          msg.content.length > 200
-              ? msg.content.substring(0, 200)
-              : msg.content,
-        );
-        buffer.writeln('<|im_end|>');
-      } else if (msg.isAssistant) {
-        buffer.writeln('<|im_start|>assistant');
-        buffer.writeln(
-          msg.content.length > 200
-              ? msg.content.substring(0, 200)
-              : msg.content,
-        );
-        buffer.writeln('<|im_end|>');
+    if (recentHistory.isNotEmpty) {
+      buffer.writeln('Previous conversation (context only):');
+      for (final msg in recentHistory) {
+        final text = msg.content.length > 200
+            ? msg.content.substring(0, 200)
+            : msg.content;
+        buffer.writeln('${msg.isUser ? "Question" : "Answer"}: $text');
       }
     }
-
-    // Current user question with document context
-    buffer.writeln('<|im_start|>user');
     buffer.writeln('--- DOCUMENT EXCERPTS ---');
     buffer.writeln(context);
     buffer.writeln('--- END EXCERPTS ---');
-    buffer.writeln();
     buffer.writeln('Question: $query');
-    buffer.writeln();
-    buffer.writeln(
-      'Answer using ONLY the excerpts above. '
-      'Include [Page X] citations for every claim.',
-    );
+    buffer.writeln('Give a short answer with [Page X] citations.');
+    buffer.writeln('/no_think');
     buffer.writeln('<|im_end|>');
     buffer.writeln('<|im_start|>assistant');
+    buffer.write('<think>\n\n</think>\n\n');
 
     return buffer.toString();
   }
@@ -342,10 +334,7 @@ class LlmService {
         .where((c) => referencedPages.contains(c.pageNumber))
         .toList();
 
-    // If model didn't cite but we have citations, add them
-    if (matched.isEmpty && availableCitations.isNotEmpty) {
-      matched.addAll(availableCitations.take(3));
-    }
+    // Do not attach uncited excerpts as though the answer cited them.
 
     // Clean up response text
     var cleaned = responseText.trim();

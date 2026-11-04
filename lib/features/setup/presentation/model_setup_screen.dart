@@ -154,7 +154,7 @@ class ModelSetupScreen extends ConsumerWidget {
               ),
               const _ModelStat(
                 label: AppStrings.storageNeededLabel,
-                value: '~500 MB',
+                value: '3 GB free',
               ),
             ],
           ),
