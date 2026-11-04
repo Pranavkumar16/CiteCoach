@@ -87,7 +87,7 @@ void main() {
     final library = _Library(_docs);
     final router = GoRouter(initialLocation: '/home', routes: [
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-      GoRoute(path: '/document/:id/chat', builder: (_, state) => Scaffold(body: LivingChatInput(initialDraft: state.uri.queryParameters['question'] ?? '', onSend: (_) {}))),
+      GoRoute(path: '/document/:id/chat', builder: (_, state) => Scaffold(body: Column(children: [Text('Chat for document ${state.pathParameters['id']}'), LivingChatInput(initialDraft: state.uri.queryParameters['question'] ?? '', onSend: (_) {})]))),
     ]);
     addTearDown(router.dispose);
     await tester.pumpWidget(ProviderScope(overrides: [libraryProvider.overrideWith((ref) => library)], child: MaterialApp.router(theme: AppTheme.fromExtension(AppThemeData.midnight()), routerConfig: router)));
@@ -95,8 +95,8 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('home-question')), '  What about A & B?  ');
     await tester.testTextInput.receiveAction(TextInputAction.send);
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/document/1/chat');
-    expect(router.routeInformationProvider.value.uri.queryParameters['question'], 'What about A & B?');
+    expect(find.text('Chat for document 1'), findsOneWidget);
+    expect(router.canPop(), isTrue);
     expect(library.opened, 1);
     expect(tester.widget<TextField>(find.byKey(const ValueKey('chat-composer'))).controller!.text, 'What about A & B?');
   });
