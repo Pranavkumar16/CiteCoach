@@ -17,6 +17,7 @@ class ChatState extends Equatable {
     this.isGenerating = false,
     this.streamingContent = '',
     this.error,
+    this.activity = 'Finding evidence…',
   });
 
   /// The document being chatted about.
@@ -36,6 +37,7 @@ class ChatState extends Equatable {
 
   /// Error message if something went wrong.
   final String? error;
+  final String activity;
 
   /// Check if chat is ready.
   bool get isReady => documentId != null && !isLoading;
@@ -60,8 +62,10 @@ class ChatState extends Equatable {
     String? streamingContent,
     String? error,
     bool clearError = false,
+    String? activity,
   }) {
     return ChatState(
+      activity: activity ?? this.activity,
       documentId: documentId ?? this.documentId,
       messages: messages ?? this.messages,
       isLoading: isLoading ?? this.isLoading,
@@ -78,6 +82,7 @@ class ChatState extends Equatable {
     isLoading,
     isGenerating,
     streamingContent,
+    activity,
     error,
   ];
 }
@@ -162,12 +167,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
   Future<void> sendMessage(
     String content, {
     InputMethod inputMethod = InputMethod.text,
+  }) => _answerMessage(content, inputMethod: inputMethod);
+
+  Future<void> _answerMessage(
+    String content, {
+    InputMethod inputMethod = InputMethod.text,
+    ChatMessage? existingMessage,
   }) async {
     final documentId = state.documentId;
     if (documentId == null || content.trim().isEmpty || state.isInputDisabled)
       return;
     final requestId = ++_requestId;
-    state = state.copyWith(isGenerating: true, clearError: true);
+    state = state.copyWith(
+      isGenerating: true,
+      clearError: true,
+      activity: 'Finding evidence…',
+    );
 
     try {
       debugPrint(
@@ -181,7 +196,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         inputMethod: inputMethod,
       );
 
-      final savedUserMessage = await _repository.saveMessage(userMessage);
+      final savedUserMessage =
+          existingMessage ?? await _repository.saveMessage(userMessage);
       if (!_isCurrent(requestId)) return;
       if (savedUserMessage == null) {
         state = state.copyWith(
@@ -253,6 +269,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       // Generate response
       debugPrint('ChatNotifier: Generating response...');
+      state = state.copyWith(
+        activity: _llmService.isModelLoaded
+            ? 'Preparing your answer…'
+            : 'Preparing offline AI…',
+      );
       final generationResult = await _llmService.generate(
         query: content.trim(),
         retrievalResult: retrievalResult,
@@ -264,6 +285,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           if (!_isCurrent(requestId)) return;
           state = state.copyWith(
             streamingContent: state.streamingContent + token,
+            activity: 'Writing your answer…',
           );
         },
       );
@@ -345,16 +367,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   /// Retry the last failed message.
   Future<void> retryLastMessage() async {
+    if (state.isInputDisabled) return;
     final lastUser = state.lastUserMessage;
     if (lastUser == null) return;
 
-    // Remove the last user message and retry
+    // Reuse the saved question on failure instead of inserting a duplicate.
+    ChatMessage? existingMessage;
     final messages = state.messages.toList();
     if (messages.isNotEmpty && messages.last.isUser) {
-      messages.removeLast();
+      existingMessage = messages.removeLast();
       state = state.copyWith(messages: messages, clearError: true);
     }
 
-    await sendMessage(lastUser.content, inputMethod: lastUser.inputMethod);
+    await _answerMessage(
+      lastUser.content,
+      inputMethod: lastUser.inputMethod,
+      existingMessage: existingMessage,
+    );
   }
 }

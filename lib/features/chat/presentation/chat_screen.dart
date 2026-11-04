@@ -6,6 +6,8 @@ import '../../../core/constants/constants.dart';
 import '../../../core/preferences/user_preferences.dart';
 import '../../../core/theme/app_theme_data.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../core/widgets/glass_surface.dart';
+import 'widgets/generation_status.dart';
 import '../../../routing/app_router.dart';
 import '../../library/domain/document.dart';
 import '../../library/providers/library_provider.dart';
@@ -228,71 +230,70 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         }
       },
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: _buildAppBar(context, document),
         floatingActionButton: _showScrollToBottom
             ? _buildScrollToBottomFab(theme)
             : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-        body: SafeArea(
-          child: Row(
-            children: [
-              // Main chat column
-              Expanded(
-                child: Column(
-                  children: [
-                    if (chatState.error != null)
-                      _buildErrorBanner(theme, chatState.error!),
-                    Expanded(
-                      child: chatState.isLoading
-                          ? const Center(
-                              child: LoadingIndicator(useGradient: true),
-                            )
-                          : chatState.messages.isEmpty
-                          ? EmptyChatView(
-                              documentTitle: document?.title ?? 'Document',
-                              onSampleQuestion: _handleSend,
-                            )
-                          : _buildMessageList(chatState, document),
-                    ),
-                    if (chatState.isGenerating)
-                      TextButton.icon(
-                        onPressed: () =>
-                            ref.read(chatProvider.notifier).cancelGeneration(),
-                        icon: const Icon(Icons.stop_circle_outlined),
-                        label: Text(
-                          chatState.streamingContent.isEmpty
-                              ? 'Preparing answer on this device… Stop'
-                              : 'Stop answer',
-                        ),
+        body: GlassBackdrop(
+          child: SafeArea(
+            child: Row(
+              children: [
+                // Main chat column
+                Expanded(
+                  child: Column(
+                    children: [
+                      if (chatState.error != null)
+                        _buildErrorBanner(theme, chatState),
+                      Expanded(
+                        child: chatState.isLoading
+                            ? const Center(
+                                child: LoadingIndicator(useGradient: true),
+                              )
+                            : chatState.messages.isEmpty
+                            ? EmptyChatView(
+                                documentTitle: document?.title ?? 'Document',
+                                onSampleQuestion: _handleSend,
+                              )
+                            : _buildMessageList(chatState, document),
                       ),
-                    LivingChatInput(
-                      onSend: _handleSend,
-                      onVoiceStart: _handleVoiceStart,
-                      suggestions: chatState.messages.isEmpty
-                          ? _suggestedQuestions(document)
-                          : const [],
-                      isDisabled: chatState.isInputDisabled,
+                      if (chatState.isGenerating)
+                        GenerationStatus(
+                          label: chatState.activity,
+                          onStop: () => ref
+                              .read(chatProvider.notifier)
+                              .cancelGeneration(),
+                        ),
+                      LivingChatInput(
+                        onSend: _handleSend,
+                        onVoiceStart: _handleVoiceStart,
+                        suggestions: chatState.messages.isEmpty
+                            ? _suggestedQuestions(document)
+                            : const [],
+                        isDisabled: chatState.isInputDisabled,
+                      ),
+                    ],
+                  ),
+                ),
+                // Document DNA strip — only if the document has pages and
+                // there's at least one citation.
+                if (document != null &&
+                    document.pageCount > 0 &&
+                    citationCounts.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 4,
                     ),
-                  ],
-                ),
-              ),
-              // Document DNA strip — only if the document has pages and
-              // there's at least one citation.
-              if (document != null &&
-                  document.pageCount > 0 &&
-                  citationCounts.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 4,
+                    child: DocumentDnaStrip(
+                      pageCount: document.pageCount,
+                      citationCounts: citationCounts,
+                      onPageTap: (p) => _handleDnaPageTap(p, document),
+                    ),
                   ),
-                  child: DocumentDnaStrip(
-                    pageCount: document.pageCount,
-                    citationCounts: citationCounts,
-                    onPageTap: (p) => _handleDnaPageTap(p, document),
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -300,29 +301,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, Document? document) {
+    final theme = Theme.of(context).extension<AppThemeData>()!;
     return AppBar(
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      flexibleSpace: const GlassSurface(radius: 0, child: SizedBox.expand()),
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
+        tooltip: 'Back to Library',
         onPressed: _handleBack,
       ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            document?.title ?? 'Chat',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const Text(
-            'Ask questions about this document',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-              color: AppColors.textSecondary,
+      title: Tooltip(
+        message: document?.title ?? 'Chat',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              document?.title ?? 'Chat',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+            Text(
+              'Private document chat',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: theme.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         IconButton(
@@ -359,29 +368,54 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildErrorBanner(AppThemeData theme, String error) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      color: theme.error.withOpacity(0.1),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: theme.error, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              error,
-              style: TextStyle(color: theme.error, fontSize: 13),
+  Widget _buildErrorBanner(AppThemeData theme, ChatState state) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      child: GlassSurface(
+        blur: false,
+        radius: 20,
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: theme.error, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Couldn’t finish that answer',
+                    style: TextStyle(
+                      color: theme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Dismiss error',
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () => ref.read(chatProvider.notifier).clearError(),
+                ),
+              ],
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, size: 20),
-            color: theme.error,
-            onPressed: () => ref.read(chatProvider.notifier).clearError(),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
+            Text(
+              state.error!,
+              style: TextStyle(
+                color: theme.textSecondary,
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+            if (state.lastUserMessage != null)
+              TextButton.icon(
+                onPressed: state.isInputDisabled
+                    ? null
+                    : () => ref.read(chatProvider.notifier).retryLastMessage(),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Try again'),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -393,6 +427,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       itemCount: state.messages.length + (state.isGenerating ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == state.messages.length && state.isGenerating) {
+          if (state.streamingContent.isEmpty) return const SizedBox.shrink();
           return MessageBubble(
             message: ChatMessage.streaming(widget.documentId),
             streamingContent: state.streamingContent,
@@ -444,9 +479,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ],
         ),
-        child: const Icon(
+        child: Icon(
           Icons.arrow_downward_rounded,
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onPrimary,
           size: 22,
         ),
       ),

@@ -50,6 +50,15 @@ jobs:
         timeout-minutes: 5
         run: flutter test --no-pub
 
+      - name: Upload glass UI previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: citecoach-glass-ui-previews
+          path: build/ui-previews/*.png
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Build APK
         run: flutter build apk --release --verbose
 

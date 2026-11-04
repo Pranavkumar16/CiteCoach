@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants/constants.dart';
+import '../core/widgets/glass_surface.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/compare/presentation/compare_screen.dart';
 import '../features/home/presentation/home_screen.dart';
@@ -60,8 +61,7 @@ abstract final class AppRoutes {
       '/document/$documentId/processing';
   static String documentReader(String documentId) =>
       '/document/$documentId/reader';
-  static String documentChat(String documentId) =>
-      '/document/$documentId/chat';
+  static String documentChat(String documentId) => '/document/$documentId/chat';
 }
 
 /// Provider for the GoRouter instance.
@@ -90,7 +90,8 @@ GoRouter createRouter(Ref ref) {
       final isSetupCompleted = setupState.currentStep == SetupStep.done;
 
       if (isSetupCompleted && isSetupPath) return AppRoutes.home;
-      if (!isSetupCompleted && !isSetupPath) return setupState.currentStep.routePath;
+      if (!isSetupCompleted && !isSetupPath)
+        return setupState.currentStep.routePath;
 
       return null;
     },
@@ -192,10 +193,7 @@ GoRouter createRouter(Ref ref) {
           final documentId = int.parse(state.pathParameters['id']!);
           final pageStr = state.uri.queryParameters['page'];
           final initialPage = pageStr != null ? int.tryParse(pageStr) : null;
-          return ReaderScreen(
-            documentId: documentId,
-            initialPage: initialPage,
-          );
+          return ReaderScreen(documentId: documentId, initialPage: initialPage);
         },
       ),
       GoRoute(
@@ -218,8 +216,9 @@ GoRouter createRouter(Ref ref) {
         name: 'voiceInput',
         builder: (context, state) {
           final documentIdStr = state.uri.queryParameters['documentId'];
-          final documentId =
-              documentIdStr != null ? int.tryParse(documentIdStr) ?? 0 : 0;
+          final documentId = documentIdStr != null
+              ? int.tryParse(documentIdStr) ?? 0
+              : 0;
           return VoiceOverlayScreen(documentId: documentId);
         },
       ),
@@ -245,37 +244,47 @@ class _MainShell extends StatelessWidget {
     final location = GoRouterState.of(context).uri.path;
     final currentIndex = location.startsWith('/settings')
         ? 2
-        : location.startsWith('/library') ? 1 : 0;
+        : location.startsWith('/library')
+        ? 1
+        : 0;
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          if (index == 0) {
-            context.go(AppRoutes.home);
-          } else if (index == 1) {
-            context.go(AppRoutes.library);
-          } else {
-            context.go(AppRoutes.settings);
-          }
-        },
-        selectedItemColor: AppColors.primaryIndigo,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            label: 'Home',
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        child: GlassSurface(
+          radius: 26,
+          child: BottomNavigationBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            currentIndex: currentIndex,
+            type: BottomNavigationBarType.fixed,
+            onTap: (index) {
+              if (index == 0) {
+                context.go(AppRoutes.home);
+              } else if (index == 1) {
+                context.go(AppRoutes.library);
+              } else {
+                context.go(AppRoutes.settings);
+              }
+            },
+            selectedItemColor: Theme.of(context).colorScheme.primary,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.library_books_rounded),
+                label: 'Library',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.settings_rounded),
+                label: 'Settings',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_books_rounded),
-            label: 'Library',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_rounded),
-            label: 'Settings',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -296,13 +305,17 @@ class _ErrorScreen extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text('Page not found',
-                style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              'Page not found',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 8),
             if (error != null)
-              Text(error.toString(),
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center),
+              Text(
+                error.toString(),
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => context.go(AppRoutes.library),

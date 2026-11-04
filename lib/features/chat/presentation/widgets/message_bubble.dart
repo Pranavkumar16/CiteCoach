@@ -37,78 +37,80 @@ class MessageBubble extends ConsumerWidget {
     return GestureDetector(
       onLongPress: onLongPress,
       child: Padding(
-      padding: EdgeInsets.only(
-        left: isUser ? 48 : 0,
-        right: isUser ? 0 : 48,
-        bottom: style == ChatStyle.compact ? 4 : 8,
-      ),
-      child: Row(
-        mainAxisAlignment: isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isUser && style != ChatStyle.compact) ...[
-            _buildAvatar(theme, isUser: false),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment:
-                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                // Sidebar citation mode: citations on the left of AI messages
-                if (!isUser &&
-                    citationMode == CitationDisplay.sidebar &&
-                    message.hasCitations &&
-                    onCitationTap != null)
-                  _buildSidebarLayout(
-                    theme: theme,
-                    style: style,
-                    content: content,
-                    padding: padding,
-                    radius: radius,
-                    isUser: isUser,
-                  )
-                else
-                  _buildBubble(
-                    theme: theme,
-                    style: style,
-                    content: content,
-                    padding: padding,
-                    radius: radius,
-                    isUser: isUser,
-                    // Inline: render citations inside the bubble
-                    inlineCitations: !isUser &&
-                        citationMode == CitationDisplay.inline &&
-                        message.hasCitations &&
-                        onCitationTap != null,
-                  ),
-
-                // Footer citation mode: citations below the bubble
-                if (!isUser &&
-                    citationMode == CitationDisplay.footer &&
-                    message.hasCitations &&
-                    onCitationTap != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 4),
-                    child: CitationRow(
-                      citations: message.citations,
-                      onCitationTap: onCitationTap!,
+        padding: EdgeInsets.only(
+          left: isUser ? 48 : 0,
+          right: isUser ? 0 : 48,
+          bottom: style == ChatStyle.compact ? 4 : 8,
+        ),
+        child: Row(
+          mainAxisAlignment: isUser
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!isUser && style != ChatStyle.compact) ...[
+              _buildAvatar(theme, isUser: false),
+              const SizedBox(width: 8),
+            ],
+            Flexible(
+              child: Column(
+                crossAxisAlignment: isUser
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
+                children: [
+                  // Sidebar citation mode: citations on the left of AI messages
+                  if (!isUser &&
+                      citationMode == CitationDisplay.sidebar &&
+                      message.hasCitations &&
+                      onCitationTap != null)
+                    _buildSidebarLayout(
+                      theme: theme,
+                      style: style,
+                      content: content,
+                      padding: padding,
+                      radius: radius,
+                      isUser: isUser,
+                    )
+                  else
+                    _buildBubble(
+                      theme: theme,
+                      style: style,
+                      content: content,
+                      padding: padding,
+                      radius: radius,
+                      isUser: isUser,
+                      // Inline: render citations inside the bubble
+                      inlineCitations:
+                          !isUser &&
+                          citationMode == CitationDisplay.inline &&
+                          message.hasCitations &&
+                          onCitationTap != null,
                     ),
-                  ),
 
-                const SizedBox(height: 4),
-                _buildMetadata(theme),
-              ],
+                  // Footer citation mode: citations below the bubble
+                  if (!isUser &&
+                      citationMode == CitationDisplay.footer &&
+                      message.hasCitations &&
+                      onCitationTap != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 4),
+                      child: CitationRow(
+                        citations: message.citations,
+                        onCitationTap: onCitationTap!,
+                      ),
+                    ),
+
+                  const SizedBox(height: 4),
+                  _buildMetadata(theme),
+                ],
+              ),
             ),
-          ),
-          if (isUser && style != ChatStyle.compact) ...[
-            const SizedBox(width: 8),
-            _buildAvatar(theme, isUser: true),
+            if (isUser && style != ChatStyle.compact) ...[
+              const SizedBox(width: 8),
+              _buildAvatar(theme, isUser: true),
+            ],
           ],
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -124,16 +126,16 @@ class MessageBubble extends ConsumerWidget {
     required bool isUser,
     required bool inlineCitations,
   }) {
-    final useGradient = isUser && style == ChatStyle.modern;
     final bgColor = _bgColor(theme, isUser: isUser, style: style);
     final borderColor = _borderColor(theme, isUser: isUser, style: style);
-    final textColor = _textColor(theme, isUser: isUser);
+    final textColor = isUser && style == ChatStyle.modern
+        ? (theme.isDark ? const Color(0xFF271B21) : const Color(0xFFFBF8F1))
+        : theme.textPrimary;
 
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: useGradient ? null : bgColor,
-        gradient: useGradient ? theme.accentGradient : null,
+        color: bgColor,
         borderRadius: radius,
         border: borderColor != null
             ? Border.all(color: borderColor, width: 1)
@@ -187,15 +189,18 @@ class MessageBubble extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: pages.take(5).map((page) {
-              final citation =
-                  message.citations.firstWhere((c) => c.pageNumber == page);
+              final citation = message.citations.firstWhere(
+                (c) => c.pageNumber == page,
+              );
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: GestureDetector(
                   onTap: () => onCitationTap!(citation),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.citation.withOpacity(0.15),
                       border: Border.all(
@@ -250,10 +255,10 @@ class MessageBubble extends ConsumerWidget {
     switch (style) {
       case ChatStyle.modern:
         return BorderRadius.only(
-          topLeft: Radius.circular(isUser ? 12 : 4),
-          topRight: Radius.circular(isUser ? 4 : 12),
-          bottomLeft: const Radius.circular(12),
-          bottomRight: const Radius.circular(12),
+          topLeft: Radius.circular(isUser ? 20 : 6),
+          topRight: Radius.circular(isUser ? 6 : 20),
+          bottomLeft: const Radius.circular(20),
+          bottomRight: const Radius.circular(20),
         );
       case ChatStyle.classic:
         return BorderRadius.circular(6);
@@ -272,9 +277,11 @@ class MessageBubble extends ConsumerWidget {
       if (style == ChatStyle.classic || style == ChatStyle.compact) {
         return theme.surfaceElevated;
       }
-      return theme.userMessageBg; // only used if gradient disabled
+      return theme.isDark
+          ? const Color(0xFFE3F39B)
+          : const Color(0xFF3B2932); // // only used if gradient disabled
     }
-    return theme.aiMessageBg;
+    return theme.surfaceElevated.withOpacity(0.94);
   }
 
   Color? _borderColor(
@@ -287,11 +294,6 @@ class MessageBubble extends ConsumerWidget {
       return theme.border;
     }
     return null;
-  }
-
-  Color _textColor(AppThemeData theme, {required bool isUser}) {
-    if (isUser) return Colors.white;
-    return theme.textPrimary;
   }
 
   // ==================== SUB-WIDGETS ====================
@@ -341,10 +343,7 @@ class MessageBubble extends ConsumerWidget {
           Icon(Icons.mic, size: 12, color: theme.textTertiary),
           const SizedBox(width: 4),
         ],
-        Text(
-          time,
-          style: TextStyle(fontSize: 11, color: theme.textTertiary),
-        ),
+        Text(time, style: TextStyle(fontSize: 11, color: theme.textTertiary)),
       ],
     );
   }
