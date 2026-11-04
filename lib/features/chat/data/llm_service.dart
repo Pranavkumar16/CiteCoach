@@ -119,6 +119,7 @@ class LlmService {
     required RetrievalResult retrievalResult,
     List<ChatMessage> conversationHistory = const [],
     StreamCallback? onToken,
+    String? responseInstructions,
   }) async {
     if (_pendingResponse != null) {
       return GenerationResult.error(
@@ -138,6 +139,7 @@ class LlmService {
       context: retrievalResult.context,
       citations: retrievalResult.citations,
       history: conversationHistory,
+      responseInstructions: responseInstructions,
     );
 
     if (!_isModelLoaded) {
@@ -279,12 +281,14 @@ class LlmService {
     required String context,
     required List<Citation> citations,
     required List<ChatMessage> history,
+    String? responseInstructions,
   }) {
     // Qwen3 ChatML with explicit non-thinking assistant prefill.
     // Keep each question self-contained so excerpt grounding is unambiguous.
     final buffer = StringBuffer();
     buffer.writeln('<|im_start|>user');
     buffer.writeln(
+      responseInstructions ??
       'You are CiteCoach. Answer briefly using ONLY the document excerpts. '
       'Cite every claim using [Page X]. If the excerpts do not answer the '
       'question, say "I could not find this information in the document."',
@@ -305,7 +309,7 @@ class LlmService {
     buffer.writeln(context);
     buffer.writeln('--- END EXCERPTS ---');
     buffer.writeln('Question: $query');
-    buffer.writeln('Give a short answer with [Page X] citations.');
+    buffer.writeln(responseInstructions ?? 'Give a short answer with [Page X] citations.');
     buffer.writeln('/no_think');
     buffer.writeln('<|im_end|>');
     buffer.writeln('<|im_start|>assistant');

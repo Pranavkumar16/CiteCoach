@@ -11,17 +11,21 @@ class StudyCardParser {
 
   List<StudyCard> parse(String output, Set<int> allowedPages) {
     final cards = <StudyCard>[];
-    for (final line in output.split('\n')) {
-      final fields = line.trim().split(' | ');
-      if (fields.length != 3 || !fields[0].startsWith('Q:') ||
-          !fields[1].startsWith('A:') || !fields[2].startsWith('PAGE:')) {
+    final pattern = RegExp(
+      r'(?:^|\n)\s*(?:[-*]|\d+[.)])?\s*Q(?:uestion)?\s*:\s*(.*?)\s*(?:\|\s*|\n\s*)A(?:nswer)?\s*:\s*(.*?)\s*(?:\|\s*|\n\s*)(?:PAGE\s*:\s*|\[Page\s*)(\d+)\]?(?:[^\n]*)',
+      caseSensitive: false,
+      dotAll: true,
+    );
+    final clean = output.replaceAll('**', '');
+    final seen = <String>{};
+    for (final match in pattern.allMatches(clean)) {
+      final question = match.group(1)!.trim();
+      final answer = match.group(2)!.trim();
+      final page = int.tryParse(match.group(3)!);
+      if (question.isEmpty || answer.isEmpty || page == null ||
+          !allowedPages.contains(page) || !seen.add(question.toLowerCase())) {
         continue;
       }
-      final question = fields[0].substring(2).trim();
-      final answer = fields[1].substring(2).trim();
-      final page = int.tryParse(fields[2].substring(5).trim());
-      if (question.isEmpty || answer.isEmpty || page == null ||
-          !allowedPages.contains(page)) continue;
       cards.add(StudyCard(question: question, answer: answer, page: page));
       if (cards.length == 5) break;
     }

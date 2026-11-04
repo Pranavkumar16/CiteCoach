@@ -11,7 +11,7 @@ final studyCardParserProvider = Provider<StudyCardParser>(
 final generateStudyCardsProvider = FutureProvider.autoDispose.family<
     List<StudyCard>, ({int documentId, String topic})>((ref, request) async {
   final prefs = await SharedPreferences.getInstance();
-  final cacheKey = 'learn.cards.v1.${request.documentId}.${Uri.encodeComponent(request.topic.trim().toLowerCase())}';
+  final cacheKey = 'learn.cards.v2.${request.documentId}.${Uri.encodeComponent(request.topic.trim().toLowerCase())}';
   final cached = prefs.getString(cacheKey);
   if (cached != null) {
     try {
@@ -28,19 +28,26 @@ final generateStudyCardsProvider = FutureProvider.autoDispose.family<
   }
   final retrieval = await ref.read(ragServiceProvider)
       .retrieve(request.documentId, request.topic);
-  if (!retrieval.isSuccess || retrieval.citations.isEmpty) return [];
+  if (!retrieval.isSuccess || retrieval.citations.isEmpty) {
+    throw Exception('No matching passages found. Choose a topic covered in this PDF.');
+  }
   final pages = retrieval.citations.map((c) => c.pageNumber).toSet();
   final result = await ref.read(llmServiceProvider).generate(
     query: '''
-Create up to five study flashcards about "${request.topic}" using ONLY the supplied excerpts.
+Create three short study flashcards about "${request.topic}" using ONLY the supplied excerpts.
 Each card must be exactly one line in this format:
 Q: question | A: short answer | PAGE: number
 Use only these page numbers: ${pages.join(', ')}.
 Do not include headings, markdown or invented facts.
 ''',
     retrievalResult: retrieval,
+    responseInstructions: 'You are CiteCoach. Create flashcards using ONLY the supplied excerpts. '
+        'Follow the requested Q: question | A: answer | PAGE: number format exactly. '
+        'Keep each answer under 20 words. Do not add prose or [Page X] citations.',
   );
-  if (!result.isSuccess) return [];
+  if (!result.isSuccess) {
+    throw Exception(result.error ?? 'The AI returned no cards. Please retry.');
+  }
   final cards = ref.read(studyCardParserProvider).parse(result.response, pages);
   if (cards.isNotEmpty) {
     await prefs.setString(cacheKey, jsonEncode(cards.map((card) => {

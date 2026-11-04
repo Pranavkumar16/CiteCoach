@@ -8,6 +8,16 @@ void main() {
         'Q: What is RAG? | A: Retrieval augmented generation | PAGE: 3', {3});
     expect(cards.single.page, 3);
   });
+  test('accepts compact separators and markdown labels', () {
+    final cards = parser.parse(
+      '1. **Q:** What is ML?|**A:** Learning from data|**PAGE:** 3', {3});
+    expect(cards.single.answer, 'Learning from data');
+  });
+  test('accepts multiline cards and cited page format', () {
+    final cards = parser.parse(
+      'Question: What is ML?\nAnswer: Learning from data\n[Page 3]', {3});
+    expect(cards.single.page, 3);
+  });
   test('rejects fabricated page', () {
     expect(parser.parse('Q: What? | A: Answer | PAGE: 99', {3}), isEmpty);
   });

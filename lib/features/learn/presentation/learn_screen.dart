@@ -29,6 +29,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
   String _cardKey(StudyCard card) => '${card.page}:${card.question}';
 
   Future<void> _start(int documentId, String topic) async {
+    ref.invalidate(generateStudyCardsProvider((documentId: documentId, topic: topic)));
     setState(() {
       _request = (documentId: documentId, topic: topic);
       _revealed.clear();
@@ -180,11 +181,27 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                     ref.watch(generateStudyCardsProvider(_request!)).when(
                           loading: () =>
                               const Center(child: CircularProgressIndicator()),
-                          error: (error, stack) => const Text(
-                              'Could not generate cards. Check the local AI model.'),
+                          error: (error, stack) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(error.toString().replaceFirst('Exception: ', '')),
+                              TextButton(
+                                onPressed: () => ref.invalidate(generateStudyCardsProvider(_request!)),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
                           data: (cards) => cards.isEmpty
-                              ? const Text(
-                                  'No valid cited cards generated. Try another topic.')
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('The AI could not format valid cards. Retry, or choose a more specific topic from this PDF.'),
+                                    TextButton(
+                                      onPressed: () => ref.invalidate(generateStudyCardsProvider(_request!)),
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                )
                               : Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
