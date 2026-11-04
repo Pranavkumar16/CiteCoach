@@ -45,7 +45,11 @@ typedef StreamCallback = void Function(String token);
 /// The service constructs prompts that force the model to ground answers
 /// in provided context with page-level citations.
 class LlmService {
-  LlmService();
+  LlmService({
+    Duration generationTimeout = const Duration(seconds: 120),
+  }) : _generationTimeout = generationTimeout;
+
+  final Duration _generationTimeout;
 
   static const _channel = MethodChannel('com.citecoach/llm');
   static const _streamChannel = EventChannel('com.citecoach/llm_stream');
@@ -126,7 +130,7 @@ class LlmService {
     }
 
     // Build the grounded prompt
-    final prompt = _buildPrompt(
+    final prompt = buildGroundedPrompt(
       query: query,
       context: retrievalResult.context,
       citations: retrievalResult.citations,
@@ -201,9 +205,7 @@ class LlmService {
       );
 
       // Wait for generation to complete
-      final responseText = await completer.future.timeout(
-        const Duration(seconds: 120),
-      );
+      final responseText = await completer.future.timeout(_generationTimeout);
 
       // Clean up stream
       await _streamSubscription?.cancel();
@@ -259,16 +261,17 @@ class LlmService {
   }
 
   /// Build a citation-grounded prompt for the on-device LLM.
-  String _buildPrompt({
+  @visibleForTesting
+  String buildGroundedPrompt({
     required String query,
     required String context,
     required List<Citation> citations,
     required List<ChatMessage> history,
   }) {
-    // Gemma uses user/model turns, with instructions inside the user turn.
+    // Qwen3 ChatML with explicit non-thinking assistant prefill.
     // Keep each question self-contained so excerpt grounding is unambiguous.
     final buffer = StringBuffer();
-    buffer.writeln('<start_of_turn>user');
+    buffer.writeln('<|im_start|>user');
     buffer.writeln(
       'You are CiteCoach. Answer briefly using ONLY the document excerpts. '
       'Cite every claim using [Page X]. If the excerpts do not answer the '
@@ -289,8 +292,10 @@ class LlmService {
     buffer.writeln('--- END EXCERPTS ---');
     buffer.writeln('Question: $query');
     buffer.writeln('Give a short answer with [Page X] citations.');
-    buffer.writeln('<end_of_turn>');
-    buffer.writeln('<start_of_turn>model');
+    buffer.writeln('/no_think');
+    buffer.writeln('<|im_end|>');
+    buffer.writeln('<|im_start|>assistant');
+    buffer.write('<think>\n\n</think>\n\n');
 
     return buffer.toString();
   }
@@ -315,18 +320,14 @@ class LlmService {
         .where((c) => referencedPages.contains(c.pageNumber))
         .toList();
 
-    // If model didn't cite but we have citations, add them
-    if (matched.isEmpty && availableCitations.isNotEmpty) {
-      matched.addAll(availableCitations.take(3));
-    }
+    // Do not attach uncited excerpts as though the answer cited them.
 
     // Clean up response text
     var cleaned = responseText.trim();
     cleaned = cleaned.replaceAll('<|im_end|>', '');
     cleaned = cleaned.replaceAll('<|im_start|>', '');
     cleaned = cleaned.replaceAll('<|endoftext|>', '');
-    cleaned = cleaned.replaceAll('<end_of_turn>', '');
-    cleaned = cleaned.replaceAll('<eos>', '');
+
 
     return _ParsedResponse(cleanedText: cleaned, matchedCitations: matched);
   }

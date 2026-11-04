@@ -252,14 +252,14 @@ class LlmPlugin : MethodChannel.MethodCallHandler {
     private fun getModelInfo(result: MethodChannel.Result) {
         val info = HashMap<String, Any>()
         info["name"] = "CiteCoach AI"
-        info["parameters"] = "270M"
+        info["parameters"] = "1.7B"
         info["isLoaded"] = modelHandle != 0L
         result.success(info)
     }
 
     private fun getDefaultModelPath(): String {
         val appDir = context?.filesDir?.absolutePath ?: ""
-        return "$appDir/models/google_gemma-3-270m-it-Q4_K_M.gguf"
+        return "$appDir/models/Qwen3-1.7B-Q4_K_M.gguf"
     }
 
     fun dispose() {

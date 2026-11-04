@@ -28,14 +28,14 @@ abstract final class AppStrings {
   static const String modelName = 'CiteCoach AI';
   static const String modelDescription =
       'Offline assistance for understanding your documents';
-  static const String modelSize = '242 MB';
+  static const String modelSize = '1056 MB';
   static const String modelNetwork = 'Wi-Fi recommended';
-  static const String modelTime = '~3-5 minutes';
+  static const String modelTime = 'Varies by connection';
   static const String downloadSizeLabel = 'Download Size';
   static const String storageNeededLabel = 'Storage Needed';
   static const String requirementsTitle = 'Requirements';
   static const String requirement1 = 'Wi-Fi connection recommended';
-  static const String requirement2 = 'At least 1 GB free storage';
+  static const String requirement2 = 'At least 3 GB free storage';
   static const String requirement3 = 'Keep app open during download';
   
   // Setup Flow - Download Screen

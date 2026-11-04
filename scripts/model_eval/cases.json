@@ -1,0 +1,25 @@
+{
+  "context": "[Page 1] Northstar Library pilot agreement, signed 4 March 2026. The customer is Cedar Research Ltd. The pilot starts 1 April 2026 and ends 30 June 2026. The pilot fee is SGD 2400, excluding tax. The pilot covers 12 named users.\n[Page 2] Standard invoices are due 30 calendar days after the invoice date. Approved research partners instead have 45 calendar days. Late payment interest is 1 percent per month. Cedar Research Ltd is an approved research partner.\n[Page 3] The service target is 99.5 percent availability per calendar month. Planned maintenance is excluded. Data is retained for 90 days after the pilot ends and then deleted. Support is available Monday to Friday, 09:00 to 17:00 Singapore time. The support email is help@northstar.example.\n[Page 4] Original delivery schedule dated 4 March: delivery is 20 March 2026. This original schedule specifies 8 training hours. Initial budget: hardware SGD 600, software SGD 1200, training SGD 600.\n[Page 5] Signed amendment dated 12 March 2026: delivery is moved to 27 March 2026. This amendment replaces the delivery date on Page 4; all other terms remain unchanged. The amendment does not alter the pilot start date.\n[Page 6] Cancellation requires 14 calendar days written notice. Export formats are PDF and CSV. The customer contact is Mira Tan. The contract states no refund policy. The agreement contains no information about server location, encryption algorithm, or the customer's annual revenue.",
+  "cases": [
+    {"id":"customer","question":"What is the customer company name?","expected":"Cedar Research Ltd","pages":[1]},
+    {"id":"start","question":"When does the pilot start?","expected":"1 April 2026","pages":[1]},
+    {"id":"fee","question":"What is the pilot fee, and does it include tax?","expected":"SGD 2400 excluding tax","pages":[1]},
+    {"id":"users","question":"How many named users does the pilot cover?","expected":"12","pages":[1]},
+    {"id":"standard_terms","question":"What is the standard invoice payment period?","expected":"30 calendar days after invoice date","pages":[2]},
+    {"id":"customer_terms","question":"How many days does Cedar Research Ltd have to pay an invoice?","expected":"45 calendar days because it is an approved research partner","pages":[2]},
+    {"id":"availability","question":"What availability is targeted and what is excluded?","expected":"99.5 percent per calendar month; planned maintenance excluded","pages":[3]},
+    {"id":"retention","question":"How long is data retained after the pilot ends?","expected":"90 days then deleted","pages":[3]},
+    {"id":"support","question":"What hours and timezone is support available?","expected":"Monday-Friday 09:00-17:00 Singapore time","pages":[3]},
+    {"id":"contact","question":"Who is the customer contact?","expected":"Mira Tan","pages":[6]},
+    {"id":"export","question":"Which export formats are available?","expected":"PDF and CSV","pages":[6]},
+    {"id":"notice","question":"What cancellation notice is required?","expected":"14 calendar days written notice","pages":[6]},
+    {"id":"server","question":"In which country are the servers located?","expected":"Not specified; abstain","pages":[],"abstain":true},
+    {"id":"encryption","question":"Which encryption algorithm is used?","expected":"Not specified; abstain","pages":[],"abstain":true},
+    {"id":"revenue","question":"What is Cedar Research Ltd's annual revenue?","expected":"Not specified; abstain","pages":[],"abstain":true},
+    {"id":"refund","question":"What percentage refund can the customer receive?","expected":"No refund policy specified; abstain, do not infer zero","pages":[],"abstain":true},
+    {"id":"amended_delivery","question":"What is the current delivery date? Explain why the original date does not apply.","expected":"27 March 2026; signed amendment supersedes original 20 March date","pages":[4,5]},
+    {"id":"unchanged_training","question":"How many training hours apply after the amendment?","expected":"8 hours; amendment only changes delivery","pages":[4,5]},
+    {"id":"budget_total","question":"What is the total initial budget for hardware, software and training?","expected":"SGD 2400 (600 + 1200 + 600)","pages":[4]},
+    {"id":"per_user","question":"What is the pilot fee per named user, excluding tax?","expected":"SGD 200 (2400 / 12)","pages":[1]}
+  ]
+}

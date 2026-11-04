@@ -69,7 +69,7 @@ class SetupState extends Equatable {
 
   /// Estimated downloaded package size in MiB.
   String get downloadedSizeMb {
-    final downloadedMb = (downloadProgress * 253115168 / (1024 * 1024)).toInt();
+    final downloadedMb = (downloadProgress * 1107409472 / (1024 * 1024)).toInt();
     return '$downloadedMb MB';
   }
 

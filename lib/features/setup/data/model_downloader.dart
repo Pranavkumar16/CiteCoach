@@ -38,12 +38,12 @@ enum DownloadStatus { idle, downloading, paused, completed, failed }
 
 /// Internal package identity; product UI uses CiteCoach AI.
 enum ModelVariant {
-  gemma270m(
-    fileName: 'google_gemma-3-270m-it-Q4_K_M.gguf',
-    sizeBytes: 253115168,
+  qwen317b(
+    fileName: 'Qwen3-1.7B-Q4_K_M.gguf',
+    sizeBytes: 1107409472,
     displayName: 'CiteCoach AI',
     urls: [
-      'https://huggingface.co/bartowski/google_gemma-3-270m-it-GGUF/resolve/d127a4e2c6ed47fdf409a956867b604c040432f9/google_gemma-3-270m-it-Q4_K_M.gguf',
+      'https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/d7f544eead698dbd1f15126ef60b45a1e1933222/Qwen3-1.7B-Q4_K_M.gguf',
     ],
   );
 
@@ -117,14 +117,14 @@ class DownloadProgress {
 class ModelDownloader {
   ModelDownloader();
 
-  static const String modelVersion = '4.0.0';
-  static const ModelVariant defaultVariant = ModelVariant.gemma270m;
-  static const String modelFileName = 'google_gemma-3-270m-it-Q4_K_M.gguf';
-  static const int modelSizeBytes = 253115168;
+  static const String modelVersion = '4.1.0';
+  static const ModelVariant defaultVariant = ModelVariant.qwen317b;
+  static const String modelFileName = 'Qwen3-1.7B-Q4_K_M.gguf';
+  static const int modelSizeBytes = 1107409472;
   static const String modelSha256 =
-      'c866c9f113f2e9aa2225c5997ede437392b8fa844ba5db9e4c77e315ffe20800';
+      'b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897';
 
-  /// Use the compact package on every device for predictable speed.
+  /// Use the evaluated balanced package consistently on supported devices.
   Future<ModelVariant> selectedVariant() async => defaultVariant;
 
   /// Embedding model URL (MiniLM-L6-v2 ONNX → TFLite, ~22MB).

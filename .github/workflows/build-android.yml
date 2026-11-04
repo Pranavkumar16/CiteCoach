@@ -47,6 +47,7 @@ jobs:
           dart run flutter_launcher_icons
 
       - name: Run tests
+        timeout-minutes: 5
         run: flutter test --no-pub
 
       - name: Build APK

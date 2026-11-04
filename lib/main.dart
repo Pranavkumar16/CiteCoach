@@ -16,10 +16,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   LicenseRegistry.addLicense(() async* {
-    for (final asset in ['gemma', 'gemma_prohibited_use']) {
-      final text = await rootBundle.loadString('assets/licenses/$asset.txt');
-      yield LicenseEntryWithLineBreaks(['Gemma'], text);
-    }
+    final text = await rootBundle.loadString('assets/licenses/qwen.txt');
+    yield LicenseEntryWithLineBreaks(['Qwen'], text);
   });
 
   // Set system UI mode for edge-to-edge display
