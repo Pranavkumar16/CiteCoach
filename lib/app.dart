@@ -63,7 +63,10 @@ class CiteCoachApp extends ConsumerWidget {
             disableAnimations:
                 prefs.reduceMotion || MediaQuery.of(context).disableAnimations,
           ),
-          child: child ?? const SizedBox.shrink(),
+          child: ColoredBox(
+            color: appThemeData.background,
+            child: SafeArea(child: child ?? const SizedBox.shrink()),
+          ),
         );
       },
     );

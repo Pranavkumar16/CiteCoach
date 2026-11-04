@@ -140,16 +140,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 top: 0,
                 left: 0,
                 right: 0,
-                child: _buildTopBar(context, document),
-              ),
-
-            // Search bar
-            if (_isSearching)
-              Positioned(
-                top: 56,
-                left: 0,
-                right: 0,
-                child: _buildSearchBar(),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  _buildTopBar(context, document),
+                  if (_isSearching) _buildSearchBar(),
+                ]),
               ),
 
             // Bottom toolbar
@@ -291,11 +285,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        runSpacing: 8,
         children: [
           // Page navigation
-          Row(
+          Wrap(
             children: [
               IconButton(
                 icon: const Icon(Icons.first_page),
@@ -343,7 +338,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             ],
           ),
           // Zoom controls
-          Row(
+          Wrap(
             children: [
               IconButton(
                 icon: const Icon(Icons.zoom_out, size: 20),

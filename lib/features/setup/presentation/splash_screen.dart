@@ -1,3 +1,4 @@
+import '../../../core/widgets/adaptive_page_column.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -69,7 +70,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
-          child: Column(
+          child: AdaptivePageColumn(
             children: [
               const Spacer(flex: 3),
               _buildIconWithRing(theme),

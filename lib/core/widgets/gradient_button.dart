@@ -38,7 +38,8 @@ class GradientButton extends StatelessWidget {
       opacity: opacity,
       child: Container(
         width: width,
-        height: height,
+        constraints: BoxConstraints(minHeight: height),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.accent,
           borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
@@ -60,6 +61,7 @@ class GradientButton extends StatelessWidget {
             splashColor: Colors.white.withOpacity(0.15),
             highlightColor: Colors.white.withOpacity(0.05),
             child: Center(
+              heightFactor: 1,
               child: isLoading
                   ? const SizedBox(
                       width: 24,
@@ -76,8 +78,9 @@ class GradientButton extends StatelessWidget {
                           Icon(icon, color: AppColors.textOnPrimary, size: 20),
                           const SizedBox(width: AppDimensions.spacingXs),
                         ],
-                        Text(
+                        Flexible(child: Text(
                           text,
+                          textAlign: TextAlign.center,
                           style: textStyle ??
                               const TextStyle(
                                 color: AppColors.textOnPrimary,
@@ -85,7 +88,7 @@ class GradientButton extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.2,
                               ),
-                        ),
+                        )),
                       ],
                     ),
             ),
@@ -129,7 +132,8 @@ class SecondaryButton extends StatelessWidget {
       opacity: opacity,
       child: Container(
         width: width,
-        height: height,
+        constraints: BoxConstraints(minHeight: height),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.zinc800,
           borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
@@ -146,6 +150,7 @@ class SecondaryButton extends StatelessWidget {
             splashColor: AppColors.accent.withOpacity(0.1),
             highlightColor: AppColors.accent.withOpacity(0.05),
             child: Center(
+              heightFactor: 1,
               child: isLoading
                   ? SizedBox(
                       width: 24,
@@ -168,8 +173,9 @@ class SecondaryButton extends StatelessWidget {
                           ),
                           const SizedBox(width: AppDimensions.spacingXs),
                         ],
-                        Text(
+                        Flexible(child: Text(
                           text,
+                          textAlign: TextAlign.center,
                           style: textStyle ??
                               const TextStyle(
                                 color: AppColors.textPrimary,
@@ -177,7 +183,7 @@ class SecondaryButton extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.2,
                               ),
-                        ),
+                        )),
                       ],
                     ),
             ),

@@ -1,3 +1,4 @@
+import '../../../core/widgets/adaptive_page_column.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +22,7 @@ class DownloadRequiredScreen extends ConsumerWidget {
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(AppDimensions.spacingXl),
-          child: Column(
+          child: AdaptivePageColumn(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(),

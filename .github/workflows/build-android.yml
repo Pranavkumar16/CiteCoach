@@ -59,6 +59,22 @@ jobs:
           lib/features/verify/presentation/verify_screen.dart
           lib/features/compare/presentation/compare_screen.dart
           lib/features/learn/presentation/learn_screen.dart
+          lib/features/learn/presentation/quiz_session.dart
+          lib/features/learn/providers/quiz_provider.dart
+          lib/features/learn/domain/quiz_question.dart
+          lib/core/widgets/adaptive_page_column.dart
+          lib/core/widgets/gradient_button.dart
+          lib/features/setup/presentation/privacy_screen.dart
+          lib/features/setup/presentation/model_setup_screen.dart
+          lib/features/setup/presentation/setup_complete_screen.dart
+          lib/features/setup/presentation/splash_screen.dart
+          lib/features/settings/presentation/download_required_screen.dart
+          lib/features/settings/presentation/model_info_screen.dart
+          lib/features/processing/presentation/processing_screen.dart
+          lib/features/processing/presentation/document_ready_screen.dart
+          lib/features/voice/presentation/voice_overlay_screen.dart
+          lib/features/reader/presentation/reader_screen.dart
+          lib/app.dart
           lib/features/learn/providers/learn_provider.dart
           lib/features/learn/domain/study_card.dart
           lib/features/chat/data/llm_service.dart
@@ -78,6 +94,7 @@ jobs:
         run: flutter test --no-pub
 
       - name: Upload glass UI previews
+        continue-on-error: true
         if: always()
         uses: actions/upload-artifact@v4
         with:

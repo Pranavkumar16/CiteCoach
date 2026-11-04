@@ -1,3 +1,4 @@
+import '../../../core/widgets/adaptive_page_column.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -64,7 +65,7 @@ class _SetupCompleteScreenState extends ConsumerState<SetupCompleteScreen>
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(AppDimensions.spacingXl),
-            child: Column(
+            child: AdaptivePageColumn(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),

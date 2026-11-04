@@ -9,6 +9,8 @@ import '../../home/presentation/home_screen.dart';
 import '../data/study_progress_store.dart';
 import '../domain/study_card.dart';
 import '../providers/learn_provider.dart';
+import '../providers/quiz_provider.dart';
+import 'quiz_session.dart';
 
 class LearnScreen extends ConsumerStatefulWidget {
   const LearnScreen({super.key});
@@ -25,11 +27,14 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
   final Set<int> _revealed = {};
   Set<String> _known = {};
   bool _progressLoading = false;
+  bool _quiz = false;
 
   String _cardKey(StudyCard card) => '${card.page}:${card.question}';
 
   Future<void> _start(int documentId, String topic) async {
+    FocusScope.of(context).unfocus();
     ref.invalidate(generateStudyCardsProvider((documentId: documentId, topic: topic)));
+    ref.invalidate(generateQuizProvider((documentId: documentId, topic: topic)));
     setState(() {
       _request = (documentId: documentId, topic: topic);
       _revealed.clear();
@@ -86,7 +91,10 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
   Widget build(BuildContext context) {
     final docs = HomeScreen.recentDocuments(ref.watch(libraryProvider).readyDocuments, limit: ref.watch(libraryProvider).readyDocuments.length);
     final selected = docs.any((d) => d.id == _documentId) ? _documentId : (docs.isEmpty ? null : docs.first.id);
-    final disabledReason = selected == null ? 'Choose a document to start' : _topic.text.trim().isEmpty ? 'Enter a topic to generate flashcards' : null;
+    final busy = _request != null && (_quiz
+        ? ref.watch(generateQuizProvider(_request!)).isLoading
+        : _progressLoading || ref.watch(generateStudyCardsProvider(_request!)).isLoading);
+    final disabledReason = selected == null ? 'Choose a document to start' : _topic.text.trim().isEmpty ? 'Enter a topic to study' : null;
     final theme =
         Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();
     return Scaffold(
@@ -94,23 +102,31 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
       backgroundColor: theme.background,
       body: GlassBackdrop(
         child: SafeArea(
-          bottom: false,
+          bottom: true,
           child: ListView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
             children: [
               const GlassPageHeader(
                 eyebrow: 'Learn',
                 title: 'Make knowledge stick',
                 subtitle:
-                    'Study your PDF with cited flashcards.',
+                    'Study offline with flashcards and quizzes.',
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 16),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                ChoiceChip(label: const Text('Flashcards'), selected: !_quiz,
+                  onSelected: busy ? null : (_) => setState(() { _quiz = false; _request = null; })),
+                ChoiceChip(label: const Text('Quiz'), selected: _quiz,
+                  onSelected: (_) => setState(() { _quiz = true; _request = null; })),
+              ]),
+              const SizedBox(height: 16),
               if (docs.isEmpty)
                 GlassSurface(
                   blur: false,
                   padding: const EdgeInsets.all(18),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const GlassIconBadge(icon: Icons.school_outlined),
                       const SizedBox(height: 14),
@@ -140,7 +156,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                         items: docs
                             .map((d) => DropdownMenuItem(
                                   value: d.id,
-                                  child: Text(d.title,
+                                  child: Text(d.title, maxLines: 1,
                                       overflow: TextOverflow.ellipsis),
                                 ))
                             .toList(),
@@ -161,14 +177,14 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                         ),
                       ),
                       FilledButton.icon(
-                        onPressed: disabledReason != null
+                        onPressed: disabledReason != null || busy
                             ? null
                             : () {
                                 final topic = _topic.text.trim();
                                 if (topic.isNotEmpty) _start(selected!, topic);
                               },
                         icon: const Icon(Icons.auto_stories),
-                        label: const Text('Generate flashcards'),
+                        label: Text(_quiz ? 'Generate quiz' : 'Generate flashcards'),
                       ),
                       if (disabledReason != null) Text(disabledReason, style: TextStyle(color: theme.textSecondary)),
                     ],
@@ -176,7 +192,28 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                 ),
                 if (_request != null) ...[
                   const SizedBox(height: 20),
-                  if (_progressLoading)
+                  if (_quiz)
+                    ref.watch(generateQuizProvider(_request!)).when(
+                      loading: () => const Column(children: [
+                        CircularProgressIndicator(), SizedBox(height: 12),
+                        Text('Creating your quiz with offline AI…'),
+                      ]),
+                      error: (error, stack) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(error.toString().replaceFirst('Exception: ', '')),
+                          TextButton(onPressed: () => ref.invalidate(generateQuizProvider(_request!)),
+                            child: const Text('Retry quiz')),
+                        ],
+                      ),
+                      data: (questions) => QuizSession(
+                        key: ValueKey((_request, questions)),
+                        questions: questions,
+                        onSource: (page) => context.push(
+                          '${AppRoutes.documentReader(_request!.documentId.toString())}?page=$page'),
+                      ),
+                    )
+                  else if (_progressLoading)
                     const Center(child: CircularProgressIndicator())
                   else
                     ref.watch(generateStudyCardsProvider(_request!)).when(

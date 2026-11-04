@@ -45,7 +45,7 @@ class _CompareScreenState extends ConsumerState<CompareScreen> {
       backgroundColor: theme.background,
       body: GlassBackdrop(
         child: SafeArea(
-          bottom: false,
+          bottom: true,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
             children: [

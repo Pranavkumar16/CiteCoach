@@ -60,8 +60,8 @@ void main() {
     await (FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
   });
 
-  Future<void> wrap(WidgetTester tester, Widget screen, {List<Document>? docs, AppThemeData? theme, GlobalKey? boundary, bool highContrast = false, double scale = 1}) async {
-    tester.view.physicalSize = const Size(390, 844);
+  Future<void> wrap(WidgetTester tester, Widget screen, {List<Document>? docs, AppThemeData? theme, GlobalKey? boundary, bool highContrast = false, double scale = 1, double width = 390, double height = 844}) async {
+    tester.view.physicalSize = Size(width, height);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -69,11 +69,21 @@ void main() {
       libraryProvider.overrideWith((ref) => _Library(docs ?? _docs)),
       sharedPreferencesProvider.overrideWithValue(prefs),
     ], child: MaterialApp(theme: AppTheme.fromExtension(theme ?? AppThemeData.midnight()),
-      home: MediaQuery(data: MediaQueryData(size: const Size(390, 844), highContrast: highContrast, textScaler: TextScaler.linear(scale)),
+      home: MediaQuery(data: MediaQueryData(size: Size(width, height), highContrast: highContrast, textScaler: TextScaler.linear(scale)),
         child: RepaintBoundary(key: boundary, child: screen)),
     )));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('tool screens fit small phones with large text', (tester) async {
+    for (final screen in [const HomeScreen(), const VerifyScreen(), const CompareScreen(), const LearnScreen()]) {
+      await wrap(tester, screen, width: 320, height: 568, scale: 1.5);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -500));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
 
   test('opening a source updates recency without restarting the app', () async {
     final library = LibraryNotifier(_TrackingRepository(), _ImportService());

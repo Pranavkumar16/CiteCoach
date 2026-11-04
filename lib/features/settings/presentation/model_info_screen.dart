@@ -179,8 +179,9 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: AppColors.textSecondary)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Expanded(child: Text(label, style: TextStyle(color: AppColors.textSecondary))),
+          const SizedBox(width: 12),
+          Expanded(child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w500))),
         ],
       ),
     );
@@ -193,7 +194,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
         children: [
           Icon(icon, size: 18, color: AppColors.accent),
           const SizedBox(width: 10),
-          Text(text, style: const TextStyle(fontSize: 14)),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
         ],
       ),
     );

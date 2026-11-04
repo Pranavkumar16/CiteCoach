@@ -67,7 +67,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       backgroundColor: appTheme?.background,
       body: GlassBackdrop(
         child: SafeArea(
-          bottom: false,
+          bottom: true,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
             children: [

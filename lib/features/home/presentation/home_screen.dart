@@ -44,7 +44,7 @@ class HomeScreen extends ConsumerWidget {
       backgroundColor: theme.background,
       body: GlassBackdrop(
         child: SafeArea(
-          bottom: false,
+          bottom: true,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
             children: [
@@ -85,7 +85,7 @@ class HomeScreen extends ConsumerWidget {
                 _EmptyRecent(onTap: () => context.go(AppRoutes.library))
               else
                 SizedBox(
-                  height: 148,
+                  height: 148 + 85 * (MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.5) - 1),
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     clipBehavior: Clip.none,
@@ -105,7 +105,7 @@ class HomeScreen extends ConsumerWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 1.08,
+                mainAxisExtent: 190 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.5),
                 children: [
                   _ToolTile(
                     title: 'Verify',
@@ -121,7 +121,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   _ToolTile(
                     title: 'Learn',
-                    subtitle: 'Study with cited flashcards',
+                    subtitle: 'Flashcards and offline quizzes',
                     icon: Icons.school_outlined,
                     onTap: () => context.push(AppRoutes.learn),
                   ),
