@@ -206,7 +206,7 @@ GoRouter createRouter(Ref ref) {
           if (!setupState.isModelDownloaded) {
             return const DownloadRequiredScreen();
           }
-          return ChatScreen(documentId: documentId);
+          return ChatScreen(documentId: documentId, initialQuestion: state.uri.queryParameters['question']);
         },
       ),
 
