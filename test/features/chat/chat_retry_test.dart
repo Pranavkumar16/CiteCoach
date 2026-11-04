@@ -28,10 +28,24 @@ class FailingLlm extends LlmService {
     required RetrievalResult retrievalResult,
     List<ChatMessage> conversationHistory = const [],
     StreamCallback? onToken,
+    String? responseInstructions,
   }) async => GenerationResult.error('Try again');
 }
 
 void main() {
+  test('flashcard prompt replaces conflicting chat instructions', () {
+    final prompt = LlmService().buildGroundedPrompt(
+      query: 'Create three cards',
+      context: '[Page 1] Evidence',
+      citations: [],
+      history: [],
+      responseInstructions: 'Use Q: | A: | PAGE: format only.',
+    );
+    expect(prompt, contains('Use Q: | A: | PAGE: format only.'));
+    expect(prompt, isNot(contains('Give a short answer with')));
+    expect(prompt, isNot(contains('Cite every claim')));
+    expect(prompt, contains('[Page 1] Evidence'));
+  });
   test(
     'Retry reuses the saved question without duplicate history rows',
     () async {
