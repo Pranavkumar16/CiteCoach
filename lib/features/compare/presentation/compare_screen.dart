@@ -7,6 +7,7 @@ import '../../../core/widgets/glass_surface.dart';
 import '../../../routing/app_router.dart';
 import '../../chat/domain/chat_message.dart';
 import '../../library/providers/library_provider.dart';
+import '../../home/presentation/home_screen.dart';
 import '../domain/document_comparison.dart';
 import '../providers/compare_provider.dart';
 
@@ -33,12 +34,14 @@ class _CompareScreenState extends ConsumerState<CompareScreen> {
   Widget build(BuildContext context) {
     final theme =
         Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();
-    final documents = ref.watch(libraryProvider).readyDocuments;
+    final documents = HomeScreen.recentDocuments(ref.watch(libraryProvider).readyDocuments, limit: ref.watch(libraryProvider).readyDocuments.length);
     final ids = documents.map((d) => d.id).toSet();
-    final leftId = ids.contains(_leftId) ? _leftId : null;
-    final rightId = ids.contains(_rightId) ? _rightId : null;
+    final leftId = ids.contains(_leftId) ? _leftId : (documents.isEmpty ? null : documents.first.id);
+    final rightId = ids.contains(_rightId) ? _rightId : (documents.length < 2 ? null : documents[1].id);
+    final disabledReason = leftId == null || rightId == null ? 'Choose two documents to start' : leftId == rightId ? 'Choose two different documents' : _question.text.trim().isEmpty ? 'Enter a question to compare' : null;
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Compare'), leading: BackButton(onPressed: () { if (context.canPop()) { context.pop(); } else { context.go(AppRoutes.home); } })),
       backgroundColor: theme.background,
       body: GlassBackdrop(
         child: SafeArea(
@@ -50,7 +53,7 @@ class _CompareScreenState extends ConsumerState<CompareScreen> {
                 eyebrow: 'Compare',
                 title: 'Two sources.\nOne question.',
                 subtitle:
-                    'Compare retrieved passages side by side. Differences in wording are not automatically factual conflicts.',
+                    'Compare PDF passages side by side.',
               ),
               const SizedBox(height: 22),
               if (documents.length < 2)
@@ -108,6 +111,7 @@ class _CompareScreenState extends ConsumerState<CompareScreen> {
                       ],
                       TextField(
                         controller: _question,
+                        onChanged: (_) => setState(() {}),
                         maxLines: 3,
                         maxLength: 300,
                         decoration: const InputDecoration(
@@ -119,9 +123,7 @@ class _CompareScreenState extends ConsumerState<CompareScreen> {
                       FilledButton.icon(
                         icon: const Icon(Icons.compare_arrows),
                         label: const Text('Compare evidence'),
-                        onPressed: leftId == null ||
-                                rightId == null ||
-                                leftId == rightId
+                        onPressed: disabledReason != null
                             ? null
                             : () {
                                 final question = _question.text.trim();
@@ -133,6 +135,7 @@ class _CompareScreenState extends ConsumerState<CompareScreen> {
                                     ));
                               },
                       ),
+                      if (disabledReason != null) Text(disabledReason, style: TextStyle(color: theme.textSecondary)),
                     ],
                   ),
                 ),
@@ -146,6 +149,8 @@ class _CompareScreenState extends ConsumerState<CompareScreen> {
                         data: (result) => Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text('Different wording does not prove a factual conflict. Check the sources.', style: TextStyle(color: theme.textSecondary)),
+                            const SizedBox(height: 12),
                             Text(
                                 switch (result.status) {
                                   ComparisonStatus.sharedWording =>

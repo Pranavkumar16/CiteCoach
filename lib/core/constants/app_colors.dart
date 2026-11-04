@@ -57,7 +57,7 @@ abstract final class AppColors {
 
   // Semantic Colors
   static const Color success = Color(0xFFB4CF45);
-  static const Color warning = Color(0xFFD9A441);
+  static const Color warning = Color(0xFFC6B5FF);
   static const Color error = Color(0xFFD85B43);
   static const Color info = Color(0xFF8A7770);
 
@@ -77,7 +77,7 @@ abstract final class AppColors {
 
   // Semantic colors with specific names
   static const Color successGreen = Color(0xFFB4CF45);
-  static const Color warningOrange = Color(0xFFD9A441);
+  static const Color warningOrange = Color(0xFFC6B5FF);
   static const Color errorRed = Color(0xFFD85B43);
   static const Color infoBlue = Color(0xFF8A7770);
 

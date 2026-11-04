@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme_data.dart';
 import '../../../core/widgets/glass_surface.dart';
 import '../../../routing/app_router.dart';
 import '../../library/providers/library_provider.dart';
+import '../../home/presentation/home_screen.dart';
 import '../domain/evidence_assessment.dart';
 import '../domain/claim_verification.dart';
 import '../providers/verify_provider.dart';
@@ -35,12 +36,14 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
   Widget build(BuildContext context) {
     final theme =
         Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();
-    final documents = ref.watch(libraryProvider).readyDocuments;
+    final documents = HomeScreen.recentDocuments(ref.watch(libraryProvider).readyDocuments, limit: ref.watch(libraryProvider).readyDocuments.length);
     final selected = documents.any((document) => document.id == _documentId)
         ? _documentId
-        : null;
+        : (documents.isEmpty ? null : documents.first.id);
+    final disabledReason = selected == null ? 'Choose a document to start' : _controller.text.trim().isEmpty ? 'Enter a claim to inspect' : null;
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Verify'), leading: BackButton(onPressed: () { if (context.canPop()) { context.pop(); } else { context.go(AppRoutes.home); } })),
       backgroundColor: theme.background,
       body: GlassBackdrop(
         child: SafeArea(
@@ -52,7 +55,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                 eyebrow: 'Verify',
                 title: 'Challenge my answer',
                 subtitle:
-                    'Check up to six statements against your document using the offline AI model. Results are AI assessments, not guaranteed facts.',
+                    'Check claims against your PDF.',
               ),
               const SizedBox(height: 22),
               if (documents.isEmpty) ...[
@@ -104,6 +107,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: _controller,
+                        onChanged: (_) => setState(() {}),
                         maxLines: 4,
                         maxLength: 1500,
                         decoration: const InputDecoration(
@@ -117,7 +121,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                         contentPadding: EdgeInsets.zero,
                         title: const Text('AI evidence assessment'),
                         subtitle:
-                            const Text('Off: lexical passage screening only'),
+                            Text(_useAi ? 'AI checks each claim against the passages' : 'Keyword match only, faster'),
                         value: _useAi,
                         onChanged: (value) => setState(() {
                           _useAi = value;
@@ -126,7 +130,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                       ),
                       const SizedBox(height: 12),
                       FilledButton.icon(
-                        onPressed: selected == null
+                        onPressed: disabledReason != null
                             ? null
                             : () {
                                 final claim = _controller.text.trim();
@@ -136,11 +140,14 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                         icon: const Icon(Icons.fact_check_outlined),
                         label: const Text('Inspect evidence'),
                       ),
+                      if (disabledReason != null) Text(disabledReason, style: TextStyle(color: theme.textSecondary)),
                     ],
                   ),
                 ),
                 if (_submittedClaim != null && selected != null) ...[
                   const SizedBox(height: 24),
+                  Text('AI can be wrong. Check the cited passages.', style: TextStyle(color: theme.textSecondary)),
+                  const SizedBox(height: 12),
                   (_useAi
                       ? ref
                           .watch(verifyAnswerProvider((

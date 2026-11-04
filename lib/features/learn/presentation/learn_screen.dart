@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme_data.dart';
 import '../../../core/widgets/glass_surface.dart';
 import '../../../routing/app_router.dart';
 import '../../library/providers/library_provider.dart';
+import '../../home/presentation/home_screen.dart';
 import '../data/study_progress_store.dart';
 import '../domain/study_card.dart';
 import '../providers/learn_provider.dart';
@@ -79,11 +80,13 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final docs = ref.watch(libraryProvider).readyDocuments;
-    final selected = docs.any((d) => d.id == _documentId) ? _documentId : null;
+    final docs = HomeScreen.recentDocuments(ref.watch(libraryProvider).readyDocuments, limit: ref.watch(libraryProvider).readyDocuments.length);
+    final selected = docs.any((d) => d.id == _documentId) ? _documentId : (docs.isEmpty ? null : docs.first.id);
+    final disabledReason = selected == null ? 'Choose a document to start' : _topic.text.trim().isEmpty ? 'Enter a topic to generate flashcards' : null;
     final theme =
         Theme.of(context).extension<AppThemeData>() ?? AppThemeData.midnight();
     return Scaffold(
+      appBar: AppBar(title: const Text('Learn'), leading: BackButton(onPressed: () { if (context.canPop()) { context.pop(); } else { context.go(AppRoutes.home); } })),
       backgroundColor: theme.background,
       body: GlassBackdrop(
         child: SafeArea(
@@ -95,7 +98,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                 eyebrow: 'Learn',
                 title: 'Make knowledge stick',
                 subtitle:
-                    'Generate cited flashcards using your offline AI model. Your remembered cards are saved on this device.',
+                    'Study your PDF with cited flashcards.',
               ),
               const SizedBox(height: 22),
               if (docs.isEmpty)
@@ -145,6 +148,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: _topic,
+                        onChanged: (_) => setState(() {}),
                         maxLength: 150,
                         decoration: const InputDecoration(
                           labelText: 'Study topic',
@@ -153,15 +157,16 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                         ),
                       ),
                       FilledButton.icon(
-                        onPressed: selected == null
+                        onPressed: disabledReason != null
                             ? null
                             : () {
                                 final topic = _topic.text.trim();
-                                if (topic.isNotEmpty) _start(selected, topic);
+                                if (topic.isNotEmpty) _start(selected!, topic);
                               },
                         icon: const Icon(Icons.auto_stories),
                         label: const Text('Generate flashcards'),
                       ),
+                      if (disabledReason != null) Text(disabledReason, style: TextStyle(color: theme.textSecondary)),
                     ],
                   ),
                 ),
