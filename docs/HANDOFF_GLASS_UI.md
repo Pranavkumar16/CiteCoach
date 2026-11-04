@@ -69,9 +69,10 @@ no pull request was opened.
 - First regression run: 136 passed; the Home push test incorrectly inspected the
   browser URL rather than the imperative route. Corrected the test to assert the
   displayed chat document, editable draft and retained back stack.
-- Final full-suite result: **passed** on code commit `c63dcdb` in run
+- Final full-suite result: **137/137 passed** on code commit `c63dcdb` in run
   https://github.com/Pranavkumar16/CiteCoach/actions/runs/41798796470.
-  The release APK build is still running at the time of this note.
+  Release APK build and upload: **successful**. The run above contains the
+  `citecoach-release-apk` and `citecoach-glass-ui-previews` artifacts.
 
 ### Still open
 - Optional glass migration for setup, processing, reader and voice is not included.
