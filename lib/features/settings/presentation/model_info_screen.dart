@@ -40,7 +40,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('AI Model')),
+      appBar: AppBar(title: const Text(AppStrings.modelName)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -68,14 +68,14 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Qwen 2.5 1.5B Instruct',
+                              AppStrings.modelName,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                             Text(
-                              _checkingModel ? 'Checking model...' : (_modelExists ? 'Downloaded (inference not yet verified)' : 'Not Downloaded'),
+                              _checkingModel ? 'Checking offline AI...' : (_modelExists ? 'Downloaded (inference not yet verified)' : 'Not Downloaded'),
                               style: TextStyle(
                                 color: _modelExists
                                     ? AppColors.success
@@ -101,11 +101,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
           Card(
             child: Column(
               children: [
-                _infoRow('Model', 'Qwen 2.5 1.5B Instruct'),
-                const Divider(height: 1),
-                _infoRow('Parameters', '1.5 billion'),
-                const Divider(height: 1),
-                _infoRow('Storage', '~900 MB'),
+                _infoRow('Assistant', AppStrings.modelName),
                 const Divider(height: 1),
                 _infoRow('Optimized For', 'Document Q&A'),
                 const Divider(height: 1),
@@ -114,7 +110,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
                         ? '${(_modelSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB'
                         : '—'),
                 const Divider(height: 1),
-                _infoRow('Version', ModelDownloader.modelVersion),
+                _infoRow('AI package version', ModelDownloader.modelVersion),
                 const Divider(height: 1),
                 _infoRow('Processing', '100% On-Device'),
               ],
@@ -150,7 +146,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
           if (_modelExists)
             OutlinedButton.icon(
               icon: const Icon(Icons.delete_outline, color: AppColors.errorRed),
-              label: const Text('Delete Model',
+              label: const Text('Remove offline AI',
                   style: TextStyle(color: AppColors.errorRed)),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.errorRed),
@@ -192,9 +188,9 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete AI Model?'),
+        title: const Text('Remove offline AI?'),
         content: const Text(
-          'This will delete the downloaded model and disable chat functionality. '
+          'This will remove the downloaded AI files and disable offline chat. '
           'You can re-download it anytime.',
         ),
         actions: [
@@ -211,7 +207,7 @@ class _ModelInfoScreenState extends ConsumerState<ModelInfoScreen> {
               await _loadModelInfo();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Model deleted')),
+                  const SnackBar(content: Text('Offline AI removed')),
                 );
               }
             },
