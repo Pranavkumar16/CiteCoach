@@ -45,7 +45,10 @@ typedef StreamCallback = void Function(String token);
 /// The service constructs prompts that force the model to ground answers
 /// in provided context with page-level citations.
 class LlmService {
-  LlmService();
+  LlmService({Duration generationTimeout = const Duration(seconds: 120)})
+    : _generationTimeout = generationTimeout;
+
+  final Duration _generationTimeout;
 
   static const _channel = MethodChannel('com.citecoach/llm');
   static const _streamChannel = EventChannel('com.citecoach/llm_stream');
@@ -203,9 +206,7 @@ class LlmService {
       );
 
       // Wait for generation to complete
-      final responseText = await completer.future.timeout(
-        const Duration(seconds: 120),
-      );
+      final responseText = await completer.future.timeout(_generationTimeout);
 
       // Clean up stream
       await _streamSubscription?.cancel();
