@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "CiteCoach Preview",
+    "slug": "citecoach-ui-preview",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.citecoach.preview"
+    },
+    "android": {
+      "package": "com.citecoach.preview",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#007B4C"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    }
+  }
+}
