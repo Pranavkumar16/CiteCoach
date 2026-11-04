@@ -39,7 +39,9 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
       final saved = await _store.load(documentId, topic);
       if (!mounted ||
           _request?.documentId != documentId ||
-          _request?.topic != topic) return;
+          _request?.topic != topic) {
+        return;
+      }
       setState(() => _known = saved);
     } finally {
       if (mounted &&
@@ -128,7 +130,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       DropdownButtonFormField<int>(
-                        value: selected,
+                        initialValue: selected,
                         isExpanded: true,
                         decoration: const InputDecoration(
                             labelText: 'Study document',

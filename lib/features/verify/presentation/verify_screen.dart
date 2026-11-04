@@ -85,7 +85,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       DropdownButtonFormField<int>(
-                        value: selected,
+                        initialValue: selected,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Source document',

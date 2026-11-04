@@ -24,6 +24,12 @@ import 'package:citecoach/features/verify/presentation/verify_screen.dart';
 import 'package:citecoach/routing/app_router.dart';
 
 class _Repository extends Fake implements DocumentRepository {}
+class _TrackingRepository extends Fake implements DocumentRepository {
+  @override
+  Future<List<Document>> getAllDocuments({DocumentSortOption sort = DocumentSortOption.addedNewest}) async => _docs;
+  @override
+  Future<bool> updateLastOpened(int id) async => true;
+}
 class _ImportService extends Fake implements DocumentImportService {}
 class _Library extends LibraryNotifier {
   _Library(List<Document> docs) : super(_Repository(), _ImportService()) {
@@ -68,6 +74,14 @@ void main() {
     )));
     await tester.pumpAndSettle();
   }
+
+  test('opening a source updates recency without restarting the app', () async {
+    final library = LibraryNotifier(_TrackingRepository(), _ImportService());
+    addTearDown(library.dispose);
+    await library.loadDocuments();
+    await library.markDocumentOpened(2);
+    expect(HomeScreen.recentDocuments(library.state.readyDocuments).first.id, 2);
+  });
 
   testWidgets('Home submits an encoded draft to the most recent ready document', (tester) async {
     final library = _Library(_docs);

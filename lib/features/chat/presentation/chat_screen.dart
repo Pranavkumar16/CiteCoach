@@ -43,8 +43,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted)
+      if (mounted) {
         ref.read(chatProvider.notifier).initialize(widget.documentId);
+      }
     });
   }
 

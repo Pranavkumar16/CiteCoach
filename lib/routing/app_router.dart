@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/constants/constants.dart';
 import '../core/widgets/glass_surface.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/compare/presentation/compare_screen.dart';
@@ -90,8 +89,9 @@ GoRouter createRouter(Ref ref) {
       final isSetupCompleted = setupState.currentStep == SetupStep.done;
 
       if (isSetupCompleted && isSetupPath) return AppRoutes.home;
-      if (!isSetupCompleted && !isSetupPath)
+      if (!isSetupCompleted && !isSetupPath) {
         return setupState.currentStep.routePath;
+      }
 
       return null;
     },

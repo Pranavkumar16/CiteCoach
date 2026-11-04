@@ -233,7 +233,12 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
   /// Update a document's last opened timestamp.
   Future<void> markDocumentOpened(int documentId) async {
     try {
-      await _repository.updateLastOpened(documentId);
+      final updated = await _repository.updateLastOpened(documentId);
+      if (!updated || !mounted) return;
+      final openedAt = DateTime.now();
+      state = state.copyWith(documents: state.documents.map((document) =>
+        document.id == documentId ? document.copyWith(lastOpenedAt: openedAt) : document,
+      ).toList());
       // Reload if sorting by recently opened
       if (state.sortOption == DocumentSortOption.openedRecent) {
         await loadDocuments();

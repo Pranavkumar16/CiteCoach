@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main, claude/serene-feynman-2vgwfq ]
+    branches: [ main, codex/glass-ux-refinement ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -61,7 +61,8 @@ jobs:
           lib/features/learn/presentation/learn_screen.dart
           lib/features/chat/presentation/chat_screen.dart
           lib/features/chat/presentation/widgets/living_chat_input.dart
-          lib/routing/app_router.dart test/features/home/glass_tools_test.dart
+          lib/routing/app_router.dart lib/features/library/providers/library_provider.dart
+          test/features/home/glass_tools_test.dart
           test/core/theme/glass_contrast_test.dart
 
       - name: Run tests

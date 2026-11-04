@@ -254,7 +254,7 @@ class _RecentCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: colour.withOpacity(0.14),
+                          color: colour.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Text(

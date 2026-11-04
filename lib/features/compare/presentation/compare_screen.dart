@@ -84,7 +84,7 @@ class _CompareScreenState extends ConsumerState<CompareScreen> {
                     children: [
                       for (final isLeft in [true, false]) ...[
                         DropdownButtonFormField<int>(
-                          value: isLeft ? leftId : rightId,
+                          initialValue: isLeft ? leftId : rightId,
                           isExpanded: true,
                           decoration: InputDecoration(
                             labelText:
