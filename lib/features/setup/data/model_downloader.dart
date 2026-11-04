@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'resumable_download.dart';
+import 'android_download_session.dart';
 
 import 'package:dio/dio.dart';
 import 'package:crypto/crypto.dart';
@@ -110,13 +111,16 @@ class DownloadProgress {
 /// Model downloader with pinned package verification.
 ///
 /// Features:
-/// - Retry interrupted downloads from the beginning
+/// - Resume interrupted downloads from saved bytes
+/// - Android foreground download service while minimized
 /// - Speed tracking and ETA estimation
 /// - Pause/resume support
 /// - SHA-256 integrity verification
 /// - Automatic retry on transient failures
 class ModelDownloader {
-  ModelDownloader();
+  ModelDownloader({AndroidDownloadSession? backgroundSession})
+      : _backgroundSession = backgroundSession ?? AndroidDownloadSession();
+  final AndroidDownloadSession _backgroundSession;
 
   static const String modelVersion = '4.1.0';
   static const ModelVariant defaultVariant = ModelVariant.qwen317b;
@@ -240,6 +244,7 @@ class ModelDownloader {
   /// Sequential download: LLM model first, then embedding model.
   Future<void> _startDownloadSequence() async {
     try {
+      await _backgroundSession.start();
       // Check network connectivity first
       final hasNetwork = await _checkNetworkConnectivity();
       if (!hasNetwork) {
@@ -302,6 +307,8 @@ class ModelDownloader {
       final errorMessage = _getUserFriendlyError(e);
       _progressController?.add(DownloadProgress.failed(errorMessage));
       debugPrint('ModelDownloader: Download failed: $e');
+    } finally {
+      await _backgroundSession.stop();
     }
   }
 
@@ -337,6 +344,7 @@ class ModelDownloader {
               final fileProgress =
                   actualTotal > 0 ? actualReceived / actualTotal : 0.0;
               _progress = progressOffset + (fileProgress * progressWeight);
+              unawaited(_backgroundSession.update(_progress));
 
               // Calculate speed every 500ms
               final now = DateTime.now();
@@ -361,6 +369,7 @@ class ModelDownloader {
 
           // Verify the pinned package before replacing any installed file.
           if (savePath.endsWith(modelFileName)) {
+            await _backgroundSession.update(_progress, message: 'Verifying downloaded AI model…');
             final digest = await sha256.bind(tempFile.openRead()).first;
             if (await tempFile.length() != modelSizeBytes ||
                 digest.toString() != modelSha256) {
@@ -388,6 +397,7 @@ class ModelDownloader {
             return false;
           }
 
+          await _backgroundSession.update(_progress, message: 'Connection interrupted. Retrying from saved bytes…');
           // Wait before retry (exponential backoff)
           await Future.delayed(Duration(seconds: (attempt + 1) * 2));
         }
@@ -437,6 +447,7 @@ class ModelDownloader {
 
   void pauseDownload() {
     if (_status != DownloadStatus.downloading) return;
+    unawaited(_backgroundSession.stop());
     _status = DownloadStatus.paused;
     _cancelToken?.cancel('paused');
     _progressController?.add(DownloadProgress(
@@ -468,6 +479,7 @@ class ModelDownloader {
   }
 
   void cancelDownload() {
+    unawaited(_backgroundSession.stop());
     _cancelToken?.cancel('cancelled');
     _status = DownloadStatus.idle;
     _progress = 0.0;
@@ -517,6 +529,7 @@ class ModelDownloader {
   }
 
   void dispose() {
+    unawaited(_backgroundSession.stop());
     _cancelToken?.cancel('disposed');
     _progressController?.close();
   }

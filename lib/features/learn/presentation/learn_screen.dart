@@ -88,6 +88,14 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(llmServiceProvider).warmUp();
+    });
+  }
+
+  @override
   void dispose() {
     _topic.dispose();
     super.dispose();

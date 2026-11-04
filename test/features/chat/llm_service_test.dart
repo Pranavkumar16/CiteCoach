@@ -37,6 +37,13 @@ void main() {
     messenger.setMockMethodCallHandler(channel, null);
   });
 
+  test('only short single definitions use the brief response budget', () {
+    expect(LlmService.isShortDefinition('What is supervised learning?'), isTrue);
+    expect(LlmService.isShortDefinition('Define overfitting'), isTrue);
+    expect(LlmService.isShortDefinition('What is supervised learning and give examples?'), isFalse);
+    expect(LlmService.isShortDefinition('Compare decision trees and naive Bayes'), isFalse);
+  });
+
   test('Qwen3 prompt disables thinking and retains grounded evidence', () {
     final prompt = llm.buildGroundedPrompt(
       query: 'Main topic?',
@@ -50,6 +57,9 @@ void main() {
     expect(prompt, contains('Machine learning learns from data.'));
     expect(prompt, contains('Cite every claim using [Page X]'));
     expect(prompt, isNot(contains('<start_of_turn>')));
+    final followup = llm.buildGroundedPrompt(query: 'New question',
+      context: retrieval.context, citations: [], history: []);
+    expect(followup.indexOf(retrieval.context), lessThan(followup.indexOf('Question: New question')));
   });
 
   test('cancel settles a request even if native start never replies', () async {

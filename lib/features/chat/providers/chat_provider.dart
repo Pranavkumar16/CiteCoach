@@ -138,6 +138,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// Initialize chat for a document.
   Future<void> initialize(int documentId) async {
     debugPrint('ChatNotifier: Initializing for document $documentId');
+    _llmService.warmUp();
 
     state = state.copyWith(
       documentId: documentId,

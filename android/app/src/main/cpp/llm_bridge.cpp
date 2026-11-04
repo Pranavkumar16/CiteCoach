@@ -7,6 +7,8 @@
 
 #include "llama.h"
 #include "utf8_stream.h"
+#include "prompt_cache.h"
+#include <mutex>
 
 #define LOG_TAG "CiteCoachLLM"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -37,6 +39,9 @@ static void batch_add(llama_batch & batch, llama_token id, llama_pos pos,
 // ============================================================
 
 static std::atomic<bool> stop_requested{false};
+static std::mutex prompt_cache_mutex;
+static llama_context* cached_context = nullptr;
+static std::vector<llama_token> cached_prompt;
 static void inference_error(JNIEnv *env, const char *message) {
     env->ThrowNew(env->FindClass("java/lang/IllegalStateException"), message);
 }
@@ -119,6 +124,7 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
     jint max_tokens, jfloat temperature, jfloat top_p,
     jfloat repeat_penalty, jobject token_callback) {
 
+    std::lock_guard<std::mutex> guard(prompt_cache_mutex);
     auto *ctx = reinterpret_cast<llama_context *>(context_handle);
     if (ctx == nullptr) {
         LOGE("Context handle is null");
@@ -169,13 +175,22 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
         return !env->ExceptionCheck() && keepGoing;
     };
 
-    // Clear memory (KV cache)
-    llama_memory_clear(llama_get_memory(ctx), true);
+    // Reuse only exactly matching prompt tokens. Remove every old answer token.
+    std::size_t prefix = cached_context == ctx
+        ? reusable_prompt_prefix(cached_prompt, tokens) : 0;
+    if (prefix < 16 || !llama_memory_seq_rm(llama_get_memory(ctx), 0,
+                                           static_cast<llama_pos>(prefix), -1)) {
+        prefix = 0;
+        llama_memory_clear(llama_get_memory(ctx), true);
+    }
+    cached_context = nullptr;
+    cached_prompt.clear();
+    LOGI("Reusing %zu prompt tokens; decoding %zu new tokens", prefix, tokens.size() - prefix);
 
     // Process prompt in batches
     llama_batch batch = llama_batch_init(128, 0, 1);
 
-    for (int i = 0; i < n_tokens; i++) {
+    for (int i = static_cast<int>(prefix); i < n_tokens; i++) {
         if (stop_requested.load()) { llama_batch_free(batch); env->DeleteLocalRef(callbackClass); return; }
         batch_add(batch, tokens[i], i, {0}, false);
         if (batch.n_tokens >= 128 || i == n_tokens - 1) {
@@ -191,6 +206,9 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
             batch_clear(batch);
         }
     }
+
+    cached_context = ctx;
+    cached_prompt = tokens;
 
     // Set up sampler
     auto *smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
@@ -258,6 +276,8 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeFreeContext(
     JNIEnv *env, jobject thiz, jlong context_handle) {
 
     auto *ctx = reinterpret_cast<llama_context *>(context_handle);
+    std::lock_guard<std::mutex> guard(prompt_cache_mutex);
+    if (cached_context == ctx) { cached_context = nullptr; cached_prompt.clear(); }
     if (ctx != nullptr) {
         llama_free(ctx);
         LOGI("Context freed");

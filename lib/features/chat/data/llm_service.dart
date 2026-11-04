@@ -74,6 +74,7 @@ class LlmService {
 
   String? _initializationError;
   bool _isModelLoaded = false;
+  Future<bool>? _initializationFuture;
   bool get isModelLoaded => _isModelLoaded;
 
   StreamSubscription<dynamic>? _streamSubscription;
@@ -83,7 +84,19 @@ class LlmService {
   Completer<void>? _generationFinished;
 
   /// Initialize the LLM model via platform channel.
-  Future<bool> initialize() async {
+  Future<bool> initialize() {
+    if (_isModelLoaded) return Future.value(true);
+    return _initializationFuture ??= _initializeModel().whenComplete(() {
+      _initializationFuture = null;
+    });
+  }
+
+  void warmUp() {
+    unawaited(initialize().timeout(const Duration(seconds: 60), onTimeout: () => false)
+        .catchError((Object _) => false));
+  }
+
+  Future<bool> _initializeModel() async {
     if (_isModelLoaded) return true;
     debugPrint('LlmService: Initializing...');
 
@@ -156,9 +169,12 @@ class LlmService {
       );
     }
 
+    final shortDefinition = responseInstructions == null && isShortDefinition(query);
+    final outputTokens = shortDefinition ? 96 : maxOutputTokens;
+
     // Build the grounded prompt
     final prompt = buildGroundedPrompt(
-      query: query,
+      query: shortDefinition ? '$query Answer in at most two short sentences.' : query,
       context: retrievalResult.context,
       citations: retrievalResult.citations,
       history: conversationHistory,
@@ -226,7 +242,7 @@ class LlmService {
       // Start generation via MethodChannel
       final start = _channel.invokeMethod('startGeneration', {
         'prompt': prompt,
-        'maxTokens': maxOutputTokens,
+        'maxTokens': outputTokens,
         'temperature': temperature,
         'topP': topP,
         'repeatPenalty': 1.1,
@@ -319,6 +335,14 @@ class LlmService {
     }
   }
 
+  @visibleForTesting
+  static bool isShortDefinition(String query) {
+    final q = query.trim().toLowerCase();
+    return q.length <= 140 &&
+        RegExp(r'^(what is|define|what does .+ mean)\b').hasMatch(q) &&
+        !RegExp(r'\b(and|compare|difference|examples?|steps?|why|how)\b').hasMatch(q);
+  }
+
   /// Build a citation-grounded prompt for the on-device LLM.
   @visibleForTesting
   String buildGroundedPrompt({
@@ -338,6 +362,9 @@ class LlmService {
       'Cite every claim using [Page X]. If the excerpts do not answer the '
       'question, say "I could not find this information in the document."',
     );
+    buffer.writeln('--- DOCUMENT EXCERPTS ---');
+    buffer.writeln(context);
+    buffer.writeln('--- END EXCERPTS ---');
     final recentHistory = history.length > 2
         ? history.sublist(history.length - 2)
         : history;
@@ -350,9 +377,7 @@ class LlmService {
         buffer.writeln('${msg.isUser ? "Question" : "Answer"}: $text');
       }
     }
-    buffer.writeln('--- DOCUMENT EXCERPTS ---');
-    buffer.writeln(context);
-    buffer.writeln('--- END EXCERPTS ---');
+
     buffer.writeln('Question: $query');
     buffer.writeln(responseInstructions ?? 'Give a short answer with [Page X] citations.');
     buffer.writeln('/no_think');
