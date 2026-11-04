@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, claude/serene-feynman-2vgwfq ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -50,6 +50,19 @@ jobs:
         run: |
           g++ -std=c++17 -Wall -Wextra -fsanitize=address,undefined test/native/utf8_stream_test.cpp -o /tmp/citecoach-utf8-test
           /tmp/citecoach-utf8-test
+
+      - name: Analyze glass UX changes
+        run: >-
+          flutter analyze --no-fatal-infos
+          lib/core/theme/app_theme_data.dart lib/core/constants/app_colors.dart
+          lib/features/home/presentation/home_screen.dart
+          lib/features/verify/presentation/verify_screen.dart
+          lib/features/compare/presentation/compare_screen.dart
+          lib/features/learn/presentation/learn_screen.dart
+          lib/features/chat/presentation/chat_screen.dart
+          lib/features/chat/presentation/widgets/living_chat_input.dart
+          lib/routing/app_router.dart test/features/home/glass_tools_test.dart
+          test/core/theme/glass_contrast_test.dart
 
       - name: Run tests
         timeout-minutes: 5
