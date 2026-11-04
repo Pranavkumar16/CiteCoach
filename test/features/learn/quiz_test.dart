@@ -36,13 +36,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Incorrect. Correct answer: A.'), findsOneWidget);
     await tester.ensureVisible(find.text('Check source · page 3'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Check source · page 3'));
     expect(sourcePage, 3);
     await tester.ensureVisible(find.text('Retake quiz'));
+    await tester.pumpAndSettle();
     expect(find.text('Your score: 0 / 1'), findsOneWidget);
     await tester.tap(find.text('Retake quiz'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('quiz-0-option-0')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('quiz-0-option-0')));
     await tester.pumpAndSettle();
     expect(find.text('Correct'), findsOneWidget);
