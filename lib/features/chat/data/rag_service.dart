@@ -90,6 +90,10 @@ class RagService {
 
       // Generic overview prompts have no subject keywords to match. Supply
       // bounded excerpts across the document instead of an empty keyword hit.
+      if (RegExp(r'\b(author|authored|who wrote|written by|writer)\b', caseSensitive: false).hasMatch(query)) {
+        final front = index.chunks.values.toList()..sort((a,b) { final page = a.pageNumber.compareTo(b.pageNumber); return page != 0 ? page : a.chunkIndex.compareTo(b.chunkIndex); });
+        return _buildResult(front.take(4).map((chunk) => BM25Result(chunk: chunk, score: 0)).toList());
+      }
       if (isOverviewQuery(query)) return buildOverview(index);
 
       // Search using BM25
@@ -165,7 +169,7 @@ class RagService {
       'summarize this document',
       'summarise this document',
       'summarize the key points',
-      'what are the key points',
+      'what are the key points', 'key definitions', 'document overview',
       'list the main arguments',
       'what are the main arguments',
       'explain the conclusions',

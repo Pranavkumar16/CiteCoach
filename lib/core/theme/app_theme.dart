@@ -13,7 +13,7 @@ abstract final class AppTheme {
     final colorScheme = ColorScheme(
       brightness: brightness,
       primary: ext.accentSolid,
-      onPrimary: ext.isDark ? const Color(0xFF271B21) : Colors.white,
+      onPrimary: ext.isDark ? const Color(0xFF182638) : Colors.white,
       secondary: ext.accentEnd,
       onSecondary: Colors.white,
       surface: ext.surface,

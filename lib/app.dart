@@ -38,10 +38,7 @@ class CiteCoachApp extends ConsumerWidget {
             ),
     );
 
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    SystemChrome.setPreferredOrientations([]);
 
     return MaterialApp.router(
       title: AppStrings.appName,

@@ -129,7 +129,7 @@ class MessageBubble extends ConsumerWidget {
     final bgColor = _bgColor(theme, isUser: isUser, style: style);
     final borderColor = _borderColor(theme, isUser: isUser, style: style);
     final textColor = isUser && style == ChatStyle.modern
-        ? (theme.isDark ? const Color(0xFF271B21) : const Color(0xFFFBF8F1))
+        ? (theme.isDark ? const Color(0xFF182638) : const Color(0xFFF4F7FB))
         : theme.textPrimary;
 
     return Container(
@@ -278,8 +278,8 @@ class MessageBubble extends ConsumerWidget {
         return theme.surfaceElevated;
       }
       return theme.isDark
-          ? const Color(0xFFE3F39B)
-          : const Color(0xFF3B2932); // // only used if gradient disabled
+          ? const Color(0xFFB8E9E5)
+          : const Color(0xFF173647); // // only used if gradient disabled
     }
     return theme.surfaceElevated.withOpacity(0.94);
   }

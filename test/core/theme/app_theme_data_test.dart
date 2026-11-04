@@ -8,19 +8,19 @@ void main() {
     test('midnight theme uses the approved brand palette', () {
       final theme = AppThemeData.midnight();
 
-      expect(theme.background, const Color(0xFF1A1117));
-      expect(theme.surface, const Color(0xFF271B21));
-      expect(theme.accentSolid, const Color(0xFFD9EF57));
-      expect(theme.citation, const Color(0xFFD85B43));
-      expect(theme.textPrimary, const Color(0xFFF1E9D8));
+      expect(theme.background, const Color(0xFF101B2A));
+      expect(theme.surface, const Color(0xFF182638));
+      expect(theme.accentSolid, const Color(0xFF83D6CE));
+      expect(theme.citation, const Color(0xFFEA7180));
+      expect(theme.textPrimary, const Color(0xFFE9F0F7));
       expect(theme.isDark, isTrue);
     });
 
     test('daylight theme keeps warm paper and readable ink', () {
       final theme = AppThemeData.daylight();
 
-      expect(theme.background, const Color(0xFFF1E9D8));
-      expect(theme.textPrimary, const Color(0xFF271B21));
+      expect(theme.background, const Color(0xFFE9F0F7));
+      expect(theme.textPrimary, const Color(0xFF182638));
       expect(theme.isDark, isFalse);
     });
 
@@ -28,8 +28,8 @@ void main() {
       final theme = AppThemeData.amoled();
 
       expect(theme.background, Colors.black);
-      expect(theme.accentSolid, const Color(0xFFD9EF57));
-      expect(theme.citation, const Color(0xFFD85B43));
+      expect(theme.accentSolid, const Color(0xFF83D6CE));
+      expect(theme.citation, const Color(0xFFEA7180));
       expect(theme.isDark, isTrue);
     });
   });

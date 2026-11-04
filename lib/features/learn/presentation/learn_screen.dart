@@ -76,7 +76,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
   @override
   Widget build(BuildContext context) {
     final docs = ref.watch(libraryProvider).readyDocuments;
-    final selected = docs.any((d) => d.id == _documentId) ? _documentId : null;
+    final selected = docs.any((d) => d.id == _documentId) ? _documentId : (docs.length == 1 ? docs.first.id : null);
     return Scaffold(
       appBar: AppBar(title: const Text('Learn from evidence')),
       body: ListView(
@@ -85,7 +85,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
           Text('Make knowledge stick',
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
-          const Text('Generate cited flashcards using your offline AI model. Your remembered cards are saved on this device.'),
+          const Text('Create study cards locally from your PDF. If AI formatting fails, source recall cards show the original cited passage. No internet is needed after offline AI setup.'),
           const SizedBox(height: 20),
           if (docs.isEmpty)
             FilledButton(
@@ -113,14 +113,14 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
               maxLength: 150,
               decoration: const InputDecoration(
                 labelText: 'Study topic',
-                hintText: 'e.g. key definitions',
+                hintText: 'Leave blank for a document overview',
                 border: OutlineInputBorder(),
               ),
             ),
             FilledButton.icon(
               onPressed: selected == null ? null : () {
                 final topic = _topic.text.trim();
-                if (topic.isNotEmpty) _start(selected, topic);
+                _start(selected, topic.isEmpty ? 'Summarize this document' : topic);
               },
               icon: const Icon(Icons.auto_stories),
               label: const Text('Generate flashcards'),
@@ -132,8 +132,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
               else
                 ref.watch(generateStudyCardsProvider(_request!)).when(
                   loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, stack) => const Text(
-                      'Could not generate cards. Check the local AI model.'),
+                  error: (error, stack) => Column(children: [Text(error.toString().replaceFirst('Bad state: ', '')), TextButton(onPressed: () => ref.invalidate(generateStudyCardsProvider(_request!)), child: const Text('Try again'))]),
                   data: (cards) => cards.isEmpty
                       ? const Text('No valid cited cards generated. Try another topic.')
                       : Column(
@@ -151,6 +150,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      if (cards[i].isSourceRecall) const Text('SOURCE RECALL · Original PDF excerpt'),
                                       Text(cards[i].question,
                                           style: const TextStyle(fontWeight: FontWeight.bold)),
                                       const SizedBox(height: 10),

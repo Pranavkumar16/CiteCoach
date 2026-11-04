@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme_data.dart';
+import '../../../core/widgets/glass_surface.dart';
 import '../../../routing/app_router.dart';
 import '../../library/providers/library_provider.dart';
 import '../domain/evidence_assessment.dart';
@@ -22,10 +23,45 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
   final _controller = TextEditingController();
   int? _documentId;
   String? _submittedClaim;
-  bool _useAi = true;
+  bool _useAi = false;
+  String? _validation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_edited);
+  }
+  void _edited() => setState(() { _submittedClaim = null; _validation = null; });
+
+  void _ask(int documentId) {
+    context.push(Uri(path: AppRoutes.documentChat(documentId.toString()),
+      queryParameters: {'question': _controller.text.trim()}).toString());
+  }
+
+  void _inspect() {
+    final claim = _controller.text.trim();
+    if (looksLikeEvidenceQuestion(claim)) {
+      setState(() => _validation = 'This looks like a question. Ask your PDF for an explanation, or enter a statement to check.');
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() { _submittedClaim = claim; _validation = null; });
+  }
+
+  Widget _retry(int documentId) => Column(children: [
+    const Text('Couldn’t complete the check. Try again or search passages without AI.'),
+    TextButton.icon(onPressed: () {
+      if (_useAi) {
+        ref.invalidate(verifyAnswerProvider((documentId: documentId, answer: _submittedClaim!)));
+      } else {
+        ref.invalidate(verifyClaimProvider((documentId: documentId, claim: _submittedClaim!)));
+      }
+    }, icon: const Icon(Icons.refresh), label: const Text('Try again')),
+  ]);
 
   @override
   void dispose() {
+    _controller.removeListener(_edited);
     _controller.dispose();
     super.dispose();
   }
@@ -36,22 +72,31 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
         AppThemeData.midnight();
     final documents = ref.watch(libraryProvider).readyDocuments;
     final selected = documents.any((document) => document.id == _documentId)
-        ? _documentId : null;
+        ? _documentId : (documents.length == 1 ? documents.first.id : null);
 
     return Scaffold(
       backgroundColor: theme.background,
-      appBar: AppBar(title: const Text('Challenge My Answer')),
-      body: ListView(
+      appBar: AppBar(title: const Text('Check a claim')),
+      body: GlassBackdrop(child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text('Inspect the evidence',
+          Text('Find source passages for a claim',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: theme.textPrimary, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
-            'Check up to six statements against your document using the offline AI model. Results are AI assessments, not guaranteed facts.',
+            'Paste a statement or an answer to compare it with your PDF. Checks can be mistaken—open the cited pages to review the evidence.',
             style: TextStyle(color: theme.textSecondary),
           ),
+          const SizedBox(height: 16),
+          GlassSurface(blur: false, padding: const EdgeInsets.all(16), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Want to ask a question instead?', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              const Text('“What is machine learning?” belongs in document chat.'),
+              TextButton.icon(onPressed: selected == null ? null : () => _ask(selected),
+                icon: const Icon(Icons.chat_bubble_outline), label: const Text('Ask your PDF')),
+          ])),
           const SizedBox(height: 24),
           if (documents.isEmpty) ...[
             const Text('Import and process a PDF before checking a claim.'),
@@ -84,15 +129,16 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
               maxLines: 4,
               maxLength: 1500,
               decoration: const InputDecoration(
-                labelText: 'Answer or claims to challenge',
-                hintText: 'Paste a sentence from an answer...',
+                labelText: 'Statement to check',
+                helperText: 'Use a claim, not a question.',
+                hintText: 'Example: Machine learning learns patterns from data.',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(),
               ),
             ),
             SwitchListTile.adaptive(
-              title: const Text('AI evidence assessment'),
-              subtitle: const Text('Off: lexical passage screening only'),
+              title: const Text('Use CiteCoach AI'),
+              subtitle: const Text('Turn off to find matching passages without an AI assessment.'),
               value: _useAi,
               onChanged: (value) => setState(() {
                 _useAi = value;
@@ -101,14 +147,15 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
             ),
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: selected == null ? null : () {
-                final claim = _controller.text.trim();
-                if (claim.isEmpty) return;
-                setState(() => _submittedClaim = claim);
-              },
+              onPressed: selected == null || _controller.text.trim().isEmpty ? null : _inspect,
               icon: const Icon(Icons.fact_check_outlined),
-              label: const Text('Inspect evidence'),
+              label: const Text('Check this statement'),
             ),
+            if (_validation != null) ...[
+              const SizedBox(height: 12),
+              Text(_validation!, style: TextStyle(color: theme.textPrimary)),
+              TextButton(onPressed: selected == null ? null : () => _ask(selected), child: const Text('Ask this question in chat')),
+            ],
             if (_submittedClaim != null && selected != null) ...[
               const SizedBox(height: 24),
               (_useAi
@@ -117,8 +164,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                       answer: _submittedClaim!,
                     ))).when(
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (error, stack) => Text('AI assessment failed. Please retry.',
-                          style: TextStyle(color: theme.error)),
+                      error: (error, stack) => _retry(selected),
                       data: (results) => Column(
                         children: [
                           for (final result in results)
@@ -131,10 +177,7 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
                 claim: _submittedClaim!,
               ))).when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Text(
-                  'Evidence inspection failed. Please try again.',
-                  style: TextStyle(color: theme.error),
-                ),
+                error: (error, stack) => _retry(selected),
                 data: (assessment) => _AssessmentView(
                   assessment: assessment,
                   documentId: selected,
@@ -143,9 +186,14 @@ class _VerifyScreenState extends ConsumerState<VerifyScreen> {
             ],
           ],
         ],
-      ),
+      )),
     );
   }
+}
+
+bool looksLikeEvidenceQuestion(String text) {
+  final value = text.trim().toLowerCase();
+  return value.endsWith('?') || RegExp(r'^(what is|what are|why does|how does|how do|can you|explain what)\b').hasMatch(value);
 }
 
 class _AssessmentView extends StatelessWidget {
