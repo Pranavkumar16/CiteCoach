@@ -20,6 +20,8 @@ class StudyCardParser {
       final page = int.tryParse(match.group(3)!);
       if (question.isEmpty || answer.isEmpty || page == null ||
           !allowedPages.contains(page)) continue;
+      if (RegExp(r'^Recall the source passage on page', caseSensitive: false).hasMatch(question)) continue;
+      if (cards.any((card) => card.question.toLowerCase() == question.toLowerCase())) continue;
       cards.add(StudyCard(question: question, answer: answer, page: page));
       if (cards.length == 5) break;
     }

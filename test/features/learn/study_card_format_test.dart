@@ -6,6 +6,9 @@ void main() {
     expect(cards.length, 1);
     expect(cards.first.page, 2);
   });
+  test('rejects generic page recall prompts', () {
+    expect(const StudyCardParser().parse('Q: Recall the source passage on page 2 | A: Text | PAGE: 2', {2}), isEmpty);
+  });
   test('still rejects invented source pages', () {
     expect(const StudyCardParser().parse('Q: What?|A: Answer|PAGE: 99', {2}), isEmpty);
   });

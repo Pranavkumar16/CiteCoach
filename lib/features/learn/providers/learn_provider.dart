@@ -11,7 +11,7 @@ final studyCardParserProvider = Provider<StudyCardParser>(
 final generateStudyCardsProvider = FutureProvider.autoDispose.family<
     List<StudyCard>, ({int documentId, String topic})>((ref, request) async {
   final prefs = await SharedPreferences.getInstance();
-  final cacheKey = 'learn.cards.v2.${request.documentId}.${Uri.encodeComponent(request.topic.trim().toLowerCase())}';
+  final cacheKey = 'learn.cards.v3.${request.documentId}.${Uri.encodeComponent(request.topic.trim().toLowerCase())}';
   final cached = prefs.getString(cacheKey);
   if (cached != null) {
     try {
@@ -38,19 +38,16 @@ Create two short study flashcards about "${request.topic}" using ONLY the suppli
 Each card must be exactly one line in this format:
 Q: question | A: short answer | PAGE: number
 Use only these page numbers: ${pages.join(', ')}.
+Ask specific questions about concepts in the excerpts, never ask the learner to recall a page.
+Answers must be supported by the cited page. Keep each answer under 25 words.
 Do not include headings, markdown or invented facts.
 ''',
     retrievalResult: retrieval,
   );
   var cards = result.isSuccess ? ref.read(studyCardParserProvider).parse(result.response, pages) : <StudyCard>[];
-  // A clearly labelled extractive fallback, never invented Q&A or fake citations.
   if (cards.isEmpty) {
-    final seenPages = <int>{};
-    cards = retrieval.citations.where((c) => c.text.trim().isNotEmpty && seenPages.add(c.pageNumber)).take(5)
-      .map((c) => StudyCard(question: 'Recall the source passage on page ${c.pageNumber}',
-        answer: c.text, page: c.pageNumber, isSourceRecall: true)).toList();
+    throw StateError('Could not create questions from these excerpts. Try a more specific topic or check that offline AI is ready.');
   }
-  if (cards.isEmpty) throw StateError(result.error ?? 'No usable source passages were found in the PDF.');
   if (cards.isNotEmpty) {
     await prefs.setString(cacheKey, jsonEncode(cards.map((card) => {
       'question': card.question, 'answer': card.answer, 'page': card.page, 'sourceRecall': card.isSourceRecall,
