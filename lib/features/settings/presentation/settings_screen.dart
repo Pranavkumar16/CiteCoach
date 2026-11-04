@@ -117,12 +117,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(height: 1),
 
           // ========== AI MODEL ==========
-          _buildSectionHeader('AI Model'),
+          _buildSectionHeader('CiteCoach AI'),
           _buildTile(
             icon: Icons.smart_toy_outlined,
-            title: 'Model Status',
+            title: 'Offline AI',
             subtitle: setupState.isModelDownloaded
-                ? 'Qwen 2.5 — Ready'
+                ? 'Downloaded'
                 : 'Not downloaded',
             trailing: setupState.isModelDownloaded
                 ? Icon(Icons.check_circle,
@@ -138,10 +138,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           _buildTile(
             icon: Icons.storage_outlined,
-            title: 'Model Storage',
+            title: 'AI storage',
             subtitle: _modelSizeBytes > 0
                 ? '${(_modelSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB'
-                : 'No models downloaded',
+                : 'Offline AI not downloaded',
           ),
 
           const Divider(height: 1),
@@ -417,14 +417,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SizedBox(height: 4),
               Text('• No documents are uploaded to any server'),
               SizedBox(height: 4),
-              Text('• No internet required after model download'),
+              Text('• No internet required after downloading offline AI'),
               SizedBox(height: 4),
               Text('• No analytics or tracking'),
               SizedBox(height: 4),
               Text('• Your conversations stay on your device'),
               SizedBox(height: 12),
               Text('The only network request CiteCoach makes is the '
-                  'initial one-time AI model download.'),
+                  'initial offline AI download.'),
             ],
           ),
         ),
@@ -445,7 +445,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: const Text('Reset CiteCoach?'),
         content: const Text(
           'This will delete all documents, conversations, cached responses, '
-          'and downloaded models. This cannot be undone.',
+          'and downloaded AI files. This cannot be undone.',
         ),
         actions: [
           TextButton(

@@ -22,12 +22,12 @@ abstract final class AppStrings {
   // Setup Flow - Model Setup Screen
   static const String modelSetupTitle = 'One-Time Setup';
   static const String modelSetupSubtitle = 
-      'Download the AI model to enable intelligent Q&A';
+      'Download offline AI to ask questions about your documents';
   static const String modelSetupDescription =
-      'Download the offline AI engine (~900MB) to enable Q&A. This is a one-time setup.';
-  static const String modelName = 'Qwen 2.5';
+      'Download CiteCoach AI for offline document questions and answers.';
+  static const String modelName = 'CiteCoach AI';
   static const String modelDescription =
-      '1.5B parameter instruct model, optimized for on-device document Q&A';
+      'Offline assistance for understanding your documents';
   static const String modelSize = '900 MB';
   static const String modelNetwork = 'Wi-Fi recommended';
   static const String modelTime = '~3-5 minutes';
@@ -44,7 +44,7 @@ abstract final class AppStrings {
   static const String downloadLater = 'Download Later';
   static const String skipForNowButton = 'Skip for Now';
   static const String downloading = 'Downloading...';
-  static const String downloadingTitle = 'Downloading AI Model';
+  static const String downloadingTitle = 'Downloading offline AI';
   static const String downloadingSubtitle = 
       'This may take a few minutes depending on your connection';
   static const String downloadingDescription = 
@@ -126,7 +126,7 @@ abstract final class AppStrings {
   static const String alwaysActive = 'Always active';
   static const String performance = 'PERFORMANCE';
   static const String lowPowerMode = 'Low-Power Mode';
-  static const String modelInfo = 'Model Info';
+  static const String modelInfo = 'CiteCoach AI';
   static const String voice = 'VOICE';
   static const String speechSpeed = 'Speech Speed';
   static const String normal = 'Normal (1.0x)';
@@ -134,14 +134,14 @@ abstract final class AppStrings {
   // Download Required (when user chose "Download Later")
   static const String downloadRequiredTitle = 'Download Required';
   static const String downloadRequiredDescription =
-      'Download the offline engine (~900MB) to start asking questions and getting evidence-based answers.';
+      'Download CiteCoach AI to start asking questions and getting evidence-based answers.';
   static const String downloadRequiredNote = 
       'You can still import and read PDFs. Chat will unlock after download.';
   static const String backToLibrary = 'Back to Library';
   
   // Errors
   static const String errorGeneric = 'Something went wrong. Please try again.';
-  static const String errorNoInternet = 'No internet connection. Please connect to Wi-Fi to download the model.';
+  static const String errorNoInternet = 'No internet connection. Please connect to Wi-Fi to download offline AI.';
   static const String errorPdfLoad = 'Could not load PDF. The file may be corrupted.';
   static const String errorProcessing = 'Error processing document. Please try again.';
   

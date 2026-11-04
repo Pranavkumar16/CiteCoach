@@ -44,7 +44,7 @@ class DownloadRequiredScreen extends ConsumerWidget {
 
               // Title
               Text(
-                'AI Model Required',
+                'Offline AI required',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -55,7 +55,7 @@ class DownloadRequiredScreen extends ConsumerWidget {
               // Description
               Text(
                 'To chat with your documents, CiteCoach needs to download '
-                'the AI model (1.5 GB). This is a one-time download and '
+                'CiteCoach AI. This is a one-time download and '
                 'all processing will happen offline on your device.',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppColors.textSecondary,
