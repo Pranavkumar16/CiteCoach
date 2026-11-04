@@ -145,7 +145,7 @@ class _DownloadProgressScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              Expanded(child: Text(
                 setupState.isPaused
                     ? AppStrings.downloadPaused
                     : AppStrings.downloadInProgress,
@@ -155,7 +155,8 @@ class _DownloadProgressScreenState
                           ? AppColors.warningOrange
                           : AppColors.textPrimary,
                     ),
-              ),
+              )),
+              const SizedBox(width: 12),
               Text(
                 setupState.downloadProgressPercent,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
