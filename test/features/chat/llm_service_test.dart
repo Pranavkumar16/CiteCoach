@@ -75,6 +75,38 @@ void main() {
     expect(calls, contains('stopGeneration'));
   });
 
+  test('disposing a tool cancels its own task and releases the model', () async {
+    final started = Completer<void>();
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call.method);
+      if (call.method == 'startGeneration' && !started.isCompleted) started.complete();
+      return null;
+    });
+    final cancellation = GenerationCancellation();
+    final pending = llm.generate(
+      query: 'Create cards', retrievalResult: retrieval, cancellation: cancellation);
+    await started.future;
+    cancellation.cancel();
+    expect((await pending).isSuccess, isFalse);
+    final next = await llm.generate(query: 'Next question', retrievalResult: retrieval);
+    expect(next.error, isNot(contains('Another answer')));
+    expect(calls.where((c) => c == 'startGeneration'), hasLength(2));
+  });
+
+  test('cancelled retrieval cannot start a stale inference task', () async {
+    final cancellation = GenerationCancellation()..cancel();
+    final result = await llm.generate(
+      query: 'Stale question', retrievalResult: retrieval, cancellation: cancellation);
+    expect(result.isSuccess, isFalse);
+    expect(calls, isNot(contains('startGeneration')));
+  });
+
+  test('cancelling an unrelated task does not stop the active model', () async {
+    final unrelated = GenerationCancellation()..cancel();
+    expect(unrelated.isCancelled, isTrue);
+    expect(calls, isNot(contains('stopGeneration')));
+  });
+
   test('silent native generation times out and requests stop', () async {
     final pending = llm.generate(
       query: 'Main topic?',

@@ -5,11 +5,14 @@ import '../domain/quiz_question.dart';
 
 final generateQuizProvider = FutureProvider.autoDispose.family<
     List<QuizQuestion>, ({int documentId, String topic})>((ref, request) async {
+  final cancellation = GenerationCancellation();
+  ref.onDispose(cancellation.cancel);
   final evidence = await ref.read(ragServiceProvider)
       .retrieve(request.documentId, request.topic).timeout(
         const Duration(seconds: 20),
         onTimeout: () => throw Exception('PDF search took too long. Please retry.'),
       );
+  if (cancellation.isCancelled) return [];
   if (!evidence.isSuccess || evidence.citations.isEmpty) {
     throw Exception('No matching passages found. Choose a topic covered in this PDF.');
   }
@@ -21,6 +24,7 @@ final generateQuizProvider = FutureProvider.autoDispose.family<
         'One question per line: Q: question | A: option | B: option | C: option | D: option | KEY: letter | PAGE: number. '
         'Keep each option under six words. Use only supplied evidence for the correct answer.',
     retrievalResult: evidence,
+    cancellation: cancellation,
     responseInstructions: 'Create a multiple-choice quiz using ONLY the document excerpts. '
         'Output only the requested Q: | A: | B: | C: | D: | KEY: | PAGE: format. '
         'No headings or prose. Exactly one option must be correct.',

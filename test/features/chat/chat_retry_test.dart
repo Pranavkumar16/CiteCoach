@@ -29,6 +29,7 @@ class FailingLlm extends LlmService {
     List<ChatMessage> conversationHistory = const [],
     StreamCallback? onToken,
     String? responseInstructions,
+    GenerationCancellation? cancellation,
   }) async => GenerationResult.error('Try again');
 }
 

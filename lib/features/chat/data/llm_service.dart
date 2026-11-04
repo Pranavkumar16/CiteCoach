@@ -35,6 +35,18 @@ class GenerationResult {
 
 typedef StreamCallback = void Function(String token);
 
+/// A task can cancel only its own generation, without stopping another tool.
+class GenerationCancellation {
+  bool isCancelled = false;
+  Future<void> Function()? _onCancel;
+
+  void cancel() {
+    isCancelled = true;
+    final handler = _onCancel;
+    if (handler != null) unawaited(handler());
+  }
+}
+
 /// On-device LLM inference via platform channels (llama.cpp).
 ///
 /// Architecture:
@@ -66,6 +78,8 @@ class LlmService {
   StreamSubscription<dynamic>? _streamSubscription;
   Completer<String>? _pendingResponse;
   int _requestId = 0;
+  Future<void>? _stopping;
+  Completer<void>? _generationFinished;
 
   /// Initialize the LLM model via platform channel.
   Future<bool> initialize() async {
@@ -120,7 +134,15 @@ class LlmService {
     List<ChatMessage> conversationHistory = const [],
     StreamCallback? onToken,
     String? responseInstructions,
+    GenerationCancellation? cancellation,
   }) async {
+    await _stopping;
+    if (_pendingResponse?.isCompleted == true) {
+      await _generationFinished?.future;
+    }
+    if (cancellation?.isCancelled == true) {
+      return GenerationResult.error('Answer cancelled.');
+    }
     if (_pendingResponse != null) {
       return GenerationResult.error(
         'Another answer is still running. Please wait.',
@@ -155,14 +177,16 @@ class LlmService {
       }
     }
 
-    if (requestId != _requestId) {
+    if (requestId != _requestId || cancellation?.isCancelled == true) {
       return GenerationResult.error('Answer cancelled.');
     }
     try {
       debugPrint('LlmService: Generating response...');
 
       final completer = Completer<String>();
+      _generationFinished = Completer<void>();
       _pendingResponse = completer;
+      if (cancellation != null) cancellation._onCancel = stopGeneration;
       final responseBuffer = StringBuffer();
 
       // Listen to the EventChannel for streamed tokens
@@ -231,9 +255,7 @@ class LlmService {
         citations: parsed.matchedCitations,
       );
     } on TimeoutException {
-      unawaited(
-        _channel.invokeMethod<void>('stopGeneration').catchError((_) {}),
-      );
+      await stopGeneration();
       return GenerationResult.error(
         'The on-device model took too long. Try a shorter question.',
       );
@@ -254,24 +276,43 @@ class LlmService {
         'CiteCoach AI could not finish this answer. Please try again.',
       );
     } finally {
+      if (cancellation != null) cancellation._onCancel = null;
       await _streamSubscription?.cancel();
       _streamSubscription = null;
       _pendingResponse = null;
+      _generationFinished?.complete();
+      _generationFinished = null;
     }
   }
 
   /// Stop an in-progress generation.
   Future<void> stopGeneration() async {
+    final existing = _stopping;
+    if (existing != null) {
+      await existing;
+      return;
+    }
+    final stopping = _stopNativeGeneration();
+    _stopping = stopping;
+    try {
+      await stopping;
+    } finally {
+      if (identical(_stopping, stopping)) _stopping = null;
+    }
+  }
+
+  Future<void> _stopNativeGeneration() async {
     ++_requestId;
     final pending = _pendingResponse;
-    if (pending != null && !pending.isCompleted) {
-      pending.complete('');
-    }
     try {
       await _channel
           .invokeMethod<void>('stopGeneration')
           .timeout(const Duration(seconds: 2));
-    } catch (_) {}
+    } catch (_) {
+      // Always settle the caller, including if the platform channel is silent.
+    } finally {
+      if (pending != null && !pending.isCompleted) pending.complete('');
+    }
   }
 
   /// Build a citation-grounded prompt for the on-device LLM.

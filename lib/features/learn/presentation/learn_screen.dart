@@ -187,6 +187,11 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                         label: Text(_quiz ? 'Generate quiz' : 'Generate flashcards'),
                       ),
                       if (disabledReason != null) Text(disabledReason, style: TextStyle(color: theme.textSecondary)),
+                      if (busy) TextButton.icon(
+                        onPressed: () => setState(() { _request = null; _progressLoading = false; }),
+                        icon: const Icon(Icons.stop_circle_outlined),
+                        label: const Text('Stop generation'),
+                      ),
                     ],
                   ),
                 ),
