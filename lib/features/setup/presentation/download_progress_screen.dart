@@ -28,7 +28,13 @@ class _DownloadProgressScreenState
     });
   }
 
+  void _backToSetup() {
+    ref.read(setupProvider.notifier).goBackToModelSetup();
+    context.go('/setup/model');
+  }
+
   void _checkSetupState() {
+    if (!mounted) return;
     final setupState = ref.read(setupProvider);
     if (setupState.currentStep == SetupStep.complete) {
       context.go('/setup/complete');
@@ -46,7 +52,18 @@ class _DownloadProgressScreenState
       }
     });
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _backToSetup();
+      },
+      child: Scaffold(
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimensions.spacingXl),
+          child: _buildControls(context, ref, setupState),
+        ),
+      ),
       body: Container(
         decoration: const BoxDecoration(
           color: AppColors.background,
@@ -54,24 +71,21 @@ class _DownloadProgressScreenState
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(AppDimensions.spacingXl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: ListView(
               children: [
                 _buildBackButton(context, ref),
-                const Spacer(),
                 _buildHeader(context),
                 const SizedBox(height: AppDimensions.spacing3xl),
                 _buildProgressSection(context, setupState),
                 const SizedBox(height: AppDimensions.spacingXl),
                 if (setupState.hasError) _buildErrorSection(context, ref),
                 _buildStatusInfo(context, setupState),
-                const Spacer(),
-                _buildControls(context, ref, setupState),
                 const SizedBox(height: AppDimensions.spacingMd),
               ],
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -80,10 +94,8 @@ class _DownloadProgressScreenState
     return Align(
       alignment: Alignment.centerLeft,
       child: IconButton(
-        onPressed: () {
-          ref.read(setupProvider.notifier).goBackToModelSetup();
-          context.go('/setup/model');
-        },
+        tooltip: 'Back to AI setup',
+        onPressed: _backToSetup,
         icon: const Icon(Icons.arrow_back_ios_new_rounded),
         style: IconButton.styleFrom(
           foregroundColor: AppColors.textSecondary,
@@ -273,25 +285,30 @@ class _DownloadProgressScreenState
       );
     }
 
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (setupState.isDownloading)
-          Expanded(
-            child: SecondaryButton(
-              text: AppStrings.pauseButton,
-              icon: Icons.pause_rounded,
-              onPressed: () => ref.read(setupProvider.notifier).pauseDownload(),
-            ),
+          SecondaryButton(
+            text: AppStrings.pauseButton,
+            icon: Icons.pause_rounded,
+            onPressed: () => ref.read(setupProvider.notifier).pauseDownload(),
           )
         else if (setupState.isPaused)
-          Expanded(
-            child: GradientButton(
-              text: AppStrings.resumeButton,
-              icon: Icons.play_arrow_rounded,
-              onPressed: () =>
-                  ref.read(setupProvider.notifier).resumeDownload(),
-            ),
+          GradientButton(
+            text: AppStrings.resumeButton,
+            icon: Icons.play_arrow_rounded,
+            onPressed: () => ref.read(setupProvider.notifier).resumeDownload(),
           ),
+        const SizedBox(height: AppDimensions.spacingMd),
+        SecondaryButton(
+          text: AppStrings.skipForNowButton,
+          onPressed: () async {
+            await ref.read(setupProvider.notifier).skipDownload();
+            if (context.mounted) context.go('/library');
+          },
+        ),
       ],
     );
   }

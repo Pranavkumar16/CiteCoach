@@ -80,3 +80,9 @@ no pull request was opened.
 - Physical OnePlus/TalkBack pass remains open. Widget rendering is not device
   performance verification.
 - 200% Home layout beyond the tool forms still needs a dedicated accessibility pass.
+
+## Download navigation follow-up
+- Intercepts Android Back on the root download route and returns to AI setup, sharing the toolbar action.
+- Adds Skip for now during active/paused downloads in a fixed SafeArea footer; progress content scrolls on small screens.
+- Adds regression tests for system/toolbar Back and active-download Skip. CI validation pending.
+- True byte-range resume and stalled-connection recovery remain open; this patch does not claim to fix download transport.
