@@ -10,8 +10,8 @@ void main() {
 
       expect(theme.background, const Color(0xFF1A1117));
       expect(theme.surface, const Color(0xFF271B21));
-      expect(theme.accentSolid, const Color(0xFFD9EF57));
-      expect(theme.citation, const Color(0xFFD85B43));
+      expect(theme.accentSolid, const Color(0xFFF5B544));
+      expect(theme.citation, const Color(0xFFEF6F4E));
       expect(theme.textPrimary, const Color(0xFFF1E9D8));
       expect(theme.isDark, isTrue);
     });
@@ -21,6 +21,7 @@ void main() {
 
       expect(theme.background, const Color(0xFFF1E9D8));
       expect(theme.textPrimary, const Color(0xFF271B21));
+      expect(theme.accentSolid, const Color(0xFF8F5410));
       expect(theme.isDark, isFalse);
     });
 
@@ -28,8 +29,8 @@ void main() {
       final theme = AppThemeData.amoled();
 
       expect(theme.background, Colors.black);
-      expect(theme.accentSolid, const Color(0xFFD9EF57));
-      expect(theme.citation, const Color(0xFFD85B43));
+      expect(theme.accentSolid, const Color(0xFFF5B544));
+      expect(theme.citation, const Color(0xFFEF6F4E));
       expect(theme.isDark, isTrue);
     });
   });

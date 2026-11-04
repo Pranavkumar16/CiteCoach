@@ -194,7 +194,7 @@ class AppThemeData extends ThemeExtension<AppThemeData> {
 
   // ==================== FACTORY CONSTRUCTORS ====================
 
-  /// Premium dark theme using the CiteCoach Ink & Signal palette.
+  /// Premium dark theme: plum ink with a warm amber-to-coral accent.
   factory AppThemeData.midnight() {
     return const AppThemeData(
       variant: ThemeVariant.midnight,
@@ -207,10 +207,10 @@ class AppThemeData extends ThemeExtension<AppThemeData> {
       textTertiary: Color(0xFFB7A99A),
       border: Color(0xFF493840),
       borderStrong: Color(0xFF66545A),
-      accentStart: Color(0xFFD9EF57),
-      accentEnd: Color(0xFFD85B43),
-      accentSolid: Color(0xFFD9EF57),
-      citation: Color(0xFFD85B43),
+      accentStart: Color(0xFFF5B544),
+      accentEnd: Color(0xFFEF6F4E),
+      accentSolid: Color(0xFFF5B544),
+      citation: Color(0xFFEF6F4E),
       success: Color(0xFFB4CF45),
       warning: Color(0xFFD9A441),
       error: Color(0xFFD85B43),
@@ -224,7 +224,7 @@ class AppThemeData extends ThemeExtension<AppThemeData> {
     );
   }
 
-  /// Warm daylight theme with ink typography and an accessible olive accent.
+  /// Warm daylight theme with ink typography and an accessible amber accent.
   factory AppThemeData.daylight() {
     return const AppThemeData(
       variant: ThemeVariant.daylight,
@@ -234,14 +234,14 @@ class AppThemeData extends ThemeExtension<AppThemeData> {
       surfaceElevated: Color(0xFFFFFFFF),
       textPrimary: Color(0xFF271B21),
       textSecondary: Color(0xFF66545A),
-      textTertiary: Color(0xFF928477),
+      textTertiary: Color(0xFF72645A),
       border: Color(0xFFE5DACC),
       borderStrong: Color(0xFFB7A99A),
-      accentStart: Color(0xFF71851F),
+      accentStart: Color(0xFF8F5410),
       accentEnd: Color(0xFFB94D38),
-      accentSolid: Color(0xFF71851F),
+      accentSolid: Color(0xFF8F5410),
       citation: Color(0xFFB94D38),
-      success: Color(0xFF667A19),
+      success: Color(0xFF5E7016),
       warning: Color(0xFF986A20),
       error: Color(0xFFB74733),
       userMessageBg: Color(0xFF493840),
@@ -267,10 +267,10 @@ class AppThemeData extends ThemeExtension<AppThemeData> {
       textTertiary: Color(0xFF928477),
       border: Color(0xFF35262E),
       borderStrong: Color(0xFF493840),
-      accentStart: Color(0xFFD9EF57),
-      accentEnd: Color(0xFFD85B43),
-      accentSolid: Color(0xFFD9EF57),
-      citation: Color(0xFFD85B43),
+      accentStart: Color(0xFFF5B544),
+      accentEnd: Color(0xFFEF6F4E),
+      accentSolid: Color(0xFFF5B544),
+      citation: Color(0xFFEF6F4E),
       success: Color(0xFFB4CF45),
       warning: Color(0xFFD9A441),
       error: Color(0xFFD85B43),

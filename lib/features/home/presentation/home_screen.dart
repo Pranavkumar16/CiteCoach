@@ -254,7 +254,7 @@ class _RecentCard extends StatelessWidget {
     final (label, colour) = document.isReady
         ? ('Ready', theme.success)
         : document.isProcessing
-            ? ('Processing', theme.warning)
+            ? ('Processing', theme.textSecondary)
             : document.hasError
                 ? ('Needs attention', theme.error)
                 : ('Queued', theme.textTertiary);

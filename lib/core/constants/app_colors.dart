@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 /// CiteCoach Ink & Signal brand palette.
-/// Oxblood ink, warm parchment, acid citron and signal vermilion.
+/// Oxblood ink, warm parchment, warm amber and signal coral.
 abstract final class AppColors {
   // Primary Accent — Acid Citron
-  static const Color accent = Color(0xFFD9EF57); // Signature citron
-  static const Color accentLight = Color(0xFFE8F6A0); // Soft citron
-  static const Color accentDark = Color(0xFFA6BC32); // Deep citron
+  static const Color accent = Color(0xFFF5B544); // Signature amber
+  static const Color accentLight = Color(0xFFFAD58A); // Soft amber
+  static const Color accentDark = Color(0xFFC98A22); // Deep amber
 
   // Secondary accent — Signal Vermilion
   static const Color accentCyan = Color(0xFFD85B43); // Signal vermilion
@@ -85,7 +85,7 @@ abstract final class AppColors {
   static const Color textPrimary = Color(0xFFF1E9D8); // zinc100
   static const Color textSecondary = Color(0xFFB7A99A); // zinc400
   static const Color textTertiary = Color(0xFF928477); // zinc500
-  static const Color textOnPrimary = Color(0xFF271B21); // oxblood text on citron
+  static const Color textOnPrimary = Color(0xFF271B21); // oxblood text on amber
 
   // Alias for backward compat
   static const Color primaryIndigo = accent;
@@ -113,7 +113,7 @@ abstract final class AppColors {
   static const Color micInactive = zinc500;
 
   // Shadow colors
-  static const Color shadowPrimary = Color(0x33D9EF57); // 20% citron
+  static const Color shadowPrimary = Color(0x33F5B544); // 20% amber
   static const Color shadowDark = Color(0x33000000); // 20% black
 
   // Accent variations for UI elements
@@ -123,5 +123,5 @@ abstract final class AppColors {
   static const Color indigo600 = Color(0xFFA6BC32);
 
   // Highlight color for citations in PDF
-  static const Color highlightYellow = Color(0x66D9EF57);
+  static const Color highlightYellow = Color(0x66F5B544);
 }
