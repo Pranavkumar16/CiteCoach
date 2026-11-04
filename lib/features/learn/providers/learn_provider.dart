@@ -11,7 +11,7 @@ final studyCardParserProvider = Provider<StudyCardParser>(
 final generateStudyCardsProvider = FutureProvider.autoDispose.family<
     List<StudyCard>, ({int documentId, String topic})>((ref, request) async {
   final prefs = await SharedPreferences.getInstance();
-  final cacheKey = 'learn.cards.v1.${request.documentId}.${Uri.encodeComponent(request.topic.trim().toLowerCase())}';
+  final cacheKey = 'learn.cards.v3.${request.documentId}.${Uri.encodeComponent(request.topic.trim().toLowerCase())}';
   final cached = prefs.getString(cacheKey);
   if (cached != null) {
     try {
@@ -19,7 +19,7 @@ final generateStudyCardsProvider = FutureProvider.autoDispose.family<
       final cards = decoded.map((item) {
         final row = item as Map<String, dynamic>;
         return StudyCard(question: row['question'] as String,
-            answer: row['answer'] as String, page: row['page'] as int);
+            answer: row['answer'] as String, page: row['page'] as int, isSourceRecall: row['sourceRecall'] == true);
       }).toList();
       if (cards.isNotEmpty) return cards;
     } catch (_) {
@@ -28,23 +28,29 @@ final generateStudyCardsProvider = FutureProvider.autoDispose.family<
   }
   final retrieval = await ref.read(ragServiceProvider)
       .retrieve(request.documentId, request.topic);
-  if (!retrieval.isSuccess || retrieval.citations.isEmpty) return [];
+  if (!retrieval.isSuccess || retrieval.citations.isEmpty) {
+    throw StateError('No matching PDF text was found. Try a topic present in the document, or use Document overview.');
+  }
   final pages = retrieval.citations.map((c) => c.pageNumber).toSet();
   final result = await ref.read(llmServiceProvider).generate(
     query: '''
-Create up to five study flashcards about "${request.topic}" using ONLY the supplied excerpts.
+Create two short study flashcards about "${request.topic}" using ONLY the supplied excerpts.
 Each card must be exactly one line in this format:
 Q: question | A: short answer | PAGE: number
 Use only these page numbers: ${pages.join(', ')}.
+Ask specific questions about concepts in the excerpts, never ask the learner to recall a page.
+Answers must be supported by the cited page. Keep each answer under 25 words.
 Do not include headings, markdown or invented facts.
 ''',
     retrievalResult: retrieval,
   );
-  if (!result.isSuccess) return [];
-  final cards = ref.read(studyCardParserProvider).parse(result.response, pages);
+  var cards = result.isSuccess ? ref.read(studyCardParserProvider).parse(result.response, pages) : <StudyCard>[];
+  if (cards.isEmpty) {
+    throw StateError('Could not create questions from these excerpts. Try a more specific topic or check that offline AI is ready.');
+  }
   if (cards.isNotEmpty) {
     await prefs.setString(cacheKey, jsonEncode(cards.map((card) => {
-      'question': card.question, 'answer': card.answer, 'page': card.page,
+      'question': card.question, 'answer': card.answer, 'page': card.page, 'sourceRecall': card.isSourceRecall,
     }).toList()));
   }
   return cards;

@@ -150,8 +150,8 @@ void main() {
         final text = tester.widget<Text>(find.text('My question'));
         final foreground = text.style!.color!;
         final background = dark
-            ? const Color(0xFFE3F39B)
-            : const Color(0xFF3B2932);
+            ? const Color(0xFFB8E9E5)
+            : const Color(0xFF173647);
         final a = foreground.computeLuminance();
         final b = background.computeLuminance();
         final contrast = ((a > b ? a : b) + 0.05) / ((a > b ? b : a) + 0.05);

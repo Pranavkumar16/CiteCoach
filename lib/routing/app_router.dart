@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants/constants.dart';
+import '../core/theme/theme_provider.dart';
+import '../features/setup/presentation/introduction_screen.dart';
+import '../features/quiz/presentation/quiz_screen.dart';
 import '../core/widgets/glass_surface.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/compare/presentation/compare_screen.dart';
@@ -39,6 +42,7 @@ abstract final class AppRoutes {
   static const String verify = '/verify';
   static const String compare = '/compare';
   static const String learn = '/learn';
+  static const String quiz = '/quiz';
   static const String library = '/library';
   static const String settings = '/settings';
   static const String modelInfo = '/settings/model-info';
@@ -100,7 +104,7 @@ GoRouter createRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.splash,
         name: 'splash',
-        builder: (context, state) => const SplashScreen(),
+        builder: (context, state) => ref.read(sharedPreferencesProvider).getBool(introductionSeenKey) == true ? const SplashScreen() : const IntroductionScreen(),
       ),
       GoRoute(
         path: AppRoutes.privacy,
@@ -134,6 +138,7 @@ GoRouter createRouter(Ref ref) {
             name: 'home',
             builder: (context, state) => const HomeScreen(),
           ),
+          GoRoute(path: AppRoutes.quiz, name: 'quiz', builder: (context, state) => const QuizScreen()),
           GoRoute(
             path: AppRoutes.learn,
             name: 'learn',
@@ -206,7 +211,7 @@ GoRouter createRouter(Ref ref) {
           if (!setupState.isModelDownloaded) {
             return const DownloadRequiredScreen();
           }
-          return ChatScreen(documentId: documentId);
+          return ChatScreen(documentId: documentId, initialQuestion: state.uri.queryParameters['question']);
         },
       ),
 
