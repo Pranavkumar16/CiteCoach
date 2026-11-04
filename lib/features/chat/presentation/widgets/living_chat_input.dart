@@ -123,7 +123,7 @@ class _LivingChatInputState extends State<LivingChatInput> {
                       key: const ValueKey('chat-composer'),
                       controller: _controller,
                       focusNode: _focusNode,
-                      enabled: !widget.isDisabled,
+                      enabled: true,
                       minLines: 1,
                       maxLines: 4,
                       textCapitalization: TextCapitalization.sentences,
@@ -136,7 +136,7 @@ class _LivingChatInputState extends State<LivingChatInput> {
                       ),
                       decoration: InputDecoration(
                         hintText: widget.isDisabled
-                            ? 'Answer in progress…'
+                            ? 'Type your next question…'
                             : widget.placeholder,
                         hintStyle: TextStyle(
                           color: theme.textSecondary,

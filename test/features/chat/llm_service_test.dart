@@ -39,8 +39,10 @@ void main() {
 
   test('Qwen3 prompt disables thinking and retains grounded evidence', () {
     final prompt = llm.buildGroundedPrompt(
-      query: 'Main topic?', context: retrieval.context,
-      citations: [], history: [],
+      query: 'Main topic?',
+      context: retrieval.context,
+      citations: [],
+      history: [],
     );
     expect(prompt, startsWith('<|im_start|>user\n'));
     expect(prompt, endsWith('<|im_start|>assistant\n<think>\n\n</think>\n\n'));
@@ -66,7 +68,10 @@ void main() {
     );
     await started.future.timeout(const Duration(seconds: 2));
     await llm.stopGeneration();
-    expect((await pending.timeout(const Duration(seconds: 3))).isSuccess, isFalse);
+    expect(
+      (await pending.timeout(const Duration(seconds: 3))).isSuccess,
+      isFalse,
+    );
     expect(calls, contains('stopGeneration'));
   });
 
@@ -75,7 +80,10 @@ void main() {
       query: 'Main topic?',
       retrievalResult: retrieval,
     );
-    expect((await pending.timeout(const Duration(seconds: 3))).error, contains('took too long'));
+    expect(
+      (await pending.timeout(const Duration(seconds: 3))).error,
+      contains('took too long'),
+    );
     expect(calls, contains('stopGeneration'));
   });
 
@@ -93,6 +101,9 @@ void main() {
       query: 'Main topic?',
       retrievalResult: retrieval,
     );
-    expect((await pending.timeout(const Duration(seconds: 3))).error, contains('Question exceeds model context'));
+    expect(
+      (await pending.timeout(const Duration(seconds: 3))).error,
+      contains('Try a shorter question'),
+    );
   });
 }

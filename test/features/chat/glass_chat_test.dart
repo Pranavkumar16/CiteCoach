@@ -24,6 +24,9 @@ void main() {
     final font = FontLoader('Lexend')
       ..addFont(rootBundle.load('assets/fonts/Lexend-Regular.ttf'));
     await font.load();
+    final icons = FontLoader('MaterialIcons')
+      ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+    await icons.load();
   });
 
   Widget wrap(
@@ -73,7 +76,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('disabled composer does not submit a suggestion or question', (
+  testWidgets('busy composer accepts a draft without submitting it', (
     tester,
   ) async {
     final sent = <String>[];
@@ -90,7 +93,14 @@ void main() {
       ),
     );
     expect(find.byType(ActionChip), findsNothing);
-    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+    expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+    await tester.enterText(find.byType(TextField), 'My next question');
+    await tester.pump();
+    await tester.tap(find.byTooltip('Send question'));
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'My next question',
+    );
     expect(sent, isEmpty);
   });
 
@@ -161,53 +171,52 @@ void main() {
         wrap(
           RepaintBoundary(
             key: key,
-            child: Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(12, 36, 12, 12),
-                  child: GlassSurface(
-                    padding: EdgeInsets.all(18),
-                    child: Row(
+            child: GlassBackdrop(
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(12, 36, 12, 12),
+                    child: GlassSurface(
+                      padding: EdgeInsets.all(18),
+                      child: Row(
+                        children: [
+                          Icon(Icons.arrow_back_rounded),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Introduction to Machine Learning',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(Icons.menu_book_outlined),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
                       children: [
-                        Icon(Icons.arrow_back_rounded),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Introduction to Machine Learning',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        MessageBubble(
+                          message: ChatMessage.user(
+                            documentId: 1,
+                            content: 'What is the main topic?',
                           ),
                         ),
-                        Icon(Icons.menu_book_outlined),
+                        MessageBubble(
+                          message: ChatMessage.assistant(
+                            documentId: 1,
+                            content:
+                                'The document introduces machine learning: how systems learn patterns from data and apply them to new examples. [Page 1]',
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      MessageBubble(
-                        message: ChatMessage.user(
-                          documentId: 1,
-                          content: 'What is the main topic?',
-                        ),
-                      ),
-                      MessageBubble(
-                        message: ChatMessage.assistant(
-                          documentId: 1,
-                          content:
-                              'The document introduces machine learning: how systems learn patterns from data and apply them to new examples. [Page 1]',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                LivingChatInput(
-                  onSend: (_) {},
-                  suggestions: const ['Summarize', 'Key points', 'Explain'],
-                ),
-              ],
+                  LivingChatInput(onSend: (_) {}, suggestions: const []),
+                ],
+              ),
             ),
           ),
           scale: width == 320 ? 1.6 : 1,

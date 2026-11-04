@@ -9,10 +9,9 @@ import '../domain/chat_message.dart';
 
 /// Provider for the RAG service.
 final ragServiceProvider = Provider<RagService>((ref) {
-  final db = ref.watch(databaseProvider).maybeWhen(
-        data: (db) => db,
-        orElse: () => null,
-      );
+  final db = ref
+      .watch(databaseProvider)
+      .maybeWhen(data: (db) => db, orElse: () => null);
   final bm25Service = ref.watch(bm25ServiceProvider);
   return RagService(db, bm25Service);
 });
@@ -39,19 +38,12 @@ class RetrievalResult {
 
   /// Create an error result.
   factory RetrievalResult.error(String message) {
-    return RetrievalResult(
-      context: '',
-      citations: [],
-      error: message,
-    );
+    return RetrievalResult(context: '', citations: [], error: message);
   }
 
   /// Create an empty result.
   factory RetrievalResult.empty() {
-    return const RetrievalResult(
-      context: '',
-      citations: [],
-    );
+    return const RetrievalResult(context: '', citations: []);
   }
 }
 
@@ -70,7 +62,8 @@ class RagService {
 
   /// Configuration
   static const int topKChunks = 5;
-  static const int maxContextTokens = 400; // ~1600 chars; reserve room for instructions and answer
+  static const int maxContextTokens =
+      400; // ~1600 chars; reserve room for instructions and answer
   static const double minScoreThreshold = 0.1;
 
   /// Cache for BM25 indexes per document.
@@ -84,14 +77,20 @@ class RagService {
 
     try {
       debugPrint(
-          'RagService: Retrieving context for: "${query.substring(0, query.length.clamp(0, 50))}..."');
+        'RagService: Retrieving context for: "${query.substring(0, query.length.clamp(0, 50))}..."',
+      );
 
       // Get or build BM25 index for this document
       final index = await _getOrBuildIndex(documentId);
       if (index == null || index.chunkCount == 0) {
         return RetrievalResult.error(
-            'No indexed content found for this document');
+          'No indexed content found for this document',
+        );
       }
+
+      // Generic overview prompts have no subject keywords to match. Supply
+      // bounded excerpts across the document instead of an empty keyword hit.
+      if (isOverviewQuery(query)) return buildOverview(index);
 
       // Search using BM25
       final results = _bm25Service.search(index, query, topK: topKChunks);
@@ -102,8 +101,9 @@ class RagService {
       }
 
       // Filter by minimum score
-      final filtered =
-          results.where((r) => r.score >= minScoreThreshold).toList();
+      final filtered = results
+          .where((r) => r.score >= minScoreThreshold)
+          .toList();
 
       if (filtered.isEmpty) {
         debugPrint('RagService: All results below score threshold');
@@ -132,19 +132,80 @@ class RagService {
     if (chunks.isEmpty) return null;
 
     final indexableChunks = chunks
-        .map((c) => IndexableChunk(
-              id: c.id ?? 0,
-              text: c.chunkText,
-              pageNumber: c.pageNumber,
-              chunkIndex: c.chunkIndex,
-              startOffset: c.startOffset,
-              endOffset: c.endOffset,
-            ))
+        .map(
+          (c) => IndexableChunk(
+            id: c.id ?? 0,
+            text: c.chunkText,
+            pageNumber: c.pageNumber,
+            chunkIndex: c.chunkIndex,
+            startOffset: c.startOffset,
+            endOffset: c.endOffset,
+          ),
+        )
         .toList();
 
-    final index = _bm25Service.buildIndex(indexableChunks);
+    final index = indexableChunks.length > 128
+        ? await compute(_buildIndexInBackground, indexableChunks)
+        : _bm25Service.buildIndex(indexableChunks);
     _indexCache[documentId] = index;
     return index;
+  }
+
+  @visibleForTesting
+  static bool isOverviewQuery(String query) {
+    final normalized = query
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return const {
+      'what is the main topic',
+      'what is the main topic of this document',
+      'what is this document about',
+      'summarize this document',
+      'summarise this document',
+      'summarize the key points',
+      'what are the key points',
+      'list the main arguments',
+      'what are the main arguments',
+      'explain the conclusions',
+    }.contains(normalized);
+  }
+
+  @visibleForTesting
+  RetrievalResult buildOverview(BM25Index index) {
+    final chunks =
+        index.chunks.values.where((c) => c.text.trim().isNotEmpty).toList()
+          ..sort((a, b) {
+            final page = a.pageNumber.compareTo(b.pageNumber);
+            return page != 0 ? page : a.chunkIndex.compareTo(b.chunkIndex);
+          });
+    if (chunks.isEmpty) return RetrievalResult.empty();
+    final count = chunks.length < topKChunks ? chunks.length : topKChunks;
+    final perExcerpt = maxContextTokens * 4 ~/ count - 24;
+    final excerpts = <String>[];
+    final citations = <Citation>[];
+    for (var i = 0; i < count; i++) {
+      final position = count == 1
+          ? 0
+          : (i * (chunks.length - 1) / (count - 1)).round();
+      final chunk = chunks[position];
+      final text = chunk.text.length > perExcerpt
+          ? chunk.text.substring(0, perExcerpt)
+          : chunk.text;
+      excerpts.add('[Page ${chunk.pageNumber}] $text');
+      citations.add(
+        Citation(
+          pageNumber: chunk.pageNumber,
+          chunkIndex: chunk.chunkIndex,
+          text: _createSnippet(text),
+        ),
+      );
+    }
+    return RetrievalResult(
+      context: excerpts.join('\n\n'),
+      citations: citations,
+    );
   }
 
   /// Invalidate cached index for a document (call after reprocessing).
@@ -169,35 +230,37 @@ class RagService {
         if (remaining > 100) {
           final truncated = chunkText.substring(0, remaining);
           contextParts.add('[Page ${chunk.pageNumber}] $truncated...');
-          citations.add(Citation(
-            pageNumber: chunk.pageNumber,
-            chunkIndex: chunk.chunkIndex,
-            text: _createSnippet(chunkText),
-            relevanceScore: result.score,
-          ));
+          citations.add(
+            Citation(
+              pageNumber: chunk.pageNumber,
+              chunkIndex: chunk.chunkIndex,
+              text: _createSnippet(chunkText),
+              relevanceScore: result.score,
+            ),
+          );
         }
         break;
       }
 
       contextParts.add('[Page ${chunk.pageNumber}] $chunkText');
-      citations.add(Citation(
-        pageNumber: chunk.pageNumber,
-        chunkIndex: chunk.chunkIndex,
-        text: _createSnippet(chunkText),
-        relevanceScore: result.score,
-      ));
+      citations.add(
+        Citation(
+          pageNumber: chunk.pageNumber,
+          chunkIndex: chunk.chunkIndex,
+          text: _createSnippet(chunkText),
+          relevanceScore: result.score,
+        ),
+      );
       totalChars += chunkText.length;
     }
 
     final context = contextParts.join('\n\n');
 
     debugPrint(
-        'RagService: Built context with ${contextParts.length} chunks, ${context.length} chars');
-
-    return RetrievalResult(
-      context: context,
-      citations: citations,
+      'RagService: Built context with ${contextParts.length} chunks, ${context.length} chars',
     );
+
+    return RetrievalResult(context: context, citations: citations);
   }
 
   /// Create a short snippet from chunk text.
@@ -219,3 +282,6 @@ class RagService {
     return '${text.substring(0, maxLength - 3)}...';
   }
 }
+
+BM25Index _buildIndexInBackground(List<IndexableChunk> chunks) =>
+    BM25Service().buildIndex(chunks);

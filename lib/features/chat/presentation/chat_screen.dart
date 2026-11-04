@@ -238,61 +238,64 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         body: GlassBackdrop(
           child: SafeArea(
-            child: Row(
-              children: [
-                // Main chat column
-                Expanded(
-                  child: Column(
-                    children: [
-                      if (chatState.error != null)
-                        _buildErrorBanner(theme, chatState),
-                      Expanded(
-                        child: chatState.isLoading
-                            ? const Center(
-                                child: LoadingIndicator(useGradient: true),
-                              )
-                            : chatState.messages.isEmpty
-                            ? EmptyChatView(
-                                documentTitle: document?.title ?? 'Document',
-                                onSampleQuestion: _handleSend,
-                              )
-                            : _buildMessageList(chatState, document),
-                      ),
-                      if (chatState.isGenerating)
-                        GenerationStatus(
-                          label: chatState.activity,
-                          onStop: () => ref
-                              .read(chatProvider.notifier)
-                              .cancelGeneration(),
+            child: Padding(
+              padding: const EdgeInsets.only(top: kToolbarHeight),
+              child: Row(
+                children: [
+                  // Main chat column
+                  Expanded(
+                    child: Column(
+                      children: [
+                        if (chatState.error != null)
+                          _buildErrorBanner(theme, chatState),
+                        Expanded(
+                          child: chatState.isLoading
+                              ? const Center(
+                                  child: LoadingIndicator(useGradient: true),
+                                )
+                              : chatState.messages.isEmpty
+                              ? EmptyChatView(
+                                  documentTitle: document?.title ?? 'Document',
+                                  onSampleQuestion: _handleSend,
+                                )
+                              : _buildMessageList(chatState, document),
                         ),
-                      LivingChatInput(
-                        onSend: _handleSend,
-                        onVoiceStart: _handleVoiceStart,
-                        suggestions: chatState.messages.isEmpty
-                            ? _suggestedQuestions(document)
-                            : const [],
-                        isDisabled: chatState.isInputDisabled,
+                        if (chatState.isGenerating)
+                          GenerationStatus(
+                            label: chatState.activity,
+                            onStop: () => ref
+                                .read(chatProvider.notifier)
+                                .cancelGeneration(),
+                          ),
+                        LivingChatInput(
+                          onSend: _handleSend,
+                          onVoiceStart: _handleVoiceStart,
+                          suggestions: chatState.messages.isEmpty
+                              ? _suggestedQuestions(document)
+                              : const [],
+                          isDisabled: chatState.isInputDisabled,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Document DNA strip — only if the document has pages and
+                  // there's at least one citation.
+                  if (document != null &&
+                      document.pageCount > 0 &&
+                      citationCounts.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 4,
                       ),
-                    ],
-                  ),
-                ),
-                // Document DNA strip — only if the document has pages and
-                // there's at least one citation.
-                if (document != null &&
-                    document.pageCount > 0 &&
-                    citationCounts.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 4,
+                      child: DocumentDnaStrip(
+                        pageCount: document.pageCount,
+                        citationCounts: citationCounts,
+                        onPageTap: (p) => _handleDnaPageTap(p, document),
+                      ),
                     ),
-                    child: DocumentDnaStrip(
-                      pageCount: document.pageCount,
-                      citationCounts: citationCounts,
-                      onPageTap: (p) => _handleDnaPageTap(p, document),
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

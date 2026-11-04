@@ -3,7 +3,7 @@
 abstract final class AppStrings {
   // App Info
   static const String appName = 'CiteCoach';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.2';
   static const String appTagline = 'Offline document intelligence';
   
   // Setup Flow - Privacy Screen

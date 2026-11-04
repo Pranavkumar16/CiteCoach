@@ -31,19 +31,21 @@ class _VoiceOverlayScreenState extends ConsumerState<VoiceOverlayScreen> {
     super.initState();
     // Start listening immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startListening();
+      if (mounted) _startListening();
     });
   }
 
   void _startListening() {
-    ref.read(voiceProvider.notifier).startListening(
-      onComplete: (text) {
-        widget.onComplete?.call(text);
-        if (mounted) {
-          context.pop(text);
-        }
-      },
-    );
+    ref
+        .read(voiceProvider.notifier)
+        .startListening(
+          onComplete: (text) {
+            widget.onComplete?.call(text);
+            if (mounted) {
+              context.pop(text);
+            }
+          },
+        );
   }
 
   void _toggleListening() {
@@ -122,7 +124,7 @@ class _VoiceOverlayScreenState extends ConsumerState<VoiceOverlayScreen> {
           barCount: 7,
         ),
         SizedBox(height: AppDimensions.spacingXl),
-        
+
         // Status text
         Text(
           _getStatusText(state),
@@ -133,7 +135,7 @@ class _VoiceOverlayScreenState extends ConsumerState<VoiceOverlayScreen> {
           ),
         ),
         SizedBox(height: AppDimensions.spacingLg),
-        
+
         // Transcribed text
         Container(
           constraints: BoxConstraints(
@@ -150,8 +152,8 @@ class _VoiceOverlayScreenState extends ConsumerState<VoiceOverlayScreen> {
               color: Colors.white,
               fontSize: state.displayText.isEmpty ? 16 : 20,
               fontWeight: FontWeight.w500,
-              fontStyle: state.displayText.isEmpty 
-                  ? FontStyle.italic 
+              fontStyle: state.displayText.isEmpty
+                  ? FontStyle.italic
                   : FontStyle.normal,
             ),
           ),
@@ -163,6 +165,20 @@ class _VoiceOverlayScreenState extends ConsumerState<VoiceOverlayScreen> {
   Widget _buildBottomControls(VoiceState state) {
     return Column(
       children: [
+        if (state.error != null)
+          TextButton.icon(
+            onPressed: _cancel,
+            icon: const Icon(Icons.keyboard_outlined),
+            label: const Text('Type instead'),
+          ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Text(
+            'Voice input uses your phone’s speech service and may need internet.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+        ),
         // Main mic button
         VoiceMicButton(
           isListening: state.isListening,
@@ -170,18 +186,17 @@ class _VoiceOverlayScreenState extends ConsumerState<VoiceOverlayScreen> {
           size: 80,
         ),
         SizedBox(height: AppDimensions.spacingLg),
-        
+
         // Helper text
         Text(
           state.isListening
               ? 'Tap to stop'
-              : (state.displayText.isNotEmpty ? 'Tap to retry' : 'Tap to start'),
-          style: const TextStyle(
-            color: Colors.white60,
-            fontSize: 14,
-          ),
+              : (state.displayText.isNotEmpty
+                    ? 'Tap to retry'
+                    : 'Tap to start'),
+          style: const TextStyle(color: Colors.white60, fontSize: 14),
         ),
-        
+
         // Error message
         if (state.hasError) ...[
           SizedBox(height: AppDimensions.spacingMd),
@@ -197,24 +212,19 @@ class _VoiceOverlayScreenState extends ConsumerState<VoiceOverlayScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.white,
-                  size: 18,
-                ),
+                const Icon(Icons.error_outline, color: Colors.white, size: 18),
                 SizedBox(width: AppDimensions.spacingSm),
-                Text(
-                  state.error ?? 'An error occurred',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
+                Flexible(
+                  child: Text(
+                    state.error ?? 'An error occurred',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
                   ),
                 ),
               ],
             ),
           ),
         ],
-        
+
         // Send button when text is available
         if (state.displayText.isNotEmpty && !state.isListening) ...[
           SizedBox(height: AppDimensions.spacingLg),

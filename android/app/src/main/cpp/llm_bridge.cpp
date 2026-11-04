@@ -6,6 +6,7 @@
 #include <android/log.h>
 
 #include "llama.h"
+#include "utf8_stream.h"
 
 #define LOG_TAG "CiteCoachLLM"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -96,7 +97,8 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeCreateContext(
     ctx_params.n_ctx = context_size;
     ctx_params.n_threads = 4;  // Use 4 threads for mobile
     ctx_params.n_threads_batch = 4;
-    ctx_params.n_batch = 256;
+    ctx_params.n_batch = 128;
+    ctx_params.n_ubatch = 32;
 
     llama_context *ctx = llama_init_from_model(model, ctx_params);
     if (ctx == nullptr) {
@@ -150,32 +152,45 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
         return;
     }
 
+    jclass callbackClass = env->GetObjectClass(token_callback);
+    if (callbackClass == nullptr || env->ExceptionCheck()) return;
+    jmethodID invokeMethod = env->GetMethodID(callbackClass, "onToken", "(Ljava/lang/String;)Z");
+    if (invokeMethod == nullptr || env->ExceptionCheck()) {
+        env->DeleteLocalRef(callbackClass);
+        return;
+    }
+    Utf8Stream utf8;
+    const auto emit = [&](const std::u16string &text) {
+        if (text.empty()) return true;
+        jstring token = env->NewString(reinterpret_cast<const jchar *>(text.data()), static_cast<jsize>(text.size()));
+        if (token == nullptr || env->ExceptionCheck()) return false;
+        const bool keepGoing = env->CallBooleanMethod(token_callback, invokeMethod, token);
+        env->DeleteLocalRef(token);
+        return !env->ExceptionCheck() && keepGoing;
+    };
+
     // Clear memory (KV cache)
     llama_memory_clear(llama_get_memory(ctx), true);
 
     // Process prompt in batches
-    llama_batch batch = llama_batch_init(256, 0, 1);
+    llama_batch batch = llama_batch_init(128, 0, 1);
 
     for (int i = 0; i < n_tokens; i++) {
-        if (stop_requested.load()) { llama_batch_free(batch); return; }
+        if (stop_requested.load()) { llama_batch_free(batch); env->DeleteLocalRef(callbackClass); return; }
         batch_add(batch, tokens[i], i, {0}, false);
-        if (batch.n_tokens >= 256 || i == n_tokens - 1) {
+        if (batch.n_tokens >= 128 || i == n_tokens - 1) {
             if (i == n_tokens - 1) {
                 batch.logits[batch.n_tokens - 1] = true;
             }
             if (llama_decode(ctx, batch) != 0) {
                 inference_error(env, "AI could not process document evidence. Try a shorter question.");
                 llama_batch_free(batch);
+                env->DeleteLocalRef(callbackClass);
                 return;
             }
             batch_clear(batch);
         }
     }
-
-    // Get callback method
-    jclass callbackClass = env->GetObjectClass(token_callback);
-    jmethodID invokeMethod = env->GetMethodID(callbackClass, "invoke",
-        "(Ljava/lang/Object;)Ljava/lang/Object;");
 
     // Set up sampler
     auto *smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
@@ -200,33 +215,20 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
         }
 
         // Convert token to text
-        char buf[256];
-        int n = llama_token_to_piece(vocab, new_token, buf, sizeof(buf), 0, true);
+        std::vector<char> piece(256);
+        int n = llama_token_to_piece(vocab, new_token, piece.data(), piece.size(), 0, true);
         if (n < 0) {
-            LOGE("Failed to convert token to text");
+            piece.resize(static_cast<size_t>(-n));
+            n = llama_token_to_piece(vocab, new_token, piece.data(), piece.size(), 0, true);
+        }
+        if (n < 0) {
+            inference_error(env, "AI could not read the response text. Please try again.");
             break;
         }
+        std::string token_text(piece.data(), n);
 
-        std::string token_text(buf, n);
-
-        // Send token to Kotlin callback
-        jstring java_token = env->NewStringUTF(token_text.c_str());
-        jobject result = env->CallObjectMethod(token_callback, invokeMethod, java_token);
-        env->DeleteLocalRef(java_token);
-
-        // Check if callback returned false (stop requested)
-        if (result != nullptr) {
-            jclass boolClass = env->FindClass("java/lang/Boolean");
-            jmethodID boolValue = env->GetMethodID(boolClass, "booleanValue", "()Z");
-            jboolean shouldContinue = env->CallBooleanMethod(result, boolValue);
-            env->DeleteLocalRef(result);
-            env->DeleteLocalRef(boolClass);
-
-            if (!shouldContinue) {
-                LOGI("Generation stopped by callback");
-                break;
-            }
-        }
+        // Preserve partial UTF-8 characters across pieces and send real UTF-16.
+        if (!emit(utf8.append(token_text))) break;
 
         // Prepare next batch
         batch_clear(batch);
@@ -241,6 +243,8 @@ Java_com_citecoach_citecoach_LlmPlugin_nativeGenerate(
         n_generated++;
     }
 
+    if (!env->ExceptionCheck() && !stop_requested.load()) emit(utf8.append({}, true));
+    env->DeleteLocalRef(callbackClass);
     llama_batch_free(batch);
     llama_sampler_free(smpl);
 

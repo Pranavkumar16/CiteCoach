@@ -45,9 +45,8 @@ typedef StreamCallback = void Function(String token);
 /// The service constructs prompts that force the model to ground answers
 /// in provided context with page-level citations.
 class LlmService {
-  LlmService({
-    Duration generationTimeout = const Duration(seconds: 120),
-  }) : _generationTimeout = generationTimeout;
+  LlmService({Duration generationTimeout = const Duration(seconds: 120)})
+    : _generationTimeout = generationTimeout;
 
   final Duration _generationTimeout;
 
@@ -60,6 +59,7 @@ class LlmService {
   static const double temperature = 0.3;
   static const double topP = 0.9;
 
+  String? _initializationError;
   bool _isModelLoaded = false;
   bool get isModelLoaded => _isModelLoaded;
 
@@ -90,6 +90,9 @@ class LlmService {
       return _isModelLoaded;
     } on PlatformException catch (e) {
       debugPrint('LlmService: Platform error: $e');
+      _initializationError = e.code == 'LOW_MEMORY'
+          ? 'Not enough available memory for offline AI. Close other apps and try again.'
+          : 'CiteCoach AI could not start. Try again from Settings.';
       return false;
     } catch (e) {
       debugPrint('LlmService: Init error: $e');
@@ -144,7 +147,8 @@ class LlmService {
       );
       if (!initialized) {
         return GenerationResult.error(
-          'AI model is not available. Please download the model first.',
+          _initializationError ??
+              'Offline AI is not available. Download CiteCoach AI in Settings.',
         );
       }
     }
@@ -212,7 +216,9 @@ class LlmService {
       _streamSubscription = null;
 
       if (responseText.isEmpty) {
-        return GenerationResult.error('Model returned empty response');
+        return GenerationResult.error(
+          'CiteCoach AI returned no answer. Please try again.',
+        );
       }
 
       // Parse citations from response and clean up
@@ -233,12 +239,18 @@ class LlmService {
       debugPrint('LlmService: Generation error: $e');
       await _streamSubscription?.cancel();
       _streamSubscription = null;
-      return GenerationResult.error('Model inference failed: ${e.message}');
+      return GenerationResult.error(
+        e.code == 'CONTEXT'
+            ? 'The question and evidence are too long. Try a shorter question.'
+            : 'CiteCoach AI could not finish this answer. Please try again.',
+      );
     } catch (e) {
       debugPrint('LlmService: Error: $e');
       await _streamSubscription?.cancel();
       _streamSubscription = null;
-      return GenerationResult.error('Failed to generate response: $e');
+      return GenerationResult.error(
+        'CiteCoach AI could not finish this answer. Please try again.',
+      );
     } finally {
       await _streamSubscription?.cancel();
       _streamSubscription = null;
@@ -278,12 +290,14 @@ class LlmService {
       'question, say "I could not find this information in the document."',
     );
     final recentHistory = history.length > 2
-        ? history.sublist(history.length - 2) : history;
+        ? history.sublist(history.length - 2)
+        : history;
     if (recentHistory.isNotEmpty) {
       buffer.writeln('Previous conversation (context only):');
       for (final msg in recentHistory) {
         final text = msg.content.length > 200
-            ? msg.content.substring(0, 200) : msg.content;
+            ? msg.content.substring(0, 200)
+            : msg.content;
         buffer.writeln('${msg.isUser ? "Question" : "Answer"}: $text');
       }
     }
@@ -327,7 +341,6 @@ class LlmService {
     cleaned = cleaned.replaceAll('<|im_end|>', '');
     cleaned = cleaned.replaceAll('<|im_start|>', '');
     cleaned = cleaned.replaceAll('<|endoftext|>', '');
-
 
     return _ParsedResponse(cleanedText: cleaned, matchedCitations: matched);
   }
