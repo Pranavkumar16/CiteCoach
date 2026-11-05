@@ -1,6 +1,6 @@
 {
   "name": "citecoach",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,7 @@
     "generate:icon": "node scripts/generate-icon.mjs",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "test:core": "tsx --test tests/retrieval.test.ts"
+    "test:core": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "expo": "~55.0.0",
@@ -34,7 +34,9 @@
     "expo-modules-core": "~55.0.27",
     "expo-build-properties": "~55.0.18",
     "llama.rn": "0.12.9",
-    "expo-splash-screen": "~55.0.25"
+    "expo-splash-screen": "~55.0.25",
+    "fflate": "0.8.2",
+    "base64-js": "1.5.1"
   },
   "devDependencies": {
     "typescript": "~5.9.2",

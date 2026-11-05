@@ -3,6 +3,8 @@ package expo.modules.citecoachdocuments
 import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
+import android.graphics.BitmapFactory
+import android.media.ExifInterface
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
@@ -86,6 +88,29 @@ class CiteCoachDocumentsModule : Module() {
         "No readable text found. Try a clearer scan or a different PDF."
       }
       pages
+    }
+    AsyncFunction("readImage") { uri: String ->
+      val file=File(Uri.parse(uri).path ?: throw IllegalArgumentException("Could not open this image."))
+      val bounds=BitmapFactory.Options().apply { inJustDecodeBounds=true }
+      BitmapFactory.decodeFile(file.absolutePath,bounds)
+      require(bounds.outWidth>0 && bounds.outHeight>0) { "Could not open this image. Try JPG or PNG." }
+      var sample=1
+      while(maxOf(bounds.outWidth,bounds.outHeight)/sample>2200) sample*=2
+      val bitmap=BitmapFactory.decodeFile(file.absolutePath,BitmapFactory.Options().apply { inSampleSize=sample })
+        ?: throw IllegalArgumentException("Could not open this image. Try JPG or PNG.")
+      val recognizer=TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+      val orientation=try { ExifInterface(file.absolutePath).getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL) } catch (_: Exception) { ExifInterface.ORIENTATION_NORMAL }
+      val rotation=when(orientation) { ExifInterface.ORIENTATION_ROTATE_90 -> 90; ExifInterface.ORIENTATION_ROTATE_180 -> 180; ExifInterface.ORIENTATION_ROTATE_270 -> 270; else -> 0 }
+      sendEvent("onExtractionProgress",mapOf("current" to 1,"total" to 1,"stage" to "ocr"))
+      val task=recognizer.process(InputImage.fromBitmap(bitmap,rotation))
+      try {
+        val text=Tasks.await(task,45,TimeUnit.SECONDS).text.trim()
+        require(text.any { it.isLetterOrDigit() }) { "No readable text found. Try a clearer image." }
+        listOf(mapOf("page" to 1,"text" to text.take(40000),"label" to "Image","ocr" to true))
+      } finally {
+        if(task.isComplete) { bitmap.recycle();recognizer.close() }
+        else task.addOnCompleteListener { bitmap.recycle();recognizer.close() }
+      }
     }
     AsyncFunction("startModelDownload") {
       val file = modelFile()

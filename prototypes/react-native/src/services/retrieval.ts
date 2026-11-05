@@ -11,7 +11,7 @@ export function retrieve(pages:PageText[],query:string,start=1,end=Infinity):Sou
       const text=page.text.slice(offset,offset+950);if(text.trim().length<30)continue;
       const words=terms(text);const counts=new Map<string,number>();for(const w of words)counts.set(w,(counts.get(w)??0)+1);
       const score=tokens.reduce((s,t)=>s+(counts.has(t)?1+Math.log(1+counts.get(t)!):0),0);
-      chunks.push({page:page.page,text,score});
+      chunks.push({page:page.page,text,score,label:page.label});
     }
   }
   const sorted=chunks.sort((a,b)=>b.score-a.score||a.page-b.page);
