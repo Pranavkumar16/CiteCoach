@@ -38,6 +38,7 @@ function AppBody(){
   const [notice,setNotice]=useState('');
   const [busy,setBusy]=useState('');
   const [model,setModel]=useState<ModelStatus>(emptyModel);
+  const [modelChecked,setModelChecked]=useState(false);
   const [mode,setMode]=useState<'Flashcards'|'Quiz'>('Flashcards');
   const [cardIndex,setCardIndex]=useState(0);
   const [revealed,setRevealed]=useState(false);
@@ -62,7 +63,7 @@ function AppBody(){
       setActiveId(loaded.some(b=>b.id===selected)?selected!:loaded[0]?.id??'');
       setDark(await AsyncStorage.getItem('citecoach-dark')==='true');
     }catch(e){setError(message(e));}finally{if(alive.current)setHydrated(true);}})();
-    const poll=async()=>{if(Platform.OS!=='android')return;try{const value=await nativeDocuments().modelStatus();if(alive.current)setModel(value);}catch(e){if(alive.current)setError(message(e));}};
+    const poll=async()=>{if(Platform.OS!=='android'){setModelChecked(true);return;}try{const value=await nativeDocuments().modelStatus();if(alive.current)setModel(value);}catch(e){if(alive.current)setError(message(e));}finally{if(alive.current)setModelChecked(true);}};
     void poll();const timer=setInterval(()=>void poll(),1500);
     const listener=AppState.addEventListener('change',state=>{if(state==='active')void poll();else if(state==='background'){operation.current++;void stopGeneration();setBusy(previous=>previous==='Reading PDF pages…'?previous:'');setNotice('Return to the app to generate answers. Downloads continue in the background.');}});
     return()=>{alive.current=false;clearInterval(timer);listener.remove();void stopGeneration();};
@@ -189,8 +190,28 @@ function AppBody(){
       {downloading&&<><View accessibilityRole="progressbar" style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View><Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text><Text style={s.muted}>{model.status===4?'Download paused. Check your connection.':'Download continues when you leave the app.'}</Text>{button('Cancel download',()=>{void nativeDocuments().cancelModelDownload().then(()=>setModel(emptyModel)).catch(e=>setError(message(e)));})}</>}
       {!model.ready&&!downloading&&button(model.status===16?'Retry':'Download',()=>void download(),false,'download-model')}
     </View>
-    <Text style={s.muted}>CiteCoach · 0.3.2</Text>
+    <Text style={s.muted}>CiteCoach · 0.3.3</Text>
   </>;
+  // Completion is derived from the persisted native download, never an in-memory
+  // flag. Existing downloads skip setup after restart; missing files need setup.
+  if(!hydrated||!modelChecked)return <SafeAreaView style={{flex:1,justifyContent:'center',backgroundColor:c.bg}}><BrandBusyIndicator label="Opening CiteCoach…" dark={dark}/></SafeAreaView>;
+  if(!model.ready)return <SafeAreaView style={{flex:1,backgroundColor:c.bg}} edges={['top','bottom']}>
+    <StatusBar barStyle={dark?'light-content':'dark-content'} backgroundColor={c.bg}/>
+    <ScrollView contentContainerStyle={{flexGrow:1,padding:24,gap:20,justifyContent:'center',width:'100%',maxWidth:520,alignSelf:'center'}}>
+      <View style={{alignItems:'center',gap:12}}><CiteMark size={80}/><Text style={s.heading}>Welcome to CiteCoach</Text></View>
+      <Text testID="setup-title" style={[s.title,{textAlign:'center'}]}>Set up offline AI</Text>
+      <Text style={[s.body,{textAlign:'center'}]}>Download once to ask questions and study without internet.</Text>
+      <Text style={[s.muted,{textAlign:'center'}]}>About 400 MB · Your documents stay on your device.</Text>
+      {downloading?<View style={s.card}>
+        <Text accessibilityLiveRegion="polite" style={s.title}>{model.status===4?'Waiting for connection…':'Downloading…'}</Text>
+        <View accessibilityRole="progressbar" accessibilityLabel="Offline AI download" accessibilityValue={model.total>0?{min:0,max:100,now:Math.round(model.bytes/model.total*100)}:{text:'Downloading'}} style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View>
+        <Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text>
+        <Text style={s.muted}>You can leave the app. The download will continue.</Text>
+      </View>:button(model.status===16?'Retry download':'Download',()=>void download(),false,'download-model')}
+      {!!error&&<Text accessibilityRole="alert" style={s.body}>{error}</Text>}
+      {model.status===16&&<Text style={s.muted}>Check your connection and available storage, then retry.</Text>}
+    </ScrollView>
+  </SafeAreaView>;
   return <SafeAreaView style={{flex:1,backgroundColor:c.bg}} edges={['top','bottom']}><StatusBar barStyle={dark?'light-content':'dark-content'} backgroundColor={c.bg}/>
     <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:20,paddingBottom:28,gap:16,width:'100%',maxWidth:680,alignSelf:'center'}}>
