@@ -51,7 +51,7 @@ export async function loadStudy(bookId:string):Promise<SavedStudy>{return JSON.p
 export function observeExtraction(listener:(progress:ExtractionProgress)=>void){return nativeDocuments().addListener('onExtractionProgress',listener);}
 
 export async function deleteBook(book:LocalBook):Promise<void>{
-  if(!/^book-\\d+$/.test(book.id)||!book.uri.startsWith(root()))throw Error('Could not remove this file safely.');
+  if(!/^book-[0-9]+$/.test(book.id)||!book.uri.startsWith(root()))throw Error('Could not remove this file safely.');
   // Remove the private copy and derived content; never delete a gallery original.
   await nativeDocuments().clearPreviewCache(book.uri);
   await FS.deleteAsync(book.uri,{idempotent:true});
