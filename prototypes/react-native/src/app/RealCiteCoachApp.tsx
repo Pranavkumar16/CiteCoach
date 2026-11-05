@@ -13,6 +13,7 @@ import {createTheme} from '../../theme/tokens';
 import type {LocalBook,QuizQuestion,SavedStudy,StudyCard,SourceChunk} from '../domain/documents';
 import {importBook,loadBooks,loadStudy,nativeDocuments,saveStudy,type ModelStatus} from '../services/documents';
 import {retrieve,parseStudyJSON} from '../services/retrieval';
+import {studySchema} from '../services/studySchema';
 import {generate,stopGeneration} from '../services/offline';
 
 type Tab='Home'|'Library'|'Learn'|'Ask'|'Settings';
@@ -106,19 +107,41 @@ function AppBody(){
       const instruction=kind==='answer'?'Answer in at most 100 words. Cite PDF pages as [p. N]. Question: '+query:
         kind==='cards'?'Create exactly 3 flashcards about '+query+'. Return ONLY a JSON array. Each object: {"q":"question","a":"brief answer","page":12}. Use a page number from the excerpts.':
         'Create exactly 3 multiple-choice questions about '+query+'. Return ONLY a JSON array. Each object: {"q":"question","options":["one","two","three","four"],"answer":0,"explanation":"brief explanation","page":12}. answer is the correct zero-based option index. Use a page number from the excerpts.';
-      const text=await generate(model.path,chatPrompt(system,context+'\n\n'+instruction),kind==='answer'?160:650,partial=>{if(kind==='answer'&&operation.current===id)setAnswer(partial);});
+      // Smaller, constrained calls save each card as it completes. A later failure
+      // preserves the cards already generated instead of discarding the whole set.
+      if(kind==='cards'){
+        const cards:StudyCard[]=[];
+        for(let number=0;number<3;number++){
+          if(operation.current!==id)return;
+          setBusy('Creating flashcard '+(number+1)+' of 3…');
+          const chunk=chunks[number%chunks.length];
+          const task='[PDF page '+chunk.page+']\\n'+chunk.text+'\\nCreate ONE flashcard about '+query+
+            '. Use a short specific question and an answer of at most 25 words. Return a JSON array with one object: q, a, page. Page must be '+chunk.page+
+            (cards.length?'. Ask a different question from: '+cards.map(card=>card.q).join('; '):'');
+          const output=await generate(model.path,chatPrompt(system,task),280,()=>{},studySchema('cards',[chunk.page],1));
+          if(operation.current!==id)return;
+          const data=parseStudyJSON(output,[chunk.page]) as StudyCard[];
+          if(data.length!==1||typeof data[0].a!=='string'||!data[0].a.trim())throw Error('Could not finish this flashcard. Please retry.');
+          if(cards.some(card=>card.q.toLowerCase()===data[0].q.toLowerCase()))continue;
+          cards.push(data[0]);
+          const updated={...study,cards:[...cards]};
+          await saveStudy(updated);
+          if(operation.current!==id)return;
+          setStudy(updated);setCardIndex(0);setRevealed(false);
+        }
+        setNotice(cards.length+' flashcards saved.');
+        return;
+      }
+      const text=await generate(model.path,chatPrompt(system,context+'\\n\\n'+instruction),kind==='answer'?160:900,
+        partial=>{if(kind==='answer'&&operation.current===id)setAnswer(partial);},
+        kind==='quiz'?studySchema('quiz',chunks.map(chunk=>chunk.page)):undefined);
       if(operation.current!==id)return;
       if(kind==='answer'){setAnswer(text);setNotice('');}
       else{
         const data=parseStudyJSON(text,chunks.map(chunk=>chunk.page)) as Array<Record<string,unknown>>;
         let updated:SavedStudy;
-        if(kind==='cards'){
-          if(data.some(x=>typeof x.a!=='string'||!x.a.trim()))throw Error('Generated flashcards were incomplete. Retry with a narrower topic.');
-          updated={...study,cards:data as unknown as StudyCard[]};setCardIndex(0);setRevealed(false);
-        }else{
-          if(data.some(x=>!Array.isArray(x.options)||x.options.length!==4||x.options.some(o=>typeof o!=='string'||!o.trim())||new Set(x.options).size!==4||!Number.isInteger(x.answer)||Number(x.answer)<0||Number(x.answer)>3||typeof x.explanation!=='string'||!x.explanation.trim()))throw Error('Generated quiz was incomplete. Retry with a narrower topic.');
-          updated={...study,quiz:data as unknown as QuizQuestion[]};resetQuiz();
-        }
+        if(data.some(x=>!Array.isArray(x.options)||x.options.length!==4||x.options.some(o=>typeof o!=='string'||!o.trim())||new Set(x.options).size!==4||!Number.isInteger(x.answer)||Number(x.answer)<0||Number(x.answer)>3||typeof x.explanation!=='string'||!x.explanation.trim()))throw Error('Could not finish the quiz. Please retry.');
+        updated={...study,quiz:data as unknown as QuizQuestion[]};resetQuiz();
         await saveStudy(updated);setStudy(updated);setNotice('Study set saved.');
       }
     }catch(e){if(operation.current===id)setError(message(e));}finally{if(operation.current===id)setBusy('');}
@@ -166,7 +189,7 @@ function AppBody(){
       {downloading&&<><View accessibilityRole="progressbar" style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View><Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text><Text style={s.muted}>{model.status===4?'Download paused. Check your connection.':'Download continues when you leave the app.'}</Text>{button('Cancel download',()=>{void nativeDocuments().cancelModelDownload().then(()=>setModel(emptyModel)).catch(e=>setError(message(e)));})}</>}
       {!model.ready&&!downloading&&button(model.status===16?'Retry':'Download',()=>void download(),false,'download-model')}
     </View>
-    <Text style={s.muted}>CiteCoach · 0.3.1</Text>
+    <Text style={s.muted}>CiteCoach · 0.3.2</Text>
   </>;
   return <SafeAreaView style={{flex:1,backgroundColor:c.bg}} edges={['top','bottom']}><StatusBar barStyle={dark?'light-content':'dark-content'} backgroundColor={c.bg}/>
     <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':'height'}>

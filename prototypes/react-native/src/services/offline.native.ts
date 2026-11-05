@@ -3,7 +3,7 @@ let context:LlamaContext|null=null;
 let loading:Promise<LlamaContext>|null=null;
 let running=false;
 let cancellation=0;
-export async function generate(path:string,prompt:string,tokens:number,onToken:(text:string)=>void):Promise<string>{
+export async function generate(path:string,prompt:string,tokens:number,onToken:(text:string)=>void,schema?:object):Promise<string>{
   if(running)throw Error('An answer is already running. Cancel it before starting another.');
   running=true;
   const version=cancellation;
@@ -21,7 +21,7 @@ export async function generate(path:string,prompt:string,tokens:number,onToken:(
     if(version!==cancellation)throw Error('Generation cancelled.');
     let text='';let timedOut=false;
     timer=setTimeout(()=>{timedOut=true;void context?.stopCompletion();},120000);
-    const result=await context.completion({prompt,n_predict:tokens,temperature:0.15,top_p:0.9,stop:['<|im_end|>','<|endoftext|>']},data=>{text+=data.token;onToken(text);});
+    const result=await context.completion({prompt,...(schema?{response_format:{type:'json_schema' as const,json_schema:{strict:true,schema}}}:{}),n_predict:tokens,temperature:0.15,top_p:0.9,stop:['<|im_end|>','<|endoftext|>']},data=>{text+=data.token;onToken(text);});
     if(timedOut)throw Error('Generation reached the two-minute limit. Try a shorter question or narrower topic.');
     if(!result.text.trim())throw Error('No answer was generated. Try a shorter question.');
     return result.text.trim();
