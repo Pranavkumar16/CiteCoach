@@ -8,6 +8,7 @@ import {BricolageGrotesque_700Bold} from '@expo-google-fonts/bricolage-grotesque
 import {SourceSans3_400Regular} from '@expo-google-fonts/source-sans-3/400Regular';
 import {SourceSans3_600SemiBold} from '@expo-google-fonts/source-sans-3/600SemiBold';
 import {CiteMark} from '../../components/CiteMark';
+import {BrandSplash} from '../../components/BrandSplash';
 import {BrandBusyIndicator} from '../../components/BrandBusyIndicator';
 import {createTheme} from '../../theme/tokens';
 import type {LocalBook,QuizQuestion,SavedStudy,StudyCard,SourceChunk} from '../domain/documents';
@@ -27,6 +28,7 @@ function AppBody(){
   const [activeId,setActiveId]=useState('');
   const [study,setStudy]=useState<SavedStudy>({bookId:'',cards:[],quiz:[]});
   const [hydrated,setHydrated]=useState(false);
+  const [launchReady,setLaunchReady]=useState(false);
   const [search,setSearch]=useState('');
   const [topic,setTopic]=useState('');
   const [from,setFrom]=useState('1');
@@ -57,6 +59,7 @@ function AppBody(){
   const downloading=model.status===1||model.status===2||model.status===4;
   useEffect(()=>{
     alive.current=true;
+    const launchTimer=setTimeout(()=>setLaunchReady(true),900);
     (async()=>{try{
       const loaded=await loadBooks();if(!alive.current)return;setBooks(loaded);
       const selected=await AsyncStorage.getItem('citecoach-active-book');
@@ -66,7 +69,7 @@ function AppBody(){
     const poll=async()=>{if(Platform.OS!=='android'){setModelChecked(true);return;}try{const value=await nativeDocuments().modelStatus();if(alive.current)setModel(value);}catch(e){if(alive.current)setError(message(e));}finally{if(alive.current)setModelChecked(true);}};
     void poll();const timer=setInterval(()=>void poll(),1500);
     const listener=AppState.addEventListener('change',state=>{if(state==='active')void poll();else if(state==='background'){operation.current++;void stopGeneration();setBusy(previous=>previous==='Reading PDF pages…'?previous:'');setNotice('Return to the app to generate answers. Downloads continue in the background.');}});
-    return()=>{alive.current=false;clearInterval(timer);listener.remove();void stopGeneration();};
+    return()=>{alive.current=false;clearTimeout(launchTimer);clearInterval(timer);listener.remove();void stopGeneration();};
   },[]);
   useEffect(()=>{const id=++studyRequest.current;setStudy({bookId:activeId,cards:[],quiz:[]});
     if(activeId)void loadStudy(activeId).then(value=>{if(id===studyRequest.current)setStudy(value);}).catch(e=>setError(message(e)));
@@ -190,11 +193,11 @@ function AppBody(){
       {downloading&&<><View accessibilityRole="progressbar" style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View><Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text><Text style={s.muted}>{model.status===4?'Download paused. Check your connection.':'Download continues when you leave the app.'}</Text>{button('Cancel download',()=>{void nativeDocuments().cancelModelDownload().then(()=>setModel(emptyModel)).catch(e=>setError(message(e)));})}</>}
       {!model.ready&&!downloading&&button(model.status===16?'Retry':'Download',()=>void download(),false,'download-model')}
     </View>
-    <Text style={s.muted}>CiteCoach · 0.3.3</Text>
+    <Text style={s.muted}>CiteCoach · 0.3.4</Text>
   </>;
   // Completion is derived from the persisted native download, never an in-memory
   // flag. Existing downloads skip setup after restart; missing files need setup.
-  if(!hydrated||!modelChecked)return <SafeAreaView style={{flex:1,justifyContent:'center',backgroundColor:c.bg}}><BrandBusyIndicator label="Opening CiteCoach…" dark={dark}/></SafeAreaView>;
+  if(!launchReady||!hydrated||!modelChecked)return <BrandSplash/>;
   if(!model.ready)return <SafeAreaView style={{flex:1,backgroundColor:c.bg}} edges={['top','bottom']}>
     <StatusBar barStyle={dark?'light-content':'dark-content'} backgroundColor={c.bg}/>
     <ScrollView contentContainerStyle={{flexGrow:1,padding:24,gap:20,justifyContent:'center',width:'100%',maxWidth:520,alignSelf:'center'}}>
@@ -246,5 +249,5 @@ function styles(c:ReturnType<typeof createTheme>){return StyleSheet.create({
 });}
 export default function RealCiteCoachApp(){
   const [loaded,error]=useFonts({BricolageGrotesque_700Bold,SourceSans3_400Regular,SourceSans3_600SemiBold});
-  return <SafeAreaProvider>{!loaded&&!error?<SafeAreaView style={{flex:1,justifyContent:'center',backgroundColor:'#F6F4EE'}}><BrandBusyIndicator/></SafeAreaView>:<AppBody/>}</SafeAreaProvider>;
+  return <SafeAreaProvider>{!loaded&&!error?<BrandSplash/>:<AppBody/>}</SafeAreaProvider>;
 }

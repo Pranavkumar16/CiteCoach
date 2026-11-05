@@ -1,6 +1,6 @@
 {
   "name": "citecoach",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -33,7 +33,8 @@
     "expo-file-system": "~55.0.26",
     "expo-modules-core": "~55.0.27",
     "expo-build-properties": "~55.0.18",
-    "llama.rn": "0.12.9"
+    "llama.rn": "0.12.9",
+    "expo-splash-screen": "~55.0.25"
   },
   "devDependencies": {
     "typescript": "~5.9.2",
