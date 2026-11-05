@@ -17,7 +17,7 @@ export function plainDocument(text:string,ext:string):PageText[]{
   if(ext==='html'||ext==='htm'||ext==='xml')text=clean(text.replace(/<\/(p|div|li|tr|h[1-6])>/gi,'\n').replace(/<br\s*\/?\s*>/gi,'\n'));
   return textPages(text);
 }
-const tags=(xml:string,tag:string)=>[...xml.matchAll(new RegExp('<'+tag+'(?:\\s[^>]*)?>([\\s\\S]*?)<\\/'+tag+'>','g'))].map(match=>clean(match[1]));
+const tags=(xml:string,tag:string)=>[...xml.matchAll(new RegExp('<'+tag+'(?:\\s[^>]*)?>([\\s\\S]*?)<\\/'+tag+'>','g'))].map(match=>decode(match[1].replace(/<[^>]+>/g,'')));
 const attribute=(xml:string,key:string)=>decode(xml.match(new RegExp('\\b'+key+'=["\']([^"\']*)["\']'))?.[1]??'');
 export function officeDocument(bytes:Uint8Array,ext:string):PageText[]{
   const keep=/^(word\/document\.xml|ppt\/slides\/slide\d+\.xml|xl\/(sharedStrings\.xml|workbook\.xml|_rels\/workbook\.xml\.rels|worksheets\/sheet\d+\.xml)|content\.xml)$/;

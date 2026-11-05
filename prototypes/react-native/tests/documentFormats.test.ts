@@ -4,7 +4,7 @@ import {strToU8,zipSync} from 'fflate';
 import {officeDocument,plainDocument,textPages} from '../src/services/documentFormats';
 const zip=(files:Record<string,string>)=>zipSync(Object.fromEntries(Object.entries(files).map(([name,text])=>[name,strToU8(text)])));
 test('Word joins styled text runs without breaking words',()=>{
-  const data=zip({'word/document.xml':'<w:document><w:body><w:p><w:r><w:t>Super</w:t></w:r><w:r><w:t>vised learning</w:t></w:r></w:p><w:p><w:r><w:t>Uses labels.</w:t></w:r></w:p></w:body></w:document>'});
+  const data=zip({'word/document.xml':'<w:document><w:body><w:p><w:r><w:t>Super</w:t></w:r><w:r><w:t>vised learning</w:t></w:r></w:p><w:p><w:r><w:t>Uses </w:t></w:r><w:r><w:t>labels.</w:t></w:r></w:p></w:body></w:document>'});
   assert.equal(officeDocument(data,'docx')[0].text,'Supervised learning\nUses labels.');
 });
 test('PowerPoint keeps numerical slide order and source labels',()=>{
