@@ -35,14 +35,42 @@ try {
     for (const answer of [0,1,2]) {
       await page.getByTestId('answer-' + answer).click();
       await page.getByTestId('quiz-action').click();
-      assert.match(await page.getByTestId('answer-feedback').innerText(), /You got it/);
+      assert.match(await page.getByTestId('answer-feedback').innerText(), /Correct\./);
       if (answer === 0) await page.screenshot({path:'screenshots/quiz-' + viewport.width + '.png'});
       await page.getByTestId('quiz-action').click();
     }
     assert.match(await page.getByTestId('quiz-score').innerText(), /3\s*\/\s*3/);
-    await page.getByTestId('nav-Settings').click();
-    await page.getByTestId('palette-Indigo').click();
+    await page.getByTestId('nav-Ask').click();
+    await page.getByTestId('ask-input').fill('What is the difference between supervised and unsupervised learning?');
+    await page.getByTestId('send-ask').click();
+    await page.getByTestId('citation-12').click();
+    await page.getByTestId('close-modal').click();
+    await page.getByTestId('save-answer-card').click();
+    assert.match(await page.getByTestId('save-answer-card').innerText(), /Added to sample flashcards/);
+    await page.screenshot({path:'screenshots/ask-' + viewport.width + '.png'});
+    await page.getByTestId('nav-Learn').click();
+    await page.getByTestId('start-session').click();
+    await page.getByTestId('answer-1').click();
+    await page.getByTestId('quiz-action').click();
+    assert.match(await page.getByTestId('answer-feedback').innerText(), /Not quite/);
+    await page.getByTestId('citation-12').click();
+    await page.getByTestId('close-modal').click();
+    await page.screenshot({path:'screenshots/quiz-wrong-' + viewport.width + '.png'});
+    await page.getByTestId('nav-Home').click();
+    assert.match(await page.getByTestId('home-review').innerText(), /1 cards in review/);
+    await page.getByTestId('open-settings').click();
+    assert.equal(await page.getByTestId('nav-Settings').count(), 0);
     await page.screenshot({path:'screenshots/settings-' + viewport.width + '.png'});
+    await page.getByRole('switch',{name:'Dark appearance'}).click();
+    await page.getByLabel('Back to Home').click();
+    await page.screenshot({path:'screenshots/home-dark-' + viewport.width + '.png'});
+    await page.getByTestId('open-settings').click();
+    await page.getByTestId('empty-library-preview').click();
+    await page.getByTestId('try-sample-book').waitFor();
+    assert.equal(await page.getByTestId('nav-Home').count(), 0);
+    await page.screenshot({path:'screenshots/empty-' + viewport.width + '.png'});
+    await page.getByTestId('try-sample-book').click();
+    await page.getByTestId('nav-Home').waitFor();
     assert.deepEqual(errors, []);
     await page.close();
   }
@@ -50,4 +78,4 @@ try {
   await browser.close();
   server.close();
 }
-console.log('Passed: library search, quiz feedback and score, palettes, and layouts at 320 and 390 widths.');
+console.log('Passed: search, quiz scoring, correct/wrong feedback, citations, Ask-to-flashcard, review, avatar Settings, dark and empty states at 320 and 390 widths.');

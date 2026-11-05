@@ -1,6 +1,6 @@
 {
   "name": "citecoach-ui-preview",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "export": "expo export --platform web",
-    "test:ui": "node scripts/check-preview.mjs"
+    "test:ui": "node scripts/check-preview.mjs",
+    "generate:icon": "node scripts/generate-icon.mjs"
   },
   "dependencies": {
     "expo": "~55.0.0",
@@ -21,11 +22,16 @@
     "expo-font": "~55.0.8",
     "expo-document-picker": "~55.0.17",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@expo/metro-runtime": "~55.0.12"
+    "@expo/metro-runtime": "~55.0.12",
+    "@expo-google-fonts/bricolage-grotesque": "0.4.1",
+    "@expo-google-fonts/source-sans-3": "0.4.2",
+    "@expo-google-fonts/source-serif-4": "0.4.2",
+    "react-native-svg": "15.15.3"
   },
   "devDependencies": {
     "typescript": "~5.9.2",
     "@types/react": "~19.2.0",
-    "@playwright/test": "^1.52.0"
+    "@playwright/test": "^1.52.0",
+    "sharp": "^0.34.2"
   }
 }

@@ -29,6 +29,8 @@ jobs:
           java-version: '17'
       - name: Install compatible preview dependencies
         run: npm install
+      - name: Generate citation-mark app icon
+        run: npm run generate:icon
       - name: Type check
         run: npm run typecheck
       - name: Export browser validation build
