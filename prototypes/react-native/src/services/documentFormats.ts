@@ -7,7 +7,7 @@ const decode=(text:string)=>text.replace(/&#(x[0-9a-f]+|\d+);/gi,(_,code)=>{cons
 const clean=(xml:string)=>decode(xml.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ')).replace(/[ \t]+/g,' ').replace(/\n\s*\n+/g,'\n\n').trim();
 export function textPages(text:string,label='Section'):PageText[]{
   const pages:PageText[]=[];let remaining=text.replace(/\r\n/g,'\n').trim();
-  while(remaining){let cut=Math.min(5000,remaining.length);if(cut<remaining.length){const newline=remaining.lastIndexOf('\n',cut);if(newline>2000)cut=newline;}
+  while(remaining){let cut=Math.min(5000,remaining.length);if(cut<remaining.length){const newline=remaining.lastIndexOf('\n',cut);if(newline>2000)cut=newline;else{const space=remaining.lastIndexOf(' ',cut);if(space>2000)cut=space;}}
     pages.push({page:pages.length+1,text:remaining.slice(0,cut).trim(),label:label+' '+(pages.length+1)});remaining=remaining.slice(cut).trim();
     if(pages.length>1500)throw Error('This document is too long. Split it into smaller files.');
   }
