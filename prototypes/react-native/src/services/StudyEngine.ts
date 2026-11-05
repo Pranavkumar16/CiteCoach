@@ -16,3 +16,4 @@ export interface StudyEngine {
   answer(request:StudyRequest & {question:string},options?:GenerationOptions):Promise<CitedAnswer>;
   dispose():Promise<void>;
 }
+

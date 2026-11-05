@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "CiteCoach Preview",
-    "slug": "citecoach-ui-preview",
-    "version": "0.2.2",
+    "name": "CiteCoach",
+    "slug": "citecoach",
+    "version": "0.3.0",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -11,16 +11,31 @@
     },
     "android": {
       "package": "com.citecoach.preview",
-      "versionCode": 4,
+      "versionCode": 10,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#F6F4EE"
-      }
+      },
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "single"
     },
-    "icon": "./assets/icon.png"
+    "icon": "./assets/icon.png",
+    "plugins": [
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": true,
+          "forceCxx20": true,
+          "enableOpenCL": false
+        }
+      ]
+    ],
+    "newArchEnabled": true
   }
 }

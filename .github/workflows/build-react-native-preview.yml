@@ -1,4 +1,4 @@
-name: Build React Native Preview
+name: Build CiteCoach Android
 
 on:
   push:
@@ -27,12 +27,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install compatible preview dependencies
+      - name: Install Android app dependencies
         run: npm install
       - name: Generate citation-mark app icon
         run: npm run generate:icon
       - name: Type check
         run: npm run typecheck
+      - name: Verify retrieval and generated content validation
+        run: npm run test:core
       - name: Export browser validation build
         run: npm run export
       - name: Install test browser
@@ -50,10 +52,10 @@ jobs:
       - name: Build standalone Android APK
         working-directory: prototypes/react-native/android
         run: ./gradlew :app:assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
-      - name: Upload React Native preview APK
+      - name: Upload CiteCoach APK
         uses: actions/upload-artifact@v4
         with:
-          name: citecoach-react-native-preview-apk
+          name: citecoach-react-native-apk
           path: prototypes/react-native/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30

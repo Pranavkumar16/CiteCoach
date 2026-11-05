@@ -1,1 +1,2 @@
-export {default} from './src/app/CiteCoachApp';
+export {default} from './src/app/RealCiteCoachApp';
+
