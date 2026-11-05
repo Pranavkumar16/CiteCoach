@@ -1,5 +1,9 @@
 package expo.modules.citecoachdocuments
 
+import android.app.ActivityManager
+import android.os.Build
+import android.content.Intent
+import android.provider.Settings
 import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
@@ -66,6 +70,40 @@ class CiteCoachDocumentsModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("CiteCoachDocuments")
     Events("onExtractionProgress")
+    AsyncFunction("deviceCompatibility") {
+      val ctx=context()
+      val activity=ctx.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+      val memory=ActivityManager.MemoryInfo()
+      activity?.getMemoryInfo(memory)
+      val file=modelFile()
+      val prefs=preferences()
+      val ready=prefs.getBoolean("complete",false) && valid(file)
+      var active=false
+      var downloaded=0L
+      val id=prefs.getLong("id",-1)
+      if(id!=-1L) manager().query(DownloadManager.Query().setFilterById(id)).use { cursor ->
+        if(cursor.moveToFirst()) {
+          val status=cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+          active=status==DownloadManager.STATUS_PENDING || status==DownloadManager.STATUS_RUNNING || status==DownloadManager.STATUS_PAUSED
+          if(active) downloaded=cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)).coerceAtLeast(0L)
+        }
+      }
+      mapOf(
+        "deviceName" to "${Build.MANUFACTURER} ${Build.MODEL}",
+        "androidVersion" to Build.VERSION.RELEASE,"apiLevel" to Build.VERSION.SDK_INT,
+        "minApiLevel" to ctx.applicationInfo.minSdkVersion,
+        "arm64" to Build.SUPPORTED_ABIS.contains("arm64-v8a"),"process64Bit" to android.os.Process.is64Bit(),
+        "totalRamBytes" to memory.totalMem,"availableRamBytes" to memory.availMem,
+        "lowRamDevice" to (activity?.isLowRamDevice ?: false),"lowMemory" to memory.lowMemory,
+        "freeStorageBytes" to (ctx.getExternalFilesDir(null)?.usableSpace ?: 0L),
+        "reclaimableBytes" to (if(!ready&&!active)file.length() else 0L),
+        "modelBytes" to ModelPackage.BYTES,"modelReady" to ready,"activeDownload" to active,"downloadedBytes" to downloaded
+      )
+    }
+    AsyncFunction("openStorageSettings") {
+      try { context().startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+      catch(_:android.content.ActivityNotFoundException) { context().startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
     AsyncFunction("extractPdf") { uri: String ->
       PDFBoxResourceLoader.init(context())
       val file = File(Uri.parse(uri).path ?: throw IllegalArgumentException("Invalid PDF path"))

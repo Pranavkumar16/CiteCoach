@@ -1,3 +1,4 @@
+import type {DeviceSnapshot} from './deviceCompatibility';
 import {removeImportedFile} from './removeImportedFile';
 import {requireOptionalNativeModule} from 'expo-modules-core';
 import * as FS from 'expo-file-system/legacy';
@@ -7,7 +8,7 @@ import {extension,isImage,supportedExtensions,plainDocument,officeDocument} from
 import type {LocalBook,PageText,SavedStudy} from '../domain/documents';
 export type ModelStatus={upgrade?:boolean;ready:boolean;path:string;bytes:number;total:number;status:number;reason:number};
 export type ExtractionProgress={current:number;total:number;stage:'ocr'|'text'};
-type Bridge={clearPreviewCache:(uri:string)=>Promise<void>;previewCacheSize:()=>Promise<number>;renderPdfPage:(uri:string,page:number)=>Promise<{uri:string;width:number;height:number}>;addListener:(event:string,listener:(progress:ExtractionProgress)=>void)=>{remove:()=>void};extractPdf:(uri:string)=>Promise<PageText[]>;readImage:(uri:string)=>Promise<PageText[]>;startModelDownload:()=>Promise<number>;modelStatus:()=>Promise<ModelStatus>;cancelModelDownload:()=>Promise<void>};
+type Bridge={deviceCompatibility:()=>Promise<DeviceSnapshot>;openStorageSettings:()=>Promise<void>;clearPreviewCache:(uri:string)=>Promise<void>;previewCacheSize:()=>Promise<number>;renderPdfPage:(uri:string,page:number)=>Promise<{uri:string;width:number;height:number}>;addListener:(event:string,listener:(progress:ExtractionProgress)=>void)=>{remove:()=>void};extractPdf:(uri:string)=>Promise<PageText[]>;readImage:(uri:string)=>Promise<PageText[]>;startModelDownload:()=>Promise<number>;modelStatus:()=>Promise<ModelStatus>;cancelModelDownload:()=>Promise<void>};
 const bridge=requireOptionalNativeModule<Bridge>('CiteCoachDocuments');
 export function nativeDocuments():Bridge{if(!bridge)throw Error('PDF processing and model downloads require the Android app.');return bridge;}
 const root=()=>{if(!FS.documentDirectory)throw Error('Device storage is unavailable.');return FS.documentDirectory+'citecoach/';};

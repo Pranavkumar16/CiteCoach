@@ -19,6 +19,10 @@ try{
   const page=await browser.newPage({viewport});const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('http://127.0.0.1:4173');await page.getByTestId('setup-title').waitFor();
   await page.getByTestId('download-model').waitFor();
+  await page.getByTestId('device-check').waitFor();
+  assert.equal(await page.getByTestId('download-model').getAttribute('aria-disabled'),'true');
+  await page.getByRole('button',{name:'Recheck',exact:true}).click();
+  await page.getByText('Device checks are available in the Android app.').waitFor();
   assert.equal(await page.getByTestId('nav-Library').count(),0);
   assert.equal(await page.getByTestId('nav-Ask').count(),0);
   assert.equal(await page.getByText(/Qwen|CPU|GGUF|Gemma/).count(),0);

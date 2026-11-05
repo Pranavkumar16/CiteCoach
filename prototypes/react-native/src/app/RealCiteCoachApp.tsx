@@ -5,6 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import {FilePreview} from '../../components/FilePreview';
+import {DeviceCompatibility} from '../../components/DeviceCompatibility';
+import {assessDevice,type DeviceSnapshot} from '../services/deviceCompatibility';
 import {PracticePaper} from '../../components/PracticePaper';
 import {useFonts} from 'expo-font';
 import {BricolageGrotesque_700Bold} from '@expo-google-fonts/bricolage-grotesque/700Bold';
@@ -27,6 +29,9 @@ const emptyModel:ModelStatus={ready:false,path:'',bytes:0,total:0,status:0,reaso
 const message=(e:unknown)=>e instanceof Error?e.message:String(e);
 import {chatPrompt} from '../services/chatPrompt';
 function AppBody(){
+  const [device,setDevice]=useState<DeviceSnapshot|null>(null);
+  const [deviceChecking,setDeviceChecking]=useState(false);
+  const [deviceError,setDeviceError]=useState('');
   const [tab,setTab]=useState<Tab>('Home');
   const [dark,setDark]=useState(false);
   const [answerLength,setAnswerLength]=useState<'brief'|'standard'>('standard');
@@ -81,8 +86,8 @@ function AppBody(){
       setAnswerLength(await AsyncStorage.getItem('citecoach-answer-length')==='brief'?'brief':'standard');
     }catch(e){setError(message(e));}finally{if(alive.current)setHydrated(true);}})();
     const poll=async()=>{if(Platform.OS!=='android'){setModelChecked(true);return;}try{const value=await nativeDocuments().modelStatus();if(alive.current)setModel(value);}catch(e){if(alive.current)setError(message(e));}finally{if(alive.current)setModelChecked(true);}};
-    void poll();const timer=setInterval(()=>void poll(),1500);
-    const listener=AppState.addEventListener('change',state=>{if(state==='active')void poll();else if(state==='background'){operation.current++;void stopGeneration();setBusy(previous=>previous==='Reading document pages…'?previous:'');setNotice('Return to the app to generate answers. Downloads continue in the background.');}});
+    void refreshDevice();void poll();const timer=setInterval(()=>void poll(),1500);
+    const listener=AppState.addEventListener('change',state=>{if(state==='active'){void poll();void refreshDevice();}else if(state==='background'){operation.current++;void stopGeneration();setBusy(previous=>previous==='Reading document pages…'?previous:'');setNotice('Return to the app to generate answers. Downloads continue in the background.');}});
     return()=>{alive.current=false;clearTimeout(launchTimer);clearInterval(timer);listener.remove();void stopGeneration();};
   },[]);
   useEffect(()=>{const id=++studyRequest.current;setStudy({bookId:activeId,cards:[],quiz:[]});
@@ -90,11 +95,21 @@ function AppBody(){
     setFrom('1');setTo('');setAnswer('');setSources([]);resetQuiz();setCardIndex(0);setRevealed(false);
     if(activeId)void AsyncStorage.setItem('citecoach-active-book',activeId);
   },[activeId]);
-  useEffect(()=>{if(tab==='Settings')void refreshStorage();},[tab,books]);
+  useEffect(()=>{if(tab==='Settings'){void refreshStorage();void refreshDevice();}},[tab,books]);
   useEffect(()=>{const back=BackHandler.addEventListener('hardwareBackPress',()=>{if(preview){setPreview(null);return true;}if(busy){return true;}if(tab!=='Home'){setTab('Home');return true;}return false;});return()=>back.remove();},[tab,preview,busy]);
   useEffect(()=>{if(!busy)return;setSeconds(0);const start=Date.now();const timer=setInterval(()=>setSeconds(Math.floor((Date.now()-start)/1000)),1000);return()=>clearInterval(timer);},[busy]);
   function resetQuiz(){setQuizIndex(0);setChoice(null);setChecked(false);setScores([]);setFinished(false);}
   const button=(label:string,onPress:()=>void,disabled=false,testID?:string)=><Pressable testID={testID} accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={[s.button,disabled&&{opacity:.45}]}><Text style={s.buttonText}>{label}</Text></Pressable>;
+  async function refreshDevice():Promise<DeviceSnapshot|null>{
+    setDeviceChecking(true);setDeviceError('');
+    try{
+      if(Platform.OS!=='android')throw Error('Device checks are available in the Android app.');
+      const value=await nativeDocuments().deviceCompatibility();if(alive.current)setDevice(value);return value;
+    }catch(e){if(alive.current){setDevice(null);setDeviceError(message(e));}return null;}
+    finally{if(alive.current)setDeviceChecking(false);}
+  }
+  const devicePanel=<DeviceCompatibility device={device} checking={deviceChecking} error={deviceError} dark={dark} onRefresh={()=>void refreshDevice()} onManageStorage={()=>void nativeDocuments().openStorageSettings().catch(e=>setError(message(e)))}/>;
+  const canDownload=!!device&&!deviceChecking&&assessDevice(device).canDownload;
   async function refreshStorage(){
     try{const [documents,previews]=await Promise.all([documentStorage(books),nativeDocuments().previewCacheSize()]);setStorage({documents,previews});}catch(e){setError(message(e));}
   }
@@ -215,7 +230,7 @@ function AppBody(){
     }catch(e){if(operation.current===id)setError(message(e));}finally{if(operation.current===id)setBusy('');}
   }
   async function cancel(){if(paperCancel.current?.())return;operation.current++;setBusy('');setAnswer('');setNotice('Generation cancelled.');try{await stopGeneration();}catch(e){setError(message(e));}}
-  async function download(){try{setError('');await nativeDocuments().startModelDownload();setModel(await nativeDocuments().modelStatus());setNotice('You can leave the app while the download continues.');}catch(e){setError(message(e));}}
+  async function download(){try{setError('');const current=await refreshDevice();if(!current)throw Error('Recheck your device before downloading.');const assessment=assessDevice(current);if(!assessment.canDownload)throw Error(assessment.checks.find(check=>check.state==='fail')?.detail??assessment.title);await nativeDocuments().startModelDownload();setModel(await nativeDocuments().modelStatus());setNotice('You can leave the app while the download continues.');}catch(e){setError(message(e));}}
   const heading=(title:string,description?:string)=><View style={{gap:8}}><Text style={s.heading}>{title}</Text>{description&&<Text style={s.muted}>{description}</Text>}</View>;
   const selector=books.length>0&&<ScrollView horizontal contentContainerStyle={{gap:8}} showsHorizontalScrollIndicator={false}>{books.map(b=><Pressable key={b.id} accessibilityRole="button" onPress={()=>switchBook(b.id)} disabled={!!busy} style={[s.chip,b.id===activeId&&s.activeChip]}><Text numberOfLines={1} style={{color:b.id===activeId?c.buttonInk:c.text,maxWidth:230,fontFamily:'SourceSans3_600SemiBold'}}>{b.title}</Text></Pressable>)}</ScrollView>;
   const pageScope=<View style={s.card}><Text style={s.label}>{(book?.format??'pdf')==='pdf'?'PDF pages':'Source sections'}</Text><Text style={s.muted}>Use source numbers to choose a chapter.</Text><View style={s.row}><TextInput accessibilityLabel="First document page" value={from} onChangeText={setFrom} keyboardType="number-pad" placeholder="From" style={[s.input,{flex:1}]}/><TextInput accessibilityLabel="Last document page" value={to} onChangeText={setTo} keyboardType="number-pad" placeholder={book?String(Math.max(...book.pages.map(p=>p.page))):'To'} style={[s.input,{flex:1}]}/></View></View>;
@@ -260,9 +275,10 @@ function AppBody(){
     <View style={s.card}><Text style={s.title}>Appearance</Text><View style={[s.row,{justifyContent:'space-between'}]}><Text style={s.body}>Dark appearance</Text><Switch accessibilityLabel="Dark appearance" value={dark} onValueChange={value=>{setDark(value);void AsyncStorage.setItem('citecoach-dark',String(value));}}/></View></View>
     <View style={s.card}><Text style={s.title}>Answers</Text><Text style={s.muted}>Choose how much detail you prefer.</Text><View style={s.row}>{(['brief','standard'] as const).map(value=><Pressable key={value} accessibilityRole="radio" accessibilityState={{checked:answerLength===value}} onPress={()=>{setAnswerLength(value);void AsyncStorage.setItem('citecoach-answer-length',value);}} style={[s.chip,answerLength===value&&s.activeChip]}><Text style={{color:answerLength===value?c.buttonInk:c.text}}>{value==='brief'?'Brief':'Standard'}</Text></Pressable>)}</View></View>
     <View style={s.card}><Text style={s.title}>Offline AI</Text><Text style={s.body}>{model.ready?'Ready to use offline':downloading?'Downloading…':'Not downloaded'}</Text><Text style={s.muted}>{model.ready?'No internet needed for answers.':'Set up once to use CiteCoach offline.'}</Text>{model.ready&&<Text style={s.muted}>{Math.round(model.bytes/1000000)} MB on this device</Text>}</View>
+    {devicePanel}
     <View style={s.card}><Text style={s.title}>Storage</Text><Text style={s.body}>{books.length} imported {books.length===1?'file':'files'} · {(storage.documents/1000000).toFixed(1)} MB</Text><Text style={s.muted}>Preview cache · {(storage.previews/1000000).toFixed(1)} MB</Text>{button('Clear preview cache',()=>{void nativeDocuments().clearPreviewCache('').then(()=>{setNotice('Preview cache cleared.');void refreshStorage();}).catch(e=>setError(message(e)));})}<Text style={s.muted}>Delete imported files from the Library.</Text></View>
     <View style={s.card}><Text style={s.title}>Privacy & permissions</Text><Text style={s.body}>Your documents and photos are processed on this device.</Text>{button('Camera & photo permissions',()=>void Linking.openSettings())}</View>
-    <View style={s.card}><Text style={s.title}>About CiteCoach</Text><Text style={s.muted}>Version 0.4.0</Text><Pressable accessibilityRole="button" accessibilityState={{expanded:showFormats}} onPress={()=>setShowFormats(!showFormats)} style={s.chip}><Text style={s.label}>Supported files {showFormats?'−':'+'}</Text></Pressable>{showFormats&&<Text style={s.muted}>PDF, JPG, PNG, WEBP, supported HEIC images, DOCX, PPTX, XLSX, OpenDocument, TXT, Markdown, CSV, JSON and HTML. OCR reads English and Latin-script text.</Text>}</View>
+    <View style={s.card}><Text style={s.title}>About CiteCoach</Text><Text style={s.muted}>Version 0.4.1</Text><Pressable accessibilityRole="button" accessibilityState={{expanded:showFormats}} onPress={()=>setShowFormats(!showFormats)} style={s.chip}><Text style={s.label}>Supported files {showFormats?'−':'+'}</Text></Pressable>{showFormats&&<Text style={s.muted}>PDF, JPG, PNG, WEBP, supported HEIC images, DOCX, PPTX, XLSX, OpenDocument, TXT, Markdown, CSV, JSON and HTML. OCR reads English and Latin-script text.</Text>}</View>
   </>;
 
   // Completion is derived from the persisted native download, never an in-memory
@@ -270,17 +286,18 @@ function AppBody(){
   if(!launchReady||!hydrated||!modelChecked)return <BrandSplash/>;
   if(!model.ready)return <SafeAreaView style={{flex:1,backgroundColor:c.bg}} edges={['top','bottom']}>
     <StatusBar barStyle={dark?'light-content':'dark-content'} backgroundColor={c.bg}/>
-    <ScrollView contentContainerStyle={{flexGrow:1,padding:24,gap:20,justifyContent:'center',width:'100%',maxWidth:520,alignSelf:'center'}}>
+    <ScrollView contentContainerStyle={{flexGrow:1,padding:24,gap:20,justifyContent:'flex-start',width:'100%',maxWidth:520,alignSelf:'center'}}>
       <View style={{alignItems:'center',gap:12}}><CiteMark size={80}/><Text style={s.heading}>Welcome to CiteCoach</Text></View>
       <Text testID="setup-title" style={[s.title,{textAlign:'center'}]}>{model.upgrade?'Update offline AI':'Set up offline AI'}</Text>
       <Text style={[s.body,{textAlign:'center'}]}>{model.upgrade?'Download the upgraded offline AI once. Your saved files stay here.':'Download once to ask questions and study without internet.'}</Text>
       <Text style={[s.muted,{textAlign:'center'}]}>About 1.1 GB · Your documents stay on your device.</Text>
+      {devicePanel}
       {downloading?<View style={s.card}>
         <Text accessibilityLiveRegion="polite" style={s.title}>{model.total>0&&model.bytes>=model.total?'Checking download…':model.status===4?'Waiting for connection…':'Downloading…'}</Text>
         <View accessibilityRole="progressbar" accessibilityLabel="Offline AI download" accessibilityValue={model.total>0?{min:0,max:100,now:Math.round(model.bytes/model.total*100)}:{text:'Downloading'}} style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View>
         <Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text>
         <Text style={s.muted}>You can leave the app. The download will continue.</Text>
-      </View>:button(model.status===16?'Retry download':'Download',()=>void download(),false,'download-model')}
+      </View>:button(model.status===16?'Retry download':'Download',()=>void download(),!canDownload,'download-model')}
       {!!error&&<Text accessibilityRole="alert" style={s.body}>{error}</Text>}
       {model.status===16&&<Text style={s.muted}>Check your connection and available storage, then retry.</Text>}
     </ScrollView>

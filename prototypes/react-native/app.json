@@ -2,7 +2,7 @@
   "expo": {
     "name": "CiteCoach",
     "slug": "citecoach",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -11,7 +11,7 @@
     },
     "android": {
       "package": "com.citecoach.preview",
-      "versionCode": 21,
+      "versionCode": 22,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#F6F4EE"
