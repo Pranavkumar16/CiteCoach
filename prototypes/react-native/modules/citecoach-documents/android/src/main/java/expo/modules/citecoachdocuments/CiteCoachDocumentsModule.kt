@@ -58,7 +58,7 @@ class CiteCoachDocumentsModule : Module() {
   private fun cleanupLegacyModel() {
     // Only retire the smaller package once its replacement passed full verification.
     val old=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE)
-    try { val id=old.getLong("id",-1);if(id!=-1L)manager().remove(id);legacyModelFile().delete();old.edit().clear().apply() } catch(_:Exception) {}
+    try { val id=old.getLong("id",-1);if(id!=-1L && id!=preferences().getLong("id",-1))manager().remove(id);legacyModelFile().delete();old.edit().clear().apply() } catch(_:Exception) {}
   }
   private fun state(file:File,ready:Boolean,status:Int,bytes:Long,total:Long,reason:Int) = mapOf(
     "ready" to ready,"path" to file.absolutePath,"bytes" to bytes,"total" to total,"status" to status,"reason" to reason,"upgrade" to legacyModelFile().exists()
