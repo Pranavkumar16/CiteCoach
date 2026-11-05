@@ -89,6 +89,17 @@ class CiteCoachDocumentsModule : Module() {
       }
       pages
     }
+    AsyncFunction("previewCacheSize") {
+      File(context().cacheDir,"citecoach-preview").listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L
+    }
+    AsyncFunction("clearPreviewCache") { uri: String ->
+      val directory=File(context().cacheDir,"citecoach-preview")
+      val prefix=if(uri.isBlank()) "" else File(Uri.parse(uri).path ?: "").nameWithoutExtension+"-"
+      directory.listFiles()?.filter { it.isFile && (prefix.isEmpty() || it.name.startsWith(prefix)) }?.forEach {
+        require(it.delete() || !it.exists()) { "Could not clear a preview. Close the file and retry." }
+      }
+      Unit
+    }
     AsyncFunction("renderPdfPage") { uri: String, pageNumber: Int ->
       val file=File(Uri.parse(uri).path ?: throw IllegalArgumentException("Could not open this PDF."))
       val cache=File(context().cacheDir,"citecoach-preview").apply { mkdirs() }

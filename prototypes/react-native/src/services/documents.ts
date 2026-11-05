@@ -6,7 +6,7 @@ import {extension,isImage,supportedExtensions,plainDocument,officeDocument} from
 import type {LocalBook,PageText,SavedStudy} from '../domain/documents';
 export type ModelStatus={ready:boolean;path:string;bytes:number;total:number;status:number;reason:number};
 export type ExtractionProgress={current:number;total:number;stage:'ocr'|'text'};
-type Bridge={renderPdfPage:(uri:string,page:number)=>Promise<{uri:string;width:number;height:number}>;addListener:(event:string,listener:(progress:ExtractionProgress)=>void)=>{remove:()=>void};extractPdf:(uri:string)=>Promise<PageText[]>;readImage:(uri:string)=>Promise<PageText[]>;startModelDownload:()=>Promise<number>;modelStatus:()=>Promise<ModelStatus>;cancelModelDownload:()=>Promise<void>};
+type Bridge={clearPreviewCache:(uri:string)=>Promise<void>;previewCacheSize:()=>Promise<number>;renderPdfPage:(uri:string,page:number)=>Promise<{uri:string;width:number;height:number}>;addListener:(event:string,listener:(progress:ExtractionProgress)=>void)=>{remove:()=>void};extractPdf:(uri:string)=>Promise<PageText[]>;readImage:(uri:string)=>Promise<PageText[]>;startModelDownload:()=>Promise<number>;modelStatus:()=>Promise<ModelStatus>;cancelModelDownload:()=>Promise<void>};
 const bridge=requireOptionalNativeModule<Bridge>('CiteCoachDocuments');
 export function nativeDocuments():Bridge{if(!bridge)throw Error('PDF processing and model downloads require the Android app.');return bridge;}
 const root=()=>{if(!FS.documentDirectory)throw Error('Device storage is unavailable.');return FS.documentDirectory+'citecoach/';};
@@ -41,6 +41,7 @@ export async function importBook(uri:string,title:string):Promise<LocalBook>{
     await FS.writeAsStringAsync(root()+id+'.json',JSON.stringify(book));
     const ids=JSON.parse(await AsyncStorage.getItem('citecoach-books-v1')??'[]') as string[];
     await AsyncStorage.setItem('citecoach-books-v1',JSON.stringify([...ids,id]));
+    if(FS.cacheDirectory&&uri.startsWith(FS.cacheDirectory))await FS.deleteAsync(uri,{idempotent:true}).catch(()=>{});
     return book;
   }catch(error){await FS.deleteAsync(saved,{idempotent:true});await FS.deleteAsync(root()+id+'.json',{idempotent:true});throw error;}
 }
@@ -48,3 +49,23 @@ export async function saveStudy(study:SavedStudy){await AsyncStorage.setItem('st
 export async function loadStudy(bookId:string):Promise<SavedStudy>{return JSON.parse(await AsyncStorage.getItem('study:'+bookId)??JSON.stringify({bookId,cards:[],quiz:[]}));}
 
 export function observeExtraction(listener:(progress:ExtractionProgress)=>void){return nativeDocuments().addListener('onExtractionProgress',listener);}
+
+export async function deleteBook(book:LocalBook):Promise<void>{
+  if(!/^book-\\d+$/.test(book.id)||!book.uri.startsWith(root()))throw Error('Could not remove this file safely.');
+  // Remove the private copy and derived content; never delete a gallery original.
+  await nativeDocuments().clearPreviewCache(book.uri);
+  await FS.deleteAsync(book.uri,{idempotent:true});
+  await FS.deleteAsync(root()+book.id+'.json',{idempotent:true});
+  await AsyncStorage.removeItem('study:'+book.id);
+  const ids=JSON.parse(await AsyncStorage.getItem('citecoach-books-v1')??'[]') as string[];
+  await AsyncStorage.setItem('citecoach-books-v1',JSON.stringify(ids.filter(id=>id!==book.id)));
+}
+export async function documentStorage(books:LocalBook[]):Promise<number>{
+  let bytes=0;
+  for(const book of books){
+    for(const uri of [book.uri,root()+book.id+'.json']){
+      const info=await FS.getInfoAsync(uri);if(info.exists)bytes+=info.size;
+    }
+  }
+  return bytes;
+}
