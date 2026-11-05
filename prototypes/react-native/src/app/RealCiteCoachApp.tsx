@@ -63,7 +63,7 @@ function AppBody(){
     }catch(e){setError(message(e));}finally{if(alive.current)setHydrated(true);}})();
     const poll=async()=>{if(Platform.OS!=='android')return;try{const value=await nativeDocuments().modelStatus();if(alive.current)setModel(value);}catch(e){if(alive.current)setError(message(e));}};
     void poll();const timer=setInterval(()=>void poll(),1500);
-    const listener=AppState.addEventListener('change',state=>{if(state==='active')void poll();else if(state==='background'){operation.current++;void stopGeneration();setBusy(previous=>previous==='Reading PDF pages…'?previous:'');setNotice('Return to the app to generate answers. Model downloads continue in the background.');}});
+    const listener=AppState.addEventListener('change',state=>{if(state==='active')void poll();else if(state==='background'){operation.current++;void stopGeneration();setBusy(previous=>previous==='Reading PDF pages…'?previous:'');setNotice('Return to the app to generate answers. Downloads continue in the background.');}});
     return()=>{alive.current=false;clearInterval(timer);listener.remove();void stopGeneration();};
   },[]);
   useEffect(()=>{const id=++studyRequest.current;setStudy({bookId:activeId,cards:[],quiz:[]});
@@ -97,7 +97,7 @@ function AppBody(){
     if(busy)return;
     const id=++operation.current;
     try{
-      setError('');setNotice('');if(!model.ready)throw Error('Download the offline model in Settings first.');
+      setError('');setNotice('');if(!model.ready)throw Error('Set up offline AI in Settings first.');
       const query=kind==='answer'?question:topic;if(!query.trim())throw Error(kind==='answer'?'Enter a question.':'Enter a study topic.');
       const chunks=getSources(query);setSources(chunks);if(kind==='answer')setAnswer('');
       setBusy(kind==='answer'?'Answering from your PDF…':kind==='cards'?'Generating flashcards…':'Generating quiz…');
@@ -108,7 +108,7 @@ function AppBody(){
         'Create exactly 3 multiple-choice questions about '+query+'. Return ONLY a JSON array. Each object: {"q":"question","options":["one","two","three","four"],"answer":0,"explanation":"brief explanation","page":12}. answer is the correct zero-based option index. Use a page number from the excerpts.';
       const text=await generate(model.path,chatPrompt(system,context+'\n\n'+instruction),kind==='answer'?160:650,partial=>{if(kind==='answer'&&operation.current===id)setAnswer(partial);});
       if(operation.current!==id)return;
-      if(kind==='answer'){setAnswer(text);setNotice('Generated offline. Check the source excerpts below.');}
+      if(kind==='answer'){setAnswer(text);setNotice('');}
       else{
         const data=parseStudyJSON(text,chunks.map(chunk=>chunk.page)) as Array<Record<string,unknown>>;
         let updated:SavedStudy;
@@ -119,40 +119,40 @@ function AppBody(){
           if(data.some(x=>!Array.isArray(x.options)||x.options.length!==4||x.options.some(o=>typeof o!=='string'||!o.trim())||new Set(x.options).size!==4||!Number.isInteger(x.answer)||Number(x.answer)<0||Number(x.answer)>3||typeof x.explanation!=='string'||!x.explanation.trim()))throw Error('Generated quiz was incomplete. Retry with a narrower topic.');
           updated={...study,quiz:data as unknown as QuizQuestion[]};resetQuiz();
         }
-        await saveStudy(updated);setStudy(updated);setNotice('Saved study set · generated offline');
+        await saveStudy(updated);setStudy(updated);setNotice('Study set saved.');
       }
     }catch(e){if(operation.current===id)setError(message(e));}finally{if(operation.current===id)setBusy('');}
   }
   async function cancel(){operation.current++;setBusy('');setAnswer('');setNotice('Generation cancelled.');try{await stopGeneration();}catch(e){setError(message(e));}}
-  async function download(){try{setError('');await nativeDocuments().startModelDownload();setModel(await nativeDocuments().modelStatus());setNotice('Android will continue the download when you minimize CiteCoach.');}catch(e){setError(message(e));}}
+  async function download(){try{setError('');await nativeDocuments().startModelDownload();setModel(await nativeDocuments().modelStatus());setNotice('You can leave the app while the download continues.');}catch(e){setError(message(e));}}
   const heading=(title:string,description?:string)=><View style={{gap:8}}><Text style={s.heading}>{title}</Text>{description&&<Text style={s.muted}>{description}</Text>}</View>;
   const selector=books.length>0&&<ScrollView horizontal contentContainerStyle={{gap:8}} showsHorizontalScrollIndicator={false}>{books.map(b=><Pressable key={b.id} accessibilityRole="button" onPress={()=>switchBook(b.id)} disabled={!!busy} style={[s.chip,b.id===activeId&&s.activeChip]}><Text numberOfLines={1} style={{color:b.id===activeId?c.buttonInk:c.text,maxWidth:230,fontFamily:'SourceSans3_600SemiBold'}}>{b.title}</Text></Pressable>)}</ScrollView>;
-  const pageScope=<View style={s.card}><Text style={s.label}>PDF page range</Text><Text style={s.muted}>Select a chapter using its first and last PDF pages. Printed page numbers may differ.</Text><View style={s.row}><TextInput accessibilityLabel="First PDF page" value={from} onChangeText={setFrom} keyboardType="number-pad" placeholder="From" style={[s.input,{flex:1}]}/><TextInput accessibilityLabel="Last PDF page" value={to} onChangeText={setTo} keyboardType="number-pad" placeholder={String(book?.pages.length??'To')} style={[s.input,{flex:1}]}/></View></View>;
+  const pageScope=<View style={s.card}><Text style={s.label}>PDF page range</Text><Text style={s.muted}>Use PDF page numbers to choose a chapter.</Text><View style={s.row}><TextInput accessibilityLabel="First PDF page" value={from} onChangeText={setFrom} keyboardType="number-pad" placeholder="From" style={[s.input,{flex:1}]}/><TextInput accessibilityLabel="Last PDF page" value={to} onChangeText={setTo} keyboardType="number-pad" placeholder={String(book?.pages.length??'To')} style={[s.input,{flex:1}]}/></View></View>;
   const sourceChip=(page:number,text:string)=><Pressable accessibilityRole="button" onPress={()=>setSource({page,text})} style={s.chip}><Text style={s.label}>PDF page {page} ↗</Text></Pressable>;
   const home=<>
     {heading('Your documents, answered.','Read, ask and study on your device.')}
     <View style={[s.card,{backgroundColor:c.hero}]}><Text style={[s.title,{color:'#F6F4EE'}]}>{book?'Continue with your document':'Start with one PDF'}</Text><Text style={{color:'#D7EEE1',fontSize:17}}>{book?.title??'Import a text-based PDF to create your private study library.'}</Text>{button(book?'Open library':'Import a PDF',()=>book?setTab('Library'):void doImport(),!!busy,'home-primary')}</View>
-    <View style={s.card}><Text style={s.title}>Offline model</Text><Text style={s.body}>{model.ready?'Downloaded and ready':downloading?'Downloading in Android background service':'One-time model download required'}</Text><Text style={s.muted}>Qwen2.5 0.5B · compact CPU model. After download, answers run locally. Documents are never uploaded.</Text>{button(model.ready?'Ask a question':'Set up offline AI',()=>setTab(model.ready?'Ask':'Settings'))}</View>
+    <View style={s.card}><Text style={s.title}>CiteCoach AI</Text><Text style={s.body}>{model.ready?'Ready offline':downloading?'Downloading…':'Set up once to use offline'}</Text>{button(model.ready?'Ask a question':'Set up offline AI',()=>setTab(model.ready?'Ask':'Settings'))}</View>
     <View style={s.row}>{button('Flashcards',()=>{setMode('Flashcards');setTab('Learn');})}{button('Quiz',()=>{setMode('Quiz');setTab('Learn');})}</View>
     <Text style={s.muted}>{books.length} saved documents · {study.cards.length} saved flashcards</Text>
   </>;
   const library=<>
-    {heading('Your library','PDFs and extracted text stay on this device.')}
+    {heading('Your library','Your documents stay on this device.')}
     <TextInput testID="library-search" accessibilityLabel="Search your books" placeholder="Search your books" value={search} onChangeText={setSearch} style={s.input}/>
-    {books.filter(b=>b.title.toLowerCase().includes(search.toLowerCase())).map(b=><Pressable key={b.id} onPress={()=>switchBook(b.id)} style={[s.card,b.id===activeId&&{borderColor:c.primary,borderWidth:2}]}><Text style={s.title}>{b.title}</Text><Text style={s.muted}>{b.pages.length} PDF pages · saved locally{b.id===activeId?' · selected':''}</Text><View style={s.row}>{button('Ask',()=>{switchBook(b.id);setTab('Ask');},!!busy)}{button('Study',()=>{switchBook(b.id);setTab('Learn');},!!busy)}</View></Pressable>)}
-    {!books.length&&<View style={s.card}><Text style={s.title}>Your library is empty.</Text><Text style={s.body}>Import a PDF with selectable text. Scanned pages need OCR, which is not included yet.</Text></View>}
+    {books.filter(b=>b.title.toLowerCase().includes(search.toLowerCase())).map(b=><Pressable key={b.id} onPress={()=>switchBook(b.id)} style={[s.card,b.id===activeId&&{borderColor:c.primary,borderWidth:2}]}><Text style={s.title}>{b.title}</Text><Text style={s.muted}>{b.pages.length} pages{b.id===activeId?' · selected':''}</Text><View style={s.row}>{button('Ask',()=>{switchBook(b.id);setTab('Ask');},!!busy)}{button('Study',()=>{switchBook(b.id);setTab('Learn');},!!busy)}</View></Pressable>)}
+    {!books.length&&<View style={s.card}><Text style={s.title}>Your library is empty.</Text><Text style={s.body}>Import a PDF with selectable text to get started.</Text></View>}
     {button('Import a PDF',()=>void doImport(),!!busy,'import-pdf')}
   </>;
   const ask=<>
-    {heading('Ask your document','Answers use retrieved excerpts from the selected PDF.')}{selector}{pageScope}
+    {heading('Ask your document','Ask a question about your PDF.')}{selector}{pageScope}
     <TextInput accessibilityLabel="Question" placeholder="What is supervised learning?" value={question} onChangeText={setQuestion} multiline style={[s.input,{minHeight:90}]} editable={!busy}/>
     {button('Answer offline',()=>void run('answer'),!book||!!busy,'answer-offline')}
     {!!answer&&<View style={s.card}><View style={s.row}><CiteMark size={28}/><Text style={s.label}>CiteCoach</Text></View><Text selectable style={s.body}>{answer}</Text>{!busy&&button('Save as flashcard',()=>{if(!book)return;const updated={...study,cards:[...study.cards,{q:question,a:answer,page:sources[0]?.page??1}]};void saveStudy(updated).then(()=>{setStudy(updated);setNotice('Flashcard saved.');}).catch(e=>setError(message(e)));})}</View>}
-    {!!answer&&sources.length>0&&<><Text style={s.label}>Retrieved evidence · verify the answer</Text>{sources.map((chunk,i)=><View key={i} style={s.card}>{sourceChip(chunk.page,chunk.text)}<Text selectable style={s.muted}>{chunk.text}</Text></View>)}</>}
+    {!!answer&&sources.length>0&&<><Text style={s.label}>Sources</Text>{sources.map((chunk,i)=><View key={i} style={s.card}>{sourceChip(chunk.page,chunk.text)}<Text selectable style={s.muted}>{chunk.text}</Text></View>)}</>}
   </>;
   const currentCard=study.cards[cardIndex];const currentQuestion=study.quiz[quizIndex];
   const learn=<>
-    {heading('Learn','Generate and save study material from your own PDF.')}{selector}
+    {heading('Learn','Flashcards and quizzes from your PDF.')}{selector}
     <View style={s.row}>{(['Flashcards','Quiz'] as const).map(value=><Pressable key={value} accessibilityRole="tab" accessibilityState={{selected:mode===value}} onPress={()=>setMode(value)} style={[s.chip,mode===value&&s.activeChip]}><Text style={{color:mode===value?c.buttonInk:c.text}}>{value}</Text></Pressable>)}</View>
     {pageScope}<TextInput accessibilityLabel="Study topic" placeholder="Study topic, e.g. supervised learning" value={topic} onChangeText={setTopic} style={s.input} editable={!busy}/>
     {button(mode==='Flashcards'?'Generate flashcards':'Generate quiz',()=>void run(mode==='Flashcards'?'cards':'quiz'),!book||!!busy,'generate-study')}
@@ -162,24 +162,24 @@ function AppBody(){
   const settings=<>
     {heading('Settings','Private, on-device study')}
     <View style={[s.card,s.row]}><Text style={s.title}>Dark appearance</Text><Switch accessibilityLabel="Dark appearance" value={dark} onValueChange={value=>{setDark(value);void AsyncStorage.setItem('citecoach-dark',String(value));}}/></View>
-    <View style={s.card}><Text style={s.title}>Offline AI · Qwen2.5 0.5B</Text><Text style={s.body}>{model.ready?'Model downloaded':downloading?'Download in progress':model.status===16?'Download failed (Android reason '+model.reason+')':'Model is not downloaded'}</Text><Text style={s.muted}>One-time download, approximately 400 MB. Use Wi-Fi if you prefer. Small models can make mistakes; check the source passages.</Text>
-      {downloading&&<><View accessibilityRole="progressbar" style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View><Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text><Text style={s.muted}>{model.status===4?'Android has paused the transfer while waiting for network or system resources.':'You may minimize the app; Android manages this download.'}</Text>{button('Cancel download',()=>{void nativeDocuments().cancelModelDownload().then(()=>setModel(emptyModel)).catch(e=>setError(message(e)));})}</>}
-      {!model.ready&&!downloading&&button(model.status===16?'Retry download':'Download model',()=>void download(),false,'download-model')}
+    <View style={s.card}><Text style={s.title}>Offline AI</Text><Text style={s.body}>{model.ready?'Downloaded':downloading?'Downloading…':model.status===16?'Download interrupted. Please retry.':'Not downloaded'}</Text>{!model.ready&&<Text style={s.muted}>One-time download · about 400 MB</Text>}
+      {downloading&&<><View accessibilityRole="progressbar" style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View><Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text><Text style={s.muted}>{model.status===4?'Download paused. Check your connection.':'Download continues when you leave the app.'}</Text>{button('Cancel download',()=>{void nativeDocuments().cancelModelDownload().then(()=>setModel(emptyModel)).catch(e=>setError(message(e)));})}</>}
+      {!model.ready&&!downloading&&button(model.status===16?'Retry':'Download',()=>void download(),false,'download-model')}
     </View>
-    <Text style={s.muted}>CiteCoach Android 0.3.0 · local PDF extraction and on-device inference. OCR is not included. The first model load may take longer. iOS native integration is pending.</Text>
+    <Text style={s.muted}>CiteCoach · 0.3.1</Text>
   </>;
   return <SafeAreaView style={{flex:1,backgroundColor:c.bg}} edges={['top','bottom']}><StatusBar barStyle={dark?'light-content':'dark-content'} backgroundColor={c.bg}/>
     <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==='ios'?'padding':'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:20,paddingBottom:28,gap:16,width:'100%',maxWidth:680,alignSelf:'center'}}>
         <View style={[s.row,{justifyContent:'space-between'}]}><View style={s.row}><CiteMark size={38}/><Text style={s.title}>CiteCoach</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={()=>setTab('Settings')} style={s.chip}><Text style={s.label}>Settings</Text></Pressable></View>
         {!hydrated?<BrandBusyIndicator label="Opening your library…" dark={dark}/>:tab==='Home'?home:tab==='Library'?library:tab==='Ask'?ask:tab==='Learn'?learn:settings}
-        {!!busy&&<View style={s.card}><BrandBusyIndicator label={busy} dark={dark} onCancel={busy==='Reading PDF pages…'?undefined:()=>void cancel()}/><Text style={s.muted}>{seconds}s · {busy==='Reading PDF pages…'?'Extracting text locally. Large PDFs take longer.':'The first request loads the model into memory. Keep the app open while generating.'}</Text></View>}
+        {!!busy&&<View style={s.card}><BrandBusyIndicator label={busy} dark={dark} onCancel={busy==='Reading PDF pages…'?undefined:()=>void cancel()}/><Text style={s.muted}>{seconds}s · {busy==='Reading PDF pages…'?'Reading your PDF…':'Keep the app open while we prepare your answer.'}</Text></View>}
         {!!error&&<View accessibilityRole="alert" style={[s.card,{borderColor:'#B9532E'}]}><Text style={s.body}>{error}</Text>{button('Dismiss',()=>setError(''))}</View>}
         {!!notice&&<Text accessibilityLiveRegion="polite" style={s.muted}>{notice}</Text>}
       </ScrollView>
       <View style={s.nav}>{(['Home','Library','Learn','Ask'] as const).map(value=><Pressable testID={'nav-'+value} key={value} accessibilityRole="tab" accessibilityState={{selected:tab===value}} onPress={()=>setTab(value)} style={[s.navItem,tab===value&&{backgroundColor:'#D7EEE1'}]}><Text style={{color:tab===value?'#173D2E':'#F6F4EE',fontFamily:'SourceSans3_600SemiBold'}}>{value}</Text></Pressable>)}</View>
     </KeyboardAvoidingView>
-    <Modal transparent visible={source!==null} animationType="slide" onRequestClose={()=>setSource(null)}><View style={{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(0,0,0,.4)'}}><SafeAreaView style={[s.card,{maxHeight:'85%',margin:0,borderBottomLeftRadius:0,borderBottomRightRadius:0}]}><ScrollView contentContainerStyle={{gap:16}}><Text style={s.heading}>PDF page {source?.page}</Text><Text style={s.muted}>{book?.title} · extracted source text</Text><Text selectable style={s.body}>{source?.text}</Text>{button('Close source',()=>setSource(null))}</ScrollView></SafeAreaView></View></Modal>
+    <Modal transparent visible={source!==null} animationType="slide" onRequestClose={()=>setSource(null)}><View style={{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(0,0,0,.4)'}}><SafeAreaView style={[s.card,{maxHeight:'85%',margin:0,borderBottomLeftRadius:0,borderBottomRightRadius:0}]}><ScrollView contentContainerStyle={{gap:16}}><Text style={s.heading}>PDF page {source?.page}</Text><Text style={s.muted}>{book?.title}</Text><Text selectable style={s.body}>{source?.text}</Text>{button('Close source',()=>setSource(null))}</ScrollView></SafeAreaView></View></Modal>
   </SafeAreaView>;
 }
 function styles(c:ReturnType<typeof createTheme>){return StyleSheet.create({

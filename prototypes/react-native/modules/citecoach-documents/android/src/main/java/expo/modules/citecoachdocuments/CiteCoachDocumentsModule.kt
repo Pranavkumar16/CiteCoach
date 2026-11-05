@@ -39,7 +39,7 @@ class CiteCoachDocumentsModule : Module() {
           sendEvent("onExtractionProgress",mapOf("current" to page,"total" to document.numberOfPages))
         }
       }
-      require(pages.any { (it["text"] as String).length > 40 }) { "No readable text found. This may be a scanned PDF; OCR is not included yet." }
+      require(pages.any { (it["text"] as String).length > 40 }) { "This PDF has no selectable text. Try a text-based PDF." }
       pages
     }
     AsyncFunction("startModelDownload") {
@@ -58,8 +58,8 @@ class CiteCoachDocumentsModule : Module() {
       }
       if(file.exists()) file.delete()
       val request=DownloadManager.Request(Uri.parse("https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf"))
-        .setTitle("CiteCoach offline model")
-        .setDescription("Downloading Qwen2.5 0.5B. Study documents stay on this device.")
+        .setTitle("CiteCoach AI")
+        .setDescription("Downloading offline AI. Your documents stay on this device.")
         .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         .setAllowedOverMetered(true)
         .setDestinationUri(Uri.fromFile(file))

@@ -15,7 +15,7 @@ export async function generate(path:string,prompt:string,tokens:number,onToken:(
         void loading.then(value=>{context=value;loading=null;},()=>{loading=null;});
       }
       let loadTimer:ReturnType<typeof setTimeout>|undefined;
-      try{context=await Promise.race([loading,new Promise<never>((_,reject)=>{loadTimer=setTimeout(()=>reject(Error('Model loading exceeded 90 seconds. Close other apps and retry.')),90000);})]);}
+      try{context=await Promise.race([loading,new Promise<never>((_,reject)=>{loadTimer=setTimeout(()=>reject(Error('CiteCoach is taking too long to start. Close other apps and retry.')),90000);})]);}
       finally{if(loadTimer)clearTimeout(loadTimer);}
     }
     if(version!==cancellation)throw Error('Generation cancelled.');
@@ -23,7 +23,7 @@ export async function generate(path:string,prompt:string,tokens:number,onToken:(
     timer=setTimeout(()=>{timedOut=true;void context?.stopCompletion();},120000);
     const result=await context.completion({prompt,n_predict:tokens,temperature:0.15,top_p:0.9,stop:['<|im_end|>','<|endoftext|>']},data=>{text+=data.token;onToken(text);});
     if(timedOut)throw Error('Generation reached the two-minute limit. Try a shorter question or narrower topic.');
-    if(!result.text.trim())throw Error('The model returned no answer. Try a shorter question.');
+    if(!result.text.trim())throw Error('No answer was generated. Try a shorter question.');
     return result.text.trim();
   }finally{if(timer)clearTimeout(timer);running=false;}
 }
