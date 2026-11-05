@@ -1,8 +1,10 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {AppState,BackHandler,KeyboardAvoidingView,Modal,Platform,Pressable,ScrollView,StatusBar,StyleSheet,Switch,Text,TextInput,View} from 'react-native';
+import {AppState,BackHandler,KeyboardAvoidingView,Keyboard,Linking,Platform,Pressable,ScrollView,StatusBar,StyleSheet,Switch,Text,TextInput,View} from 'react-native';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import {FilePreview} from '../../components/FilePreview';
 import {useFonts} from 'expo-font';
 import {BricolageGrotesque_700Bold} from '@expo-google-fonts/bricolage-grotesque/700Bold';
 import {SourceSans3_400Regular} from '@expo-google-fonts/source-sans-3/400Regular';
@@ -50,7 +52,8 @@ function AppBody(){
   const [checked,setChecked]=useState(false);
   const [scores,setScores]=useState<boolean[]>([]);
   const [finished,setFinished]=useState(false);
-  const [source,setSource]=useState<{page:number;text:string}|null>(null);
+  const [preview,setPreview]=useState<{book:LocalBook;page?:number}|null>(null);
+  const [permissionBlocked,setPermissionBlocked]=useState(false);
   const [seconds,setSeconds]=useState(0);
   const operation=useRef(0);
   const studyRequest=useRef(0);
@@ -77,21 +80,45 @@ function AppBody(){
     setFrom('1');setTo('');setAnswer('');setSources([]);resetQuiz();setCardIndex(0);setRevealed(false);
     if(activeId)void AsyncStorage.setItem('citecoach-active-book',activeId);
   },[activeId]);
-  useEffect(()=>{const back=BackHandler.addEventListener('hardwareBackPress',()=>{if(source){setSource(null);return true;}if(busy){return true;}if(tab!=='Home'){setTab('Home');return true;}return false;});return()=>back.remove();},[tab,source,busy]);
+  useEffect(()=>{const back=BackHandler.addEventListener('hardwareBackPress',()=>{if(preview){setPreview(null);return true;}if(busy){return true;}if(tab!=='Home'){setTab('Home');return true;}return false;});return()=>back.remove();},[tab,preview,busy]);
   useEffect(()=>{if(!busy)return;setSeconds(0);const start=Date.now();const timer=setInterval(()=>setSeconds(Math.floor((Date.now()-start)/1000)),1000);return()=>clearInterval(timer);},[busy]);
   function resetQuiz(){setQuizIndex(0);setChoice(null);setChecked(false);setScores([]);setFinished(false);}
   const button=(label:string,onPress:()=>void,disabled=false,testID?:string)=><Pressable testID={testID} accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={[s.button,disabled&&{opacity:.45}]}><Text style={s.buttonText}>{label}</Text></Pressable>;
   const switchBook=(id:string)=>{if(busy)return;setActiveId(id);setNotice('');setError('');};
-  async function doImport(){
-    if(busy)return;
+  async function acceptFile(uri:string,name:string){
     let extractionSubscription:{remove:()=>void}|undefined;
     try{
-      setError('');const result=await DocumentPicker.getDocumentAsync({type:'*/*',copyToCacheDirectory:true});if(result.canceled)return;
-      setImportProgress('');setBusy('Reading document pages…');
+      setError('');setImportProgress('');setBusy('Reading document pages…');
       extractionSubscription=observeExtraction(progress=>setImportProgress((progress.stage==='ocr'?'Reading scan':'Reading document')+' · page '+progress.current+' of '+progress.total));
-      const added=await importBook(result.assets[0].uri,result.assets[0].name);
+      const added=await importBook(uri,name);
       setBooks(previous=>[...previous,added]);setActiveId(added.id);setTab('Library');setNotice('Saved on this device');
+      Keyboard.dismiss();setPreview({book:added});
     }catch(e){setError(message(e));}finally{extractionSubscription?.remove();setImportProgress('');setBusy('');}
+  }
+  async function doImport(){
+    if(busy)return;
+    try{
+      setError('');setPermissionBlocked(false);
+      const result=await DocumentPicker.getDocumentAsync({type:'*/*',copyToCacheDirectory:true});
+      if(!result.canceled)await acceptFile(result.assets[0].uri,result.assets[0].name);
+    }catch(e){setError(message(e));}
+  }
+  async function addPhoto(camera:boolean){
+    if(busy)return;
+    try{
+      setError('');setPermissionBlocked(false);Keyboard.dismiss();
+      if(camera){
+        const permission=await ImagePicker.requestCameraPermissionsAsync();
+        if(!permission.granted){setError('Camera access is off. Enable it in phone Settings to take a photo.');setPermissionBlocked(true);return;}
+      }
+      const result=camera
+        ?await ImagePicker.launchCameraAsync({mediaTypes:['images'],quality:1,allowsEditing:false})
+        :await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],quality:1,allowsEditing:false});
+      if(result.canceled)return;
+      const image=result.assets[0];
+      const ext=image.mimeType==='image/png'?'png':image.mimeType==='image/heic'?'heic':'jpg';
+      await acceptFile(image.uri,image.fileName||'Photo-'+Date.now()+'.'+ext);
+    }catch(e){setError(camera?'Could not open the camera. Check camera access in phone Settings.':'Could not open your photos. Try importing the image from Files.');}
   }
   function getSources(query:string){
     if(!book)throw Error('Import and select a document first.');
@@ -159,10 +186,10 @@ function AppBody(){
   const selector=books.length>0&&<ScrollView horizontal contentContainerStyle={{gap:8}} showsHorizontalScrollIndicator={false}>{books.map(b=><Pressable key={b.id} accessibilityRole="button" onPress={()=>switchBook(b.id)} disabled={!!busy} style={[s.chip,b.id===activeId&&s.activeChip]}><Text numberOfLines={1} style={{color:b.id===activeId?c.buttonInk:c.text,maxWidth:230,fontFamily:'SourceSans3_600SemiBold'}}>{b.title}</Text></Pressable>)}</ScrollView>;
   const pageScope=<View style={s.card}><Text style={s.label}>{(book?.format??'pdf')==='pdf'?'PDF pages':'Source sections'}</Text><Text style={s.muted}>Use source numbers to choose a chapter.</Text><View style={s.row}><TextInput accessibilityLabel="First document page" value={from} onChangeText={setFrom} keyboardType="number-pad" placeholder="From" style={[s.input,{flex:1}]}/><TextInput accessibilityLabel="Last document page" value={to} onChangeText={setTo} keyboardType="number-pad" placeholder={book?String(Math.max(...book.pages.map(p=>p.page))):'To'} style={[s.input,{flex:1}]}/></View></View>;
   const sourceLabel=(page:number)=>book?.pages.find(p=>p.page===page)?.label??((book?.format??'pdf')==='pdf'?'Page '+page:'Section '+page);
-  const sourceChip=(page:number,text:string)=><Pressable accessibilityRole="button" onPress={()=>setSource({page,text})} style={s.chip}><Text style={s.label}>{sourceLabel(page)} ↗</Text></Pressable>;
+  const sourceChip=(page:number,text:string)=><Pressable accessibilityRole="button" onPress={()=>{if(book){Keyboard.dismiss();setPreview({book,page});}}} style={s.chip}><Text style={s.label}>{sourceLabel(page)} ↗</Text></Pressable>;
   const home=<>
     {heading('Your documents, answered.','Read, ask and study on your device.')}
-    <View style={[s.card,{backgroundColor:c.hero}]}><Text style={[s.title,{color:'#F6F4EE'}]}>{book?'Continue with your document':'Start with one document'}</Text><Text style={{color:'#D7EEE1',fontSize:17}}>{book?.title??'Import a document or image to start your private library.'}</Text>{button(book?'Open library':'Import a file',()=>book?setTab('Library'):void doImport(),!!busy,'home-primary')}</View>
+    <View style={[s.card,{backgroundColor:c.hero}]}><Text style={[s.title,{color:'#F6F4EE'}]}>{book?'Continue with your document':'Start with one document'}</Text><Text style={{color:'#D7EEE1',fontSize:17}}>{book?.title??'Import a document or image to start your private library.'}</Text>{button(book?'Open library':'Import a file',()=>book?setTab('Library'):void doImport(),!!busy,'home-primary')}{!book&&button('Take photo',()=>void addPhoto(true),!!busy,'home-take-photo')}</View>
     <View style={s.card}><Text style={s.title}>CiteCoach AI</Text><Text style={s.body}>{model.ready?'Ready offline':downloading?'Downloading…':'Set up once to use offline'}</Text>{button(model.ready?'Ask a question':'Set up offline AI',()=>setTab(model.ready?'Ask':'Settings'))}</View>
     <View style={s.row}>{button('Flashcards',()=>{setMode('Flashcards');setTab('Learn');})}{button('Quiz',()=>{setMode('Quiz');setTab('Learn');})}</View>
     <Text style={s.muted}>{books.length} saved documents · {study.cards.length} saved flashcards</Text>
@@ -170,9 +197,10 @@ function AppBody(){
   const library=<>
     {heading('Your library','Your documents stay on this device.')}
     <TextInput testID="library-search" accessibilityLabel="Search your books" placeholder="Search your books" value={search} onChangeText={setSearch} style={s.input}/>
-    {books.filter(b=>b.title.toLowerCase().includes(search.toLowerCase())).map(b=><Pressable key={b.id} onPress={()=>switchBook(b.id)} style={[s.card,b.id===activeId&&{borderColor:c.primary,borderWidth:2}]}><Text style={s.title}>{b.title}</Text><Text style={s.muted}>{b.pages.length} sources{b.id===activeId?' · selected':''}</Text><View style={s.row}>{button('Ask',()=>{switchBook(b.id);setTab('Ask');},!!busy)}{button('Study',()=>{switchBook(b.id);setTab('Learn');},!!busy)}</View></Pressable>)}
+    {books.filter(b=>b.title.toLowerCase().includes(search.toLowerCase())).map(b=><View key={b.id} style={[s.card,b.id===activeId&&{borderColor:c.primary,borderWidth:2}]}><Pressable accessibilityRole="button" accessibilityLabel={'Preview '+b.title} disabled={!!busy} onPress={()=>{switchBook(b.id);Keyboard.dismiss();setPreview({book:b});}} style={{gap:8,paddingVertical:6}}><Text style={s.title}>{b.title}</Text><Text style={s.muted}>{b.pages.length} sources{b.id===activeId?' · selected':''}</Text></Pressable><View style={s.row}>{button('Preview',()=>{switchBook(b.id);Keyboard.dismiss();setPreview({book:b});},!!busy)}{button('Ask',()=>{switchBook(b.id);setTab('Ask');},!!busy)}{button('Study',()=>{switchBook(b.id);setTab('Learn');},!!busy)}</View></View>)}
     {!books.length&&<View style={s.card}><Text style={s.title}>Your library is empty.</Text><Text style={s.body}>Import an image or document to get started.</Text></View>}
-    {button('Import a document',()=>void doImport(),!!busy,'import-pdf')}
+    {button('Import a file',()=>void doImport(),!!busy,'import-pdf')}
+    <View style={s.row}>{button('Take photo',()=>void addPhoto(true),!!busy,'take-photo')}{button('Choose photo',()=>void addPhoto(false),!!busy,'choose-photo')}</View>
   </>;
   const ask=<>
     {heading('Ask your document','Ask a question about your document.')}{selector}{pageScope}
@@ -197,7 +225,7 @@ function AppBody(){
       {downloading&&<><View accessibilityRole="progressbar" style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View><Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text><Text style={s.muted}>{model.status===4?'Download paused. Check your connection.':'Download continues when you leave the app.'}</Text>{button('Cancel download',()=>{void nativeDocuments().cancelModelDownload().then(()=>setModel(emptyModel)).catch(e=>setError(message(e)));})}</>}
       {!model.ready&&!downloading&&button(model.status===16?'Retry':'Download',()=>void download(),false,'download-model')}
     </View>
-    <Text style={s.muted}>CiteCoach · 0.3.6</Text>
+    <Text style={s.muted}>CiteCoach · 0.3.7</Text>
   </>;
   // Completion is derived from the persisted native download, never an in-memory
   // flag. Existing downloads skip setup after restart; missing files need setup.
@@ -225,12 +253,12 @@ function AppBody(){
         <View style={[s.row,{justifyContent:'space-between'}]}><View style={s.row}><CiteMark size={38}/><Text style={s.title}>CiteCoach</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={()=>setTab('Settings')} style={s.chip}><Text style={s.label}>Settings</Text></Pressable></View>
         {!hydrated?<BrandBusyIndicator label="Opening your library…" dark={dark}/>:tab==='Home'?home:tab==='Library'?library:tab==='Ask'?ask:tab==='Learn'?learn:settings}
         {!!busy&&<View style={s.card}><BrandBusyIndicator label={busy==='Reading document pages…'&&importProgress?importProgress:busy} dark={dark} onCancel={busy==='Reading document pages…'?undefined:()=>void cancel()}/><Text style={s.muted}>{seconds}s · {busy==='Reading document pages…'?'Reading your document…':'Keep the app open while we prepare your answer.'}</Text></View>}
-        {!!error&&<View accessibilityRole="alert" style={[s.card,{borderColor:'#B9532E'}]}><Text style={s.body}>{error}</Text>{button('Dismiss',()=>setError(''))}</View>}
+        {!!error&&<View accessibilityRole="alert" style={[s.card,{borderColor:'#B9532E'}]}><Text style={s.body}>{error}</Text>{permissionBlocked&&button('Open phone Settings',()=>void Linking.openSettings())}{button('Dismiss',()=>{setError('');setPermissionBlocked(false);})}</View>}
         {!!notice&&<Text accessibilityLiveRegion="polite" style={s.muted}>{notice}</Text>}
       </ScrollView>
       <View style={s.nav}>{(['Home','Library','Learn','Ask'] as const).map(value=><Pressable testID={'nav-'+value} key={value} accessibilityRole="tab" accessibilityState={{selected:tab===value}} onPress={()=>setTab(value)} style={[s.navItem,tab===value&&{backgroundColor:'#D7EEE1'}]}><Text style={{color:tab===value?'#173D2E':'#F6F4EE',fontFamily:'SourceSans3_600SemiBold'}}>{value}</Text></Pressable>)}</View>
     </KeyboardAvoidingView>
-    <Modal transparent visible={source!==null} animationType="slide" onRequestClose={()=>setSource(null)}><View style={{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(0,0,0,.4)'}}><SafeAreaView style={[s.card,{maxHeight:'85%',margin:0,borderBottomLeftRadius:0,borderBottomRightRadius:0}]}><ScrollView contentContainerStyle={{gap:16}}><Text style={s.heading}>{sourceLabel(source?.page??1)}</Text><Text style={s.muted}>{book?.title}</Text><Text selectable style={s.body}>{source?.text}</Text>{button('Close source',()=>setSource(null))}</ScrollView></SafeAreaView></View></Modal>
+    {preview&&<FilePreview key={preview.book.id+':'+String(preview.page)} book={preview.book} initialPage={preview.page} dark={dark} onClose={()=>setPreview(null)}/>}
   </SafeAreaView>;
 }
 function styles(c:ReturnType<typeof createTheme>){return StyleSheet.create({

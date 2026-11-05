@@ -2,7 +2,7 @@
   "expo": {
     "name": "CiteCoach",
     "slug": "citecoach",
-    "version": "0.3.6",
+    "version": "0.3.7",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -11,7 +11,7 @@
     },
     "android": {
       "package": "com.citecoach.preview",
-      "versionCode": 16,
+      "versionCode": 17,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#F6F4EE"
@@ -42,6 +42,14 @@
           "imageWidth": 160,
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow CiteCoach to take photos of your documents.",
+          "photosPermission": "Allow CiteCoach to import photos of your documents.",
+          "microphonePermission": false
         }
       ]
     ],

@@ -89,6 +89,34 @@ class CiteCoachDocumentsModule : Module() {
       }
       pages
     }
+    AsyncFunction("renderPdfPage") { uri: String, pageNumber: Int ->
+      val file=File(Uri.parse(uri).path ?: throw IllegalArgumentException("Could not open this PDF."))
+      val cache=File(context().cacheDir,"citecoach-preview").apply { mkdirs() }
+      val preview=File(cache,file.nameWithoutExtension+"-"+file.lastModified()+"-"+pageNumber+".png")
+      ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+        PdfRenderer(descriptor).use { pdf ->
+          require(pageNumber in 1..pdf.pageCount) { "This page is not available." }
+          pdf.openPage(pageNumber-1).use { page ->
+            val scale=minOf(2.5f,2000f/maxOf(page.width,page.height).toFloat())
+            val width=maxOf(1,(page.width*scale).roundToInt())
+            val height=maxOf(1,(page.height*scale).roundToInt())
+            if(!preview.exists()) {
+              val bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+              val temporary=File(cache,preview.name+".tmp")
+              try {
+                bitmap.eraseColor(Color.WHITE)
+                page.render(bitmap,null,null,PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                temporary.outputStream().use { stream -> require(bitmap.compress(Bitmap.CompressFormat.PNG,100,stream)) { "Could not display this page." } }
+                require(temporary.renameTo(preview)) { "Could not save this preview. Check available storage." }
+              } finally { bitmap.recycle();temporary.delete() }
+            }
+            // Cache only a few pages; originals remain in private document storage.
+            cache.listFiles()?.filter { it.extension=="png" && it!=preview }?.sortedByDescending { it.lastModified() }?.drop(7)?.forEach { it.delete() }
+            mapOf("uri" to Uri.fromFile(preview).toString(),"width" to width,"height" to height)
+          }
+        }
+      }
+    }
     AsyncFunction("readImage") { uri: String ->
       val file=File(Uri.parse(uri).path ?: throw IllegalArgumentException("Could not open this image."))
       val bounds=BitmapFactory.Options().apply { inJustDecodeBounds=true }

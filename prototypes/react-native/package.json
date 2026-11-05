@@ -1,6 +1,6 @@
 {
   "name": "citecoach",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -36,7 +36,8 @@
     "llama.rn": "0.12.9",
     "expo-splash-screen": "~55.0.25",
     "fflate": "0.8.2",
-    "base64-js": "1.5.1"
+    "base64-js": "1.5.1",
+    "expo-image-picker": "~55.0.24"
   },
   "devDependencies": {
     "typescript": "~5.9.2",

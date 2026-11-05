@@ -6,7 +6,7 @@ import {extension,isImage,supportedExtensions,plainDocument,officeDocument} from
 import type {LocalBook,PageText,SavedStudy} from '../domain/documents';
 export type ModelStatus={ready:boolean;path:string;bytes:number;total:number;status:number;reason:number};
 export type ExtractionProgress={current:number;total:number;stage:'ocr'|'text'};
-type Bridge={addListener:(event:string,listener:(progress:ExtractionProgress)=>void)=>{remove:()=>void};extractPdf:(uri:string)=>Promise<PageText[]>;readImage:(uri:string)=>Promise<PageText[]>;startModelDownload:()=>Promise<number>;modelStatus:()=>Promise<ModelStatus>;cancelModelDownload:()=>Promise<void>};
+type Bridge={renderPdfPage:(uri:string,page:number)=>Promise<{uri:string;width:number;height:number}>;addListener:(event:string,listener:(progress:ExtractionProgress)=>void)=>{remove:()=>void};extractPdf:(uri:string)=>Promise<PageText[]>;readImage:(uri:string)=>Promise<PageText[]>;startModelDownload:()=>Promise<number>;modelStatus:()=>Promise<ModelStatus>;cancelModelDownload:()=>Promise<void>};
 const bridge=requireOptionalNativeModule<Bridge>('CiteCoachDocuments');
 export function nativeDocuments():Bridge{if(!bridge)throw Error('PDF processing and model downloads require the Android app.');return bridge;}
 const root=()=>{if(!FS.documentDirectory)throw Error('Device storage is unavailable.');return FS.documentDirectory+'citecoach/';};
