@@ -1,6 +1,6 @@
 {
   "name": "citecoach-ui-preview",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "export": "expo export --platform web",
     "test:ui": "node scripts/check-preview.mjs",
-    "generate:icon": "node scripts/generate-icon.mjs"
+    "generate:icon": "node scripts/generate-icon.mjs",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "expo": "~55.0.0",
