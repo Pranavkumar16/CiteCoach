@@ -1,3 +1,4 @@
+import {removeImportedFile} from './removeImportedFile';
 import {requireOptionalNativeModule} from 'expo-modules-core';
 import * as FS from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -51,14 +52,13 @@ export async function loadStudy(bookId:string):Promise<SavedStudy>{return JSON.p
 export function observeExtraction(listener:(progress:ExtractionProgress)=>void){return nativeDocuments().addListener('onExtractionProgress',listener);}
 
 export async function deleteBook(book:LocalBook):Promise<void>{
-  if(!/^book-[0-9]+$/.test(book.id)||!book.uri.startsWith(root()))throw Error('Could not remove this file safely.');
-  // Remove the private copy and derived content; never delete a gallery original.
-  await nativeDocuments().clearPreviewCache(book.uri);
-  await FS.deleteAsync(book.uri,{idempotent:true});
-  await FS.deleteAsync(root()+book.id+'.json',{idempotent:true});
-  await AsyncStorage.removeItem('study:'+book.id);
-  const ids=JSON.parse(await AsyncStorage.getItem('citecoach-books-v1')??'[]') as string[];
-  await AsyncStorage.setItem('citecoach-books-v1',JSON.stringify(ids.filter(id=>id!==book.id)));
+  await removeImportedFile(book,root(),{
+    clearPreviews:uri=>nativeDocuments().clearPreviewCache(uri),
+    removeFile:async uri=>{await FS.deleteAsync(uri,{idempotent:true});},
+    getItem:key=>AsyncStorage.getItem(key),
+    removeItem:key=>AsyncStorage.removeItem(key),
+    setItem:(key,value)=>AsyncStorage.setItem(key,value),
+  });
 }
 export async function documentStorage(books:LocalBook[]):Promise<number>{
   let bytes=0;
