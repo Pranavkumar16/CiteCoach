@@ -36,7 +36,7 @@ export async function importBook(uri:string,title:string):Promise<LocalBook>{
         throw Error('Could not read this document. Try an unlocked copy or export it as PDF.');
       }
     }else pages=plainDocument(await FS.readAsStringAsync(saved),ext);
-    if(!pages.some(page=>page.text.trim()))throw Error('No readable text found. If this document contains only pictures, export it as PDF or import the images.');
+    if(!isImage(ext)&&!pages.some(page=>page.text.trim()))throw Error('No readable text found. If this document contains only pictures, export it as PDF or import the images.');
     const book={id,title,uri:saved,pages,importedAt:Date.now(),format:ext};
     await FS.writeAsStringAsync(root()+id+'.json',JSON.stringify(book));
     const ids=JSON.parse(await AsyncStorage.getItem('citecoach-books-v1')??'[]') as string[];

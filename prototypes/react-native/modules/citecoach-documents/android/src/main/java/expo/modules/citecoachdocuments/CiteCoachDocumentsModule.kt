@@ -133,7 +133,6 @@ class CiteCoachDocumentsModule : Module() {
       val task=recognizer.process(InputImage.fromBitmap(bitmap,rotation))
       try {
         val text=Tasks.await(task,45,TimeUnit.SECONDS).text.trim()
-        require(text.any { it.isLetterOrDigit() }) { "No readable text found. Try a clearer image." }
         listOf(mapOf("page" to 1,"text" to text.take(40000),"label" to "Image","ocr" to true))
       } finally {
         if(task.isComplete) { bitmap.recycle();recognizer.close() }

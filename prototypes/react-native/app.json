@@ -19,7 +19,8 @@
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
-      ]
+      ],
+      "allowBackup": false
     },
     "web": {
       "bundler": "metro",

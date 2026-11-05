@@ -17,7 +17,7 @@ export function FilePreview({book,initialPage,dark,onClose}:{book:LocalBook;init
   const [zoom,setZoom]=useState(1);const [jump,setJump]=useState('');const [retry,setRetry]=useState(0);
   const generation=useRef(0);const page=book.pages[index];const c=createTheme(dark);
   const text={fontFamily:'SourceSans3_400Regular',fontSize:17,lineHeight:25,color:c.text};
-  const control=(label:string,onPress:()=>void,disabled=false)=><Pressable accessibilityRole="button" disabled={disabled} accessibilityState={{disabled}} onPress={onPress} style={{padding:12,minHeight:44,borderRadius:12,borderWidth:1,borderColor:c.border,backgroundColor:c.surface,opacity:disabled?.4:1}}><Text style={{color:c.primary,fontFamily:'SourceSans3_600SemiBold',fontSize:15}}>{label}</Text></Pressable>;
+  const control=(label:string,onPress:()=>void,disabled=false)=><Pressable accessibilityRole="button" disabled={disabled} accessibilityState={{disabled}} onPress={onPress} style={{padding:12,minHeight:44,borderRadius:12,borderWidth:1,borderColor:c.border,backgroundColor:c.surface,opacity:disabled?0.4:1}}><Text style={{color:c.primary,fontFamily:'SourceSans3_600SemiBold',fontSize:15}}>{label}</Text></Pressable>;
   useEffect(()=>{
     const id=++generation.current;let active=true;setUri('');setError('');setZoom(1);
     if(!original||!page){setLoading(false);return()=>{active=false;};}

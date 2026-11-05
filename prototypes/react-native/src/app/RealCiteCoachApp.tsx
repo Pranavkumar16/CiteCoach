@@ -91,7 +91,7 @@ function AppBody(){
       setError('');setImportProgress('');setBusy('Reading document pages…');
       extractionSubscription=observeExtraction(progress=>setImportProgress((progress.stage==='ocr'?'Reading scan':'Reading document')+' · page '+progress.current+' of '+progress.total));
       const added=await importBook(uri,name);
-      setBooks(previous=>[...previous,added]);setActiveId(added.id);setTab('Library');setNotice('Saved on this device');
+      setBooks(previous=>[...previous,added]);setActiveId(added.id);setTab('Library');setNotice(added.pages.some(page=>page.text.trim())?'Saved on this device':'Image saved. No readable text was found.');
       Keyboard.dismiss();setPreview({book:added});
     }catch(e){setError(message(e));}finally{extractionSubscription?.remove();setImportProgress('');setBusy('');}
   }
@@ -122,6 +122,7 @@ function AppBody(){
   }
   function getSources(query:string){
     if(!book)throw Error('Import and select a document first.');
+    if(!book.pages.some(page=>page.text.trim()))throw Error('No readable text was found. Try a closer, clearer photo.');
     const first=Number(from||1),last=Number(to||Math.max(...book.pages.map(p=>p.page)));
     if(!Number.isInteger(first)||!Number.isInteger(last)||first<1||last<first||last>Math.max(...book.pages.map(p=>p.page)))throw Error('Enter a valid Source range from 1 to '+book.pages.length+'.');
     const chunks=retrieve(book.pages,query,first,last);
