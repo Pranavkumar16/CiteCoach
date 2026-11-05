@@ -3,6 +3,17 @@ package expo.modules.citecoachdocuments
 import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
+import com.google.android.gms.tasks.Tasks
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.tom_roush.pdfbox.io.MemoryUsageSetting
+import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
@@ -26,20 +37,54 @@ class CiteCoachDocumentsModule : Module() {
       PDFBoxResourceLoader.init(context())
       val file = File(Uri.parse(uri).path ?: throw IllegalArgumentException("Invalid PDF path"))
       val pages = ArrayList<Map<String,Any>>()
-      PDDocument.load(file).use { document ->
-        require(!document.isEncrypted) { "Password-protected PDFs are not supported. Import an unlocked copy." }
-        require(document.numberOfPages <= 1500) { "Please split this PDF into files with at most 1500 pages." }
-        val stripper = PDFTextStripper()
-        stripper.sortByPosition = true
-        for (page in 1..document.numberOfPages) {
-          stripper.startPage = page
-          stripper.endPage = page
-          val text = stripper.getText(document).trim()
-          pages.add(mapOf("page" to page, "text" to text.take(40000)))
-          sendEvent("onExtractionProgress",mapOf("current" to page,"total" to document.numberOfPages))
+      // Keep PDF caches on disk and render one bounded bitmap at a time.
+      val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+      var renderer: PdfRenderer? = null
+      var descriptor: ParcelFileDescriptor? = null
+      try {
+        PDDocument.load(file, MemoryUsageSetting.setupTempFileOnly()).use { document ->
+          require(!document.isEncrypted) { "Password-protected PDFs are not supported. Import an unlocked copy." }
+          require(document.numberOfPages <= 1500) { "Please split this PDF into files with at most 1500 pages." }
+          val stripper = PDFTextStripper()
+          stripper.sortByPosition = true
+          for (page in 1..document.numberOfPages) {
+            stripper.startPage = page
+            stripper.endPage = page
+            var text = try { stripper.getText(document).trim() } catch (_: Exception) { "" }
+            val needsOcr = text.count { it.isLetterOrDigit() } < 40
+            if (needsOcr) {
+              sendEvent("onExtractionProgress",mapOf("current" to page,"total" to document.numberOfPages,"stage" to "ocr"))
+              if (renderer == null) {
+                descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                renderer = PdfRenderer(descriptor!!)
+              }
+              renderer!!.openPage(page-1).use { imagePage ->
+                val scale = minOf(2.5f, 2200f / maxOf(imagePage.width,imagePage.height).toFloat())
+                val width = maxOf(1,(imagePage.width*scale).roundToInt())
+                val height = maxOf(1,(imagePage.height*scale).roundToInt())
+                val bitmap = Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+                try {
+                  bitmap.eraseColor(Color.WHITE)
+                  imagePage.render(bitmap,null,null,PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                  val result = Tasks.await(recognizer.process(InputImage.fromBitmap(bitmap,0)),45,TimeUnit.SECONDS)
+                  if(result.text.count { it.isLetterOrDigit() } > text.count { it.isLetterOrDigit() }) text=result.text.trim()
+                } catch (error: Exception) {
+                  throw IllegalStateException("Could not read scanned page "+page+". Try a clearer copy of this PDF.",error)
+                } finally { bitmap.recycle() }
+              }
+            }
+            pages.add(mapOf("page" to page,"text" to text.take(40000),"ocr" to needsOcr))
+            sendEvent("onExtractionProgress",mapOf("current" to page,"total" to document.numberOfPages,"stage" to (if(needsOcr) "ocr" else "text")))
+          }
         }
+      } finally {
+        renderer?.close()
+        descriptor?.close()
+        recognizer.close()
       }
-      require(pages.any { (it["text"] as String).length > 40 }) { "This PDF has no selectable text. Try a text-based PDF." }
+      require(pages.any { (it["text"] as String).count { c -> c.isLetterOrDigit() } > 10 }) {
+        "No readable text found. Try a clearer scan or a different PDF."
+      }
       pages
     }
     AsyncFunction("startModelDownload") {

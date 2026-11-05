@@ -12,7 +12,7 @@ import {BrandSplash} from '../../components/BrandSplash';
 import {BrandBusyIndicator} from '../../components/BrandBusyIndicator';
 import {createTheme} from '../../theme/tokens';
 import type {LocalBook,QuizQuestion,SavedStudy,StudyCard,SourceChunk} from '../domain/documents';
-import {importBook,loadBooks,loadStudy,nativeDocuments,saveStudy,type ModelStatus} from '../services/documents';
+import {importBook,loadBooks,loadStudy,nativeDocuments,observeExtraction,saveStudy,type ModelStatus} from '../services/documents';
 import {retrieve,parseStudyJSON} from '../services/retrieval';
 import {studySchema} from '../services/studySchema';
 import {generate,stopGeneration} from '../services/offline';
@@ -39,6 +39,7 @@ function AppBody(){
   const [error,setError]=useState('');
   const [notice,setNotice]=useState('');
   const [busy,setBusy]=useState('');
+  const [importProgress,setImportProgress]=useState('');
   const [model,setModel]=useState<ModelStatus>(emptyModel);
   const [modelChecked,setModelChecked]=useState(false);
   const [mode,setMode]=useState<'Flashcards'|'Quiz'>('Flashcards');
@@ -83,12 +84,14 @@ function AppBody(){
   const switchBook=(id:string)=>{if(busy)return;setActiveId(id);setNotice('');setError('');};
   async function doImport(){
     if(busy)return;
+    let extractionSubscription:{remove:()=>void}|undefined;
     try{
       setError('');const result=await DocumentPicker.getDocumentAsync({type:'application/pdf',copyToCacheDirectory:true});if(result.canceled)return;
-      setBusy('Reading PDF pages…');
+      setImportProgress('');setBusy('Reading PDF pages…');
+      extractionSubscription=observeExtraction(progress=>setImportProgress((progress.stage==='ocr'?'Reading scan':'Reading PDF')+' · page '+progress.current+' of '+progress.total));
       const added=await importBook(result.assets[0].uri,result.assets[0].name);
       setBooks(previous=>[...previous,added]);setActiveId(added.id);setTab('Library');setNotice('Saved on this device · '+added.pages.length+' pages');
-    }catch(e){setError(message(e));}finally{setBusy('');}
+    }catch(e){setError(message(e));}finally{extractionSubscription?.remove();setImportProgress('');setBusy('');}
   }
   function getSources(query:string){
     if(!book)throw Error('Import and select a PDF first.');
@@ -167,7 +170,7 @@ function AppBody(){
     {heading('Your library','Your documents stay on this device.')}
     <TextInput testID="library-search" accessibilityLabel="Search your books" placeholder="Search your books" value={search} onChangeText={setSearch} style={s.input}/>
     {books.filter(b=>b.title.toLowerCase().includes(search.toLowerCase())).map(b=><Pressable key={b.id} onPress={()=>switchBook(b.id)} style={[s.card,b.id===activeId&&{borderColor:c.primary,borderWidth:2}]}><Text style={s.title}>{b.title}</Text><Text style={s.muted}>{b.pages.length} pages{b.id===activeId?' · selected':''}</Text><View style={s.row}>{button('Ask',()=>{switchBook(b.id);setTab('Ask');},!!busy)}{button('Study',()=>{switchBook(b.id);setTab('Learn');},!!busy)}</View></Pressable>)}
-    {!books.length&&<View style={s.card}><Text style={s.title}>Your library is empty.</Text><Text style={s.body}>Import a PDF with selectable text to get started.</Text></View>}
+    {!books.length&&<View style={s.card}><Text style={s.title}>Your library is empty.</Text><Text style={s.body}>Import a PDF to get started.</Text></View>}
     {button('Import a PDF',()=>void doImport(),!!busy,'import-pdf')}
   </>;
   const ask=<>
@@ -193,7 +196,7 @@ function AppBody(){
       {downloading&&<><View accessibilityRole="progressbar" style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View><Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text><Text style={s.muted}>{model.status===4?'Download paused. Check your connection.':'Download continues when you leave the app.'}</Text>{button('Cancel download',()=>{void nativeDocuments().cancelModelDownload().then(()=>setModel(emptyModel)).catch(e=>setError(message(e)));})}</>}
       {!model.ready&&!downloading&&button(model.status===16?'Retry':'Download',()=>void download(),false,'download-model')}
     </View>
-    <Text style={s.muted}>CiteCoach · 0.3.4</Text>
+    <Text style={s.muted}>CiteCoach · 0.3.5</Text>
   </>;
   // Completion is derived from the persisted native download, never an in-memory
   // flag. Existing downloads skip setup after restart; missing files need setup.
@@ -220,7 +223,7 @@ function AppBody(){
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:20,paddingBottom:28,gap:16,width:'100%',maxWidth:680,alignSelf:'center'}}>
         <View style={[s.row,{justifyContent:'space-between'}]}><View style={s.row}><CiteMark size={38}/><Text style={s.title}>CiteCoach</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={()=>setTab('Settings')} style={s.chip}><Text style={s.label}>Settings</Text></Pressable></View>
         {!hydrated?<BrandBusyIndicator label="Opening your library…" dark={dark}/>:tab==='Home'?home:tab==='Library'?library:tab==='Ask'?ask:tab==='Learn'?learn:settings}
-        {!!busy&&<View style={s.card}><BrandBusyIndicator label={busy} dark={dark} onCancel={busy==='Reading PDF pages…'?undefined:()=>void cancel()}/><Text style={s.muted}>{seconds}s · {busy==='Reading PDF pages…'?'Reading your PDF…':'Keep the app open while we prepare your answer.'}</Text></View>}
+        {!!busy&&<View style={s.card}><BrandBusyIndicator label={busy==='Reading PDF pages…'&&importProgress?importProgress:busy} dark={dark} onCancel={busy==='Reading PDF pages…'?undefined:()=>void cancel()}/><Text style={s.muted}>{seconds}s · {busy==='Reading PDF pages…'?'Reading your PDF…':'Keep the app open while we prepare your answer.'}</Text></View>}
         {!!error&&<View accessibilityRole="alert" style={[s.card,{borderColor:'#B9532E'}]}><Text style={s.body}>{error}</Text>{button('Dismiss',()=>setError(''))}</View>}
         {!!notice&&<Text accessibilityLiveRegion="polite" style={s.muted}>{notice}</Text>}
       </ScrollView>

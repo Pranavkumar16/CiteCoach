@@ -3,7 +3,8 @@ import * as FS from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {LocalBook,PageText,SavedStudy} from '../domain/documents';
 export type ModelStatus={ready:boolean;path:string;bytes:number;total:number;status:number;reason:number};
-type Bridge={extractPdf:(uri:string)=>Promise<PageText[]>;startModelDownload:()=>Promise<number>;modelStatus:()=>Promise<ModelStatus>;cancelModelDownload:()=>Promise<void>};
+export type ExtractionProgress={current:number;total:number;stage:'ocr'|'text'};
+type Bridge={addListener:(event:string,listener:(progress:ExtractionProgress)=>void)=>{remove:()=>void};extractPdf:(uri:string)=>Promise<PageText[]>;startModelDownload:()=>Promise<number>;modelStatus:()=>Promise<ModelStatus>;cancelModelDownload:()=>Promise<void>};
 const bridge=requireOptionalNativeModule<Bridge>('CiteCoachDocuments');
 export function nativeDocuments():Bridge{if(!bridge)throw Error('PDF processing and model downloads require the Android app.');return bridge;}
 const root=()=>{if(!FS.documentDirectory)throw Error('Device storage is unavailable.');return FS.documentDirectory+'citecoach/';};
@@ -28,3 +29,5 @@ export async function importBook(uri:string,title:string):Promise<LocalBook>{
 }
 export async function saveStudy(study:SavedStudy){await AsyncStorage.setItem('study:'+study.bookId,JSON.stringify(study));}
 export async function loadStudy(bookId:string):Promise<SavedStudy>{return JSON.parse(await AsyncStorage.getItem('study:'+bookId)??JSON.stringify({bookId,cards:[],quiz:[]}));}
+
+export function observeExtraction(listener:(progress:ExtractionProgress)=>void){return nativeDocuments().addListener('onExtractionProgress',listener);}

@@ -8,4 +8,8 @@ android {
   namespace 'expo.modules.citecoachdocuments'
   defaultConfig { versionCode 1; versionName '1.0.0' }
 }
-dependencies { implementation 'com.tom-roush:pdfbox-android:2.0.27.0' }
+dependencies {
+  implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
+  // Bundled Latin recognizer works offline without a second OCR download.
+  implementation 'com.google.mlkit:text-recognition:16.0.1'
+}
