@@ -149,7 +149,7 @@ function AppBody() {
         <Pressable testID="quick-Quiz" onPress={() => openLearn('Quiz')} style={[s.shortcut,{flex:width < 350 ? undefined:1,backgroundColor:c.practice}]}>{icon('checkbox-outline',24,c.text)}<Text style={s.bookTitle}>Quick quiz</Text><Text style={s.small}>3 sample questions</Text></Pressable>
       </View>
       <Pressable testID="home-review" onPress={() => openLearn('Flashcards')} style={s.reviewRow}>
-        {icon('albums-outline',22,c.primary)}<View style={{flex:1,gap:4}}><Text style={s.bookTitle}>{review.length ? review.length + ' cards in review':'Nothing to review yet'}</Text><Text style={s.small}>{review.length ? 'From your sample quiz':'Missed sample questions will appear here'}</Text></View><Text style={s.link}>Review</Text>
+        {icon('albums-outline',22,c.primary)}<View style={{flex:1,gap:4}}><Text style={s.bookTitle}>{review.length ? review.length + (review.length === 1 ? ' card in review':' cards in review'):'Nothing to review yet'}</Text><Text style={s.small}>{review.length ? 'From your sample quiz':'Missed sample questions will appear here'}</Text></View><Text style={s.link}>Review</Text>
       </Pressable>
       {section('Recently opened','Your books',() => navigate('Library'))}
       {bookCard(sampleBooks[0],true)}

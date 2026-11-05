@@ -49,6 +49,7 @@ try {
     assert.match(await page.getByTestId('save-answer-card').innerText(), /Added to sample flashcards/);
     await page.screenshot({path:'screenshots/ask-' + viewport.width + '.png'});
     await page.getByTestId('nav-Learn').click();
+    await page.getByTestId('mode-Quiz').click();
     await page.getByTestId('start-session').click();
     await page.getByTestId('answer-1').click();
     await page.getByTestId('quiz-action').click();
@@ -57,7 +58,7 @@ try {
     await page.getByTestId('close-modal').click();
     await page.screenshot({path:'screenshots/quiz-wrong-' + viewport.width + '.png'});
     await page.getByTestId('nav-Home').click();
-    assert.match(await page.getByTestId('home-review').innerText(), /1 cards in review/);
+    assert.match(await page.getByTestId('home-review').innerText(), /1 card in review/);
     await page.getByTestId('open-settings').click();
     assert.equal(await page.getByTestId('nav-Settings').count(), 0);
     await page.screenshot({path:'screenshots/settings-' + viewport.width + '.png'});
