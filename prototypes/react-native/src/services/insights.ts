@@ -8,7 +8,7 @@ export function insightSources(book:LocalBook):{chunks:SourceChunk[];sampled:boo
  const chunks=sourcesForQuestion(book.pages,'Summarize this document');
  return {chunks,sampled:book.pages.reduce((sum,page)=>sum+page.text.trim().length,0)>chunks.reduce((sum,chunk)=>sum+chunk.text.length,0)};
 }
-export const insightSchema=JSON.stringify({type:'object',properties:{summary:{type:'string'},points:{type:'array',items:{type:'string'},minItems:3,maxItems:5},questions:{type:'array',items:{type:'string'},minItems:3,maxItems:3}},required:['summary','points','questions'],additionalProperties:false});
+export const insightSchema={type:'object',properties:{summary:{type:'string'},points:{type:'array',items:{type:'string'},minItems:3,maxItems:5},questions:{type:'array',items:{type:'string'},minItems:3,maxItems:3}},required:['summary','points','questions'],additionalProperties:false};
 export function parseInsight(raw:string,bookId:string,chunks:SourceChunk[],sampled:boolean):Insight{
  const clean=raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
  const value=JSON.parse(clean);

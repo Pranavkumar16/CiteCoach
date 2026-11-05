@@ -8,16 +8,17 @@ import {generate,stopGeneration} from '../src/services/offline';
 import {createTheme} from '../theme/tokens';
 type Props={book:LocalBook;modelPath:string;dark:boolean;blocked:boolean;auto:boolean;onAutoConsumed:()=>void;onBusy:(value:string)=>void;onQuestion:(question:string)=>void;onPreview:(page?:number)=>void;onStudy:(mode:'Flashcards'|'Quiz')=>void;cancelRef:React.MutableRefObject<(()=>boolean)|null>};
 export function DocumentInsights({book,modelPath,dark,blocked,auto,onAutoConsumed,onBusy,onQuestion,onPreview,onStudy,cancelRef}:Props){
- const [insight,setInsight]=useState<Insight|null>(null),[loading,setLoading]=useState(true),[running,setRunning]=useState(false),[error,setError]=useState('');
+ const [insight,setInsight]=useState<Insight|null>(null),[loading,setLoading]=useState(true),[running,setRunning]=useState(false),[error,setError]=useState(''),[seconds,setSeconds]=useState(0);
  const live=useRef(true),job=useRef(0),owns=useRef(false),started=useRef(false);const c=createTheme(dark);
  const text={fontFamily:'SourceSans3_400Regular',fontSize:16,lineHeight:23,color:c.text};
  const button=(label:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={action} style={{borderWidth:1,borderColor:c.border,borderRadius:12,padding:12,minHeight:44,opacity:disabled?0.45:1}}><Text style={{...text,color:c.primary,fontFamily:'SourceSans3_600SemiBold'}}>{label}</Text></Pressable>;
  function cancel(){if(!owns.current)return false;job.current++;owns.current=false;void stopGeneration();onBusy('');if(live.current){setRunning(false);setError('Summary paused. Tap Retry summary to continue.');}return true;}
  useEffect(()=>{live.current=true;cancelRef.current=cancel;void (async()=>{
-  try{const raw=await AsyncStorage.getItem(insightKey(book.id));if(!live.current)return;if(raw){const saved=JSON.parse(raw) as Insight;if(saved.version===1&&saved.bookId===book.id){setInsight(saved);return;}}}
+  try{const raw=await AsyncStorage.getItem(insightKey(book.id));if(!live.current)return;if(raw){const saved=JSON.parse(raw) as Insight;if(saved.version===1&&saved.bookId===book.id&&typeof saved.summary==='string'&&Array.isArray(saved.points)&&saved.points.every(p=>typeof p==='string')&&Array.isArray(saved.questions)&&saved.questions.every(q=>typeof q==='string')&&Array.isArray(saved.pages)&&saved.pages.every(p=>Number.isInteger(p))){setInsight(saved);return;}}}
   catch{if(live.current)setError('Could not load the saved summary. You can retry.');}
   finally{if(live.current)setLoading(false);}
  })();return()=>{live.current=false;cancel();if(cancelRef.current===cancel)cancelRef.current=null;};},[book.id]);
+ useEffect(()=>{if(!running)return;setSeconds(0);const start=Date.now();const timer=setInterval(()=>setSeconds(Math.floor((Date.now()-start)/1000)),1000);return()=>clearInterval(timer);},[running]);
  useEffect(()=>{if(!loading&&auto&&!insight&&!blocked&&!started.current){started.current=true;onAutoConsumed();void summarize();}},[loading,auto,insight,blocked]);
  async function summarize(){
   if(owns.current||blocked)return;
@@ -36,7 +37,7 @@ export function DocumentInsights({book,modelPath,dark,blocked,auto,onAutoConsume
  return <View testID="document-insights" style={{padding:16,gap:14,borderRadius:18,borderWidth:1,borderColor:c.border,backgroundColor:c.surface}}>
   <Text style={{...text,fontFamily:'BricolageGrotesque_700Bold',fontSize:21}}>Here’s what I found</Text>
   <Text style={{...text,color:c.muted}}>{book.title}</Text>
-  {(loading||running)&&<Text accessibilityLiveRegion="polite" style={text}>{loading?'Opening saved summary…':'Creating summary and suggested questions on your device…'}</Text>}
+  {(loading||running)&&<Text accessibilityLiveRegion="polite" style={text}>{loading?'Opening saved summary…':'Creating summary and suggested questions… '+seconds+'s'}</Text>}
   {!!error&&<Text accessibilityRole="alert" style={text}>{error}</Text>}
   {insight&&<><Text selectable style={text}>{insight.summary}</Text><Text style={{...text,fontFamily:'SourceSans3_600SemiBold'}}>Key points</Text>{insight.points.map((point,i)=><Text selectable key={i} style={text}>• {point}</Text>)}
    <Text style={{...text,color:c.muted}}>{insight.sampled?'Overview from selected excerpts; some content is not covered.':'Based on the readable source text.'}</Text>
