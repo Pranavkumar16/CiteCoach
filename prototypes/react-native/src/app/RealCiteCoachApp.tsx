@@ -22,7 +22,7 @@ import {generate,stopGeneration} from '../services/offline';
 type Tab='Home'|'Library'|'Learn'|'Ask'|'Settings';
 const emptyModel:ModelStatus={ready:false,path:'',bytes:0,total:0,status:0,reason:0};
 const message=(e:unknown)=>e instanceof Error?e.message:String(e);
-function chatPrompt(system:string,user:string){return '<|im_start|>system\n'+system+'<|im_end|>\n<|im_start|>user\n'+user+'<|im_end|>\n<|im_start|>assistant\n';}
+import {chatPrompt} from '../services/chatPrompt';
 function AppBody(){
   const [tab,setTab]=useState<Tab>('Home');
   const [dark,setDark]=useState(false);
@@ -251,7 +251,7 @@ function AppBody(){
     <View style={s.card}><Text style={s.title}>Offline AI</Text><Text style={s.body}>{model.ready?'Ready to use offline':downloading?'Downloading…':'Not downloaded'}</Text><Text style={s.muted}>{model.ready?'No internet needed for answers.':'Set up once to use CiteCoach offline.'}</Text>{model.ready&&<Text style={s.muted}>{Math.round(model.bytes/1000000)} MB on this device</Text>}</View>
     <View style={s.card}><Text style={s.title}>Storage</Text><Text style={s.body}>{books.length} imported {books.length===1?'file':'files'} · {(storage.documents/1000000).toFixed(1)} MB</Text><Text style={s.muted}>Preview cache · {(storage.previews/1000000).toFixed(1)} MB</Text>{button('Clear preview cache',()=>{void nativeDocuments().clearPreviewCache('').then(()=>{setNotice('Preview cache cleared.');void refreshStorage();}).catch(e=>setError(message(e)));})}<Text style={s.muted}>Delete imported files from the Library.</Text></View>
     <View style={s.card}><Text style={s.title}>Privacy & permissions</Text><Text style={s.body}>Your documents and photos are processed on this device.</Text>{button('Camera & photo permissions',()=>void Linking.openSettings())}</View>
-    <View style={s.card}><Text style={s.title}>About CiteCoach</Text><Text style={s.muted}>Version 0.3.8</Text><Pressable accessibilityRole="button" accessibilityState={{expanded:showFormats}} onPress={()=>setShowFormats(!showFormats)} style={s.chip}><Text style={s.label}>Supported files {showFormats?'−':'+'}</Text></Pressable>{showFormats&&<Text style={s.muted}>PDF, JPG, PNG, WEBP, supported HEIC images, DOCX, PPTX, XLSX, OpenDocument, TXT, Markdown, CSV, JSON and HTML. OCR reads English and Latin-script text.</Text>}</View>
+    <View style={s.card}><Text style={s.title}>About CiteCoach</Text><Text style={s.muted}>Version 0.3.9</Text><Pressable accessibilityRole="button" accessibilityState={{expanded:showFormats}} onPress={()=>setShowFormats(!showFormats)} style={s.chip}><Text style={s.label}>Supported files {showFormats?'−':'+'}</Text></Pressable>{showFormats&&<Text style={s.muted}>PDF, JPG, PNG, WEBP, supported HEIC images, DOCX, PPTX, XLSX, OpenDocument, TXT, Markdown, CSV, JSON and HTML. OCR reads English and Latin-script text.</Text>}</View>
   </>;
 
   // Completion is derived from the persisted native download, never an in-memory
@@ -261,11 +261,11 @@ function AppBody(){
     <StatusBar barStyle={dark?'light-content':'dark-content'} backgroundColor={c.bg}/>
     <ScrollView contentContainerStyle={{flexGrow:1,padding:24,gap:20,justifyContent:'center',width:'100%',maxWidth:520,alignSelf:'center'}}>
       <View style={{alignItems:'center',gap:12}}><CiteMark size={80}/><Text style={s.heading}>Welcome to CiteCoach</Text></View>
-      <Text testID="setup-title" style={[s.title,{textAlign:'center'}]}>Set up offline AI</Text>
-      <Text style={[s.body,{textAlign:'center'}]}>Download once to ask questions and study without internet.</Text>
-      <Text style={[s.muted,{textAlign:'center'}]}>About 400 MB · Your documents stay on your device.</Text>
+      <Text testID="setup-title" style={[s.title,{textAlign:'center'}]}>{model.upgrade?'Update offline AI':'Set up offline AI'}</Text>
+      <Text style={[s.body,{textAlign:'center'}]}>{model.upgrade?'Download the upgraded offline AI once. Your saved files stay here.':'Download once to ask questions and study without internet.'}</Text>
+      <Text style={[s.muted,{textAlign:'center'}]}>About 1.1 GB · Your documents stay on your device.</Text>
       {downloading?<View style={s.card}>
-        <Text accessibilityLiveRegion="polite" style={s.title}>{model.status===4?'Waiting for connection…':'Downloading…'}</Text>
+        <Text accessibilityLiveRegion="polite" style={s.title}>{model.total>0&&model.bytes>=model.total?'Checking download…':model.status===4?'Waiting for connection…':'Downloading…'}</Text>
         <View accessibilityRole="progressbar" accessibilityLabel="Offline AI download" accessibilityValue={model.total>0?{min:0,max:100,now:Math.round(model.bytes/model.total*100)}:{text:'Downloading'}} style={s.track}><View style={[s.fill,{width:(model.total>0?Math.min(100,model.bytes/model.total*100):0)+'%' as `${number}%`}]}/></View>
         <Text style={s.body}>{Math.round(model.bytes/1000000)} MB{model.total>0?' / '+Math.round(model.total/1000000)+' MB':''}</Text>
         <Text style={s.muted}>You can leave the app. The download will continue.</Text>

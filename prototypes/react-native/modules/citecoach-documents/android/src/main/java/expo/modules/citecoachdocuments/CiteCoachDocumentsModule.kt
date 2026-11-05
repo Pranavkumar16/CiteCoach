@@ -26,12 +26,43 @@ import java.io.RandomAccessFile
 
 class CiteCoachDocumentsModule : Module() {
   private fun context(): Context = appContext.reactContext ?: throw IllegalStateException("App context unavailable")
-  private fun modelFile(): File = File(context().getExternalFilesDir(null), "citecoach-qwen25-05b-q4.gguf")
+  private fun modelFile(): File = File(context().getExternalFilesDir(null) ?: throw IllegalStateException("Device storage is unavailable."),ModelPackage.FILE_NAME)
+  private fun legacyModelFile(): File = File(context().getExternalFilesDir(null),"citecoach-qwen25-05b-q4.gguf")
+  private fun preferences() = context().getSharedPreferences(ModelPackage.PREFS,Context.MODE_PRIVATE)
   private fun manager(): DownloadManager = context().getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-  private fun valid(file: File): Boolean {
-    if (!file.exists() || file.length() < 300000000) return false
-    return RandomAccessFile(file,"r").use { it.readInt() == 0x47475546 }
+  private fun valid(file:File) = ModelIntegrity.hasExpectedHeaderAndSize(file,ModelPackage.BYTES)
+  private fun verified(file:File):Boolean {
+    if(!valid(file)) return false
+    val prefs=preferences()
+    val modified=file.lastModified()
+    if(prefs.getBoolean("complete",false) && prefs.getLong("verifiedModified",-1)==modified) return true
+    if(prefs.getLong("rejectedModified",-1)==modified) return false
+    val accepted=ModelIntegrity.verify(file,ModelPackage.BYTES,ModelPackage.SHA256)
+    val editor=prefs.edit().putBoolean("complete",accepted)
+    if(accepted) editor.putLong("verifiedModified",modified).remove("rejectedModified")
+    else editor.putLong("rejectedModified",modified).remove("verifiedModified")
+    editor.apply()
+    return accepted
   }
+  private fun retireIncompleteLegacyTransfer() {
+    val prefs=preferences()
+    if(prefs.getBoolean("legacyTransferRetired",false))return
+    val old=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE)
+    val id=old.getLong("id",-1)
+    try {
+      if(id!=-1L) manager().query(DownloadManager.Query().setFilterById(id)).use { cursor ->
+        if(cursor.moveToFirst() && cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))!=DownloadManager.STATUS_SUCCESSFUL) manager().remove(id)
+      }
+    } finally { prefs.edit().putBoolean("legacyTransferRetired",true).apply() }
+  }
+  private fun cleanupLegacyModel() {
+    // Only retire the smaller package once its replacement passed full verification.
+    val old=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE)
+    try { val id=old.getLong("id",-1);if(id!=-1L)manager().remove(id);legacyModelFile().delete();old.edit().clear().apply() } catch(_:Exception) {}
+  }
+  private fun state(file:File,ready:Boolean,status:Int,bytes:Long,total:Long,reason:Int) = mapOf(
+    "ready" to ready,"path" to file.absolutePath,"bytes" to bytes,"total" to total,"status" to status,"reason" to reason,"upgrade" to legacyModelFile().exists()
+  )
   override fun definition() = ModuleDefinition {
     Name("CiteCoachDocuments")
     Events("onExtractionProgress")
@@ -151,54 +182,58 @@ class CiteCoachDocumentsModule : Module() {
       }
     }
     AsyncFunction("startModelDownload") {
-      val file = modelFile()
-      val prefs=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE)
+      retireIncompleteLegacyTransfer()
+      val file=modelFile()
+      val prefs=preferences()
       val previous=prefs.getLong("id",-1)
-      if (valid(file) && prefs.getBoolean("complete",false)) return@AsyncFunction -1L
-      if (previous != -1L) {
+      if(prefs.getBoolean("complete",false) && verified(file)) { cleanupLegacyModel();return@AsyncFunction -1L }
+      if(previous!=-1L) {
         manager().query(DownloadManager.Query().setFilterById(previous)).use { cursor ->
           if(cursor.moveToFirst()) {
             val status=cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-            if(status == DownloadManager.STATUS_SUCCESSFUL && valid(file)) { prefs.edit().putBoolean("complete",true).apply(); return@AsyncFunction -1L }
-            if(status != DownloadManager.STATUS_FAILED && status != DownloadManager.STATUS_SUCCESSFUL) return@AsyncFunction previous
+            if(status==DownloadManager.STATUS_SUCCESSFUL && verified(file)) { cleanupLegacyModel();return@AsyncFunction -1L }
+            if(status!=DownloadManager.STATUS_FAILED && status!=DownloadManager.STATUS_SUCCESSFUL)return@AsyncFunction previous
           }
         }
         manager().remove(previous)
       }
-      if(file.exists()) file.delete()
-      val request=DownloadManager.Request(Uri.parse("https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf"))
+      if(file.exists())require(file.delete()) { "Could not replace the download. Close and reopen CiteCoach." }
+      require((file.parentFile?.usableSpace ?: 0L)>ModelPackage.BYTES+128L*1024*1024) { "Not enough storage. Free at least 1.3 GB and retry." }
+      val request=DownloadManager.Request(Uri.parse(ModelPackage.URL))
         .setTitle("CiteCoach AI")
         .setDescription("Downloading offline AI. Your documents stay on this device.")
         .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         .setAllowedOverMetered(true)
         .setDestinationUri(Uri.fromFile(file))
       val id=manager().enqueue(request)
-      prefs.edit().putLong("id",id).putBoolean("complete",false).apply()
+      prefs.edit().putLong("id",id).putBoolean("complete",false).remove("verifiedModified").remove("rejectedModified").apply()
       id
     }
     AsyncFunction("modelStatus") {
+      retireIncompleteLegacyTransfer()
       val file=modelFile()
-      val id=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE).getLong("id",-1)
-      // Never treat a partial file with a valid header as complete.
+      val prefs=preferences()
+      val id=prefs.getLong("id",-1)
       manager().query(DownloadManager.Query().setFilterById(id)).use { cursor ->
         if(cursor.moveToFirst()) {
           val status=cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
           val bytes=cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
           val total=cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
           val reason=cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
-          val ready=status==DownloadManager.STATUS_SUCCESSFUL && valid(file)
-          if(ready) context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE).edit().putBoolean("complete",true).apply()
-          return@AsyncFunction mapOf("ready" to ready,"path" to file.absolutePath,"bytes" to bytes,"total" to total,"status" to status,"reason" to reason)
+          val ready=status==DownloadManager.STATUS_SUCCESSFUL && verified(file)
+          if(ready)cleanupLegacyModel()
+          return@AsyncFunction state(file,ready,if(status==DownloadManager.STATUS_SUCCESSFUL&&!ready) DownloadManager.STATUS_FAILED else status,bytes,total,reason)
         }
       }
-      val ready=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE).getBoolean("complete",false) && valid(file)
-      mapOf("ready" to ready,"path" to file.absolutePath,"bytes" to (if(ready) file.length() else 0L),"total" to (if(ready) file.length() else 0L),"status" to (if(ready) DownloadManager.STATUS_SUCCESSFUL else 0),"reason" to 0)
+      val ready=prefs.getBoolean("complete",false) && verified(file)
+      if(ready)cleanupLegacyModel()
+      state(file,ready,if(ready) DownloadManager.STATUS_SUCCESSFUL else 0,if(ready) file.length() else 0L,ModelPackage.BYTES,0)
     }
     AsyncFunction("cancelModelDownload") {
-      val prefs=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE)
+      val prefs=preferences()
       val id=prefs.getLong("id",-1)
-      if(id != -1L) manager().remove(id)
-      prefs.edit().remove("id").remove("complete").apply()
+      if(id!=-1L)manager().remove(id)
+      prefs.edit().remove("id").remove("complete").remove("verifiedModified").remove("rejectedModified").apply()
       modelFile().delete()
     }
   }

@@ -21,7 +21,7 @@ export async function generate(path:string,prompt:string,tokens:number,onToken:(
     if(version!==cancellation)throw Error('Generation cancelled.');
     let text='';let timedOut=false;
     timer=setTimeout(()=>{timedOut=true;void context?.stopCompletion();},120000);
-    const result=await context.completion({prompt,...(schema?{response_format:{type:'json_schema' as const,json_schema:{strict:true,schema}}}:{}),n_predict:tokens,temperature:0.15,top_p:0.9,stop:['<|im_end|>','<|endoftext|>']},data=>{text+=data.token;onToken(text);});
+    const result=await context.completion({prompt,...(schema?{response_format:{type:'json_schema' as const,json_schema:{strict:true,schema}}}:{}),n_predict:tokens,temperature:0.7,top_p:0.8,top_k:20,min_p:0,stop:['<|im_end|>','<|endoftext|>']},data=>{text+=data.token;onToken(text);});
     if(timedOut)throw Error('Generation reached the two-minute limit. Try a shorter question or narrower topic.');
     if(!result.text.trim())throw Error('No answer was generated. Try a shorter question.');
     return result.text.trim();

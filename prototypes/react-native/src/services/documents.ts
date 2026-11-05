@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {toByteArray} from 'base64-js';
 import {extension,isImage,supportedExtensions,plainDocument,officeDocument} from './documentFormats';
 import type {LocalBook,PageText,SavedStudy} from '../domain/documents';
-export type ModelStatus={ready:boolean;path:string;bytes:number;total:number;status:number;reason:number};
+export type ModelStatus={upgrade?:boolean;ready:boolean;path:string;bytes:number;total:number;status:number;reason:number};
 export type ExtractionProgress={current:number;total:number;stage:'ocr'|'text'};
 type Bridge={clearPreviewCache:(uri:string)=>Promise<void>;previewCacheSize:()=>Promise<number>;renderPdfPage:(uri:string,page:number)=>Promise<{uri:string;width:number;height:number}>;addListener:(event:string,listener:(progress:ExtractionProgress)=>void)=>{remove:()=>void};extractPdf:(uri:string)=>Promise<PageText[]>;readImage:(uri:string)=>Promise<PageText[]>;startModelDownload:()=>Promise<number>;modelStatus:()=>Promise<ModelStatus>;cancelModelDownload:()=>Promise<void>};
 const bridge=requireOptionalNativeModule<Bridge>('CiteCoachDocuments');
