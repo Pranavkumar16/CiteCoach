@@ -46,11 +46,12 @@ class CiteCoachDocumentsModule : Module() {
       val file = modelFile()
       val prefs=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE)
       val previous=prefs.getLong("id",-1)
-      if (valid(file)) return@AsyncFunction -1L
+      if (valid(file) && prefs.getBoolean("complete",false)) return@AsyncFunction -1L
       if (previous != -1L) {
         manager().query(DownloadManager.Query().setFilterById(previous)).use { cursor ->
           if(cursor.moveToFirst()) {
             val status=cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+            if(status == DownloadManager.STATUS_SUCCESSFUL && valid(file)) { prefs.edit().putBoolean("complete",true).apply(); return@AsyncFunction -1L }
             if(status != DownloadManager.STATUS_FAILED && status != DownloadManager.STATUS_SUCCESSFUL) return@AsyncFunction previous
           }
         }
@@ -64,7 +65,7 @@ class CiteCoachDocumentsModule : Module() {
         .setAllowedOverMetered(true)
         .setDestinationUri(Uri.fromFile(file))
       val id=manager().enqueue(request)
-      prefs.edit().putLong("id",id).apply()
+      prefs.edit().putLong("id",id).putBoolean("complete",false).apply()
       id
     }
     AsyncFunction("modelStatus") {
@@ -78,16 +79,18 @@ class CiteCoachDocumentsModule : Module() {
           val total=cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
           val reason=cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
           val ready=status==DownloadManager.STATUS_SUCCESSFUL && valid(file)
+          if(ready) context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE).edit().putBoolean("complete",true).apply()
           return@AsyncFunction mapOf("ready" to ready,"path" to file.absolutePath,"bytes" to bytes,"total" to total,"status" to status,"reason" to reason)
         }
       }
-      mapOf("ready" to false,"path" to file.absolutePath,"bytes" to 0L,"total" to 0L,"status" to 0,"reason" to 0)
+      val ready=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE).getBoolean("complete",false) && valid(file)
+      mapOf("ready" to ready,"path" to file.absolutePath,"bytes" to (if(ready) file.length() else 0L),"total" to (if(ready) file.length() else 0L),"status" to (if(ready) DownloadManager.STATUS_SUCCESSFUL else 0),"reason" to 0)
     }
     AsyncFunction("cancelModelDownload") {
       val prefs=context().getSharedPreferences("citecoach-model",Context.MODE_PRIVATE)
       val id=prefs.getLong("id",-1)
       if(id != -1L) manager().remove(id)
-      prefs.edit().remove("id").apply()
+      prefs.edit().remove("id").remove("complete").apply()
       modelFile().delete()
     }
   }
