@@ -20,6 +20,8 @@ export async function removeImportedFile(book:LocalBook,root:string,storage:Remo
   await storage.removeFile(book.uri);
   await storage.removeFile(root+book.id+'.json');
   await storage.removeItem('study:'+book.id);
+  await storage.removeItem('insight:'+book.id);
+  await storage.removeItem('answers:'+book.id);
   for(const paperKey of relatedPaperKeys)await storage.removeItem(paperKey);
   await storage.setItem('citecoach-books-v1',JSON.stringify(ids.filter(id=>id!==book.id)));
 }

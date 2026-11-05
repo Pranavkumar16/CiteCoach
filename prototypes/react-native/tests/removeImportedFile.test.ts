@@ -32,3 +32,8 @@ test('deleting a reference document also removes practice papers derived from it
  await removeImportedFile(book,root,f.storage);
  assert.equal(f.values.has('paper:book-123'),false);assert.equal(f.values.has('paper:book-456'),false);assert.equal(f.values.get('study:book-456'),'other cards');
 });
+
+test('deletion removes the document summary and bookmarks but preserves other documents',async()=>{
+ const f=fixture();for(const key of ['insight:book-123','answers:book-123','insight:book-456','answers:book-456'])f.values.set(key,'saved');
+ await removeImportedFile(book,root,f.storage);assert.equal(f.values.has('insight:book-123'),false);assert.equal(f.values.has('answers:book-123'),false);assert.equal(f.values.get('insight:book-456'),'saved');assert.equal(f.values.get('answers:book-456'),'saved');
+});
