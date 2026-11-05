@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import {FilePreview} from '../../components/FilePreview';
+import {PracticePaper} from '../../components/PracticePaper';
 import {useFonts} from 'expo-font';
 import {BricolageGrotesque_700Bold} from '@expo-google-fonts/bricolage-grotesque/700Bold';
 import {SourceSans3_400Regular} from '@expo-google-fonts/source-sans-3/400Regular';
@@ -49,7 +50,7 @@ function AppBody(){
   const [importProgress,setImportProgress]=useState('');
   const [model,setModel]=useState<ModelStatus>(emptyModel);
   const [modelChecked,setModelChecked]=useState(false);
-  const [mode,setMode]=useState<'Flashcards'|'Quiz'>('Flashcards');
+  const [mode,setMode]=useState<'Flashcards'|'Quiz'|'Paper'>('Flashcards');
   const [cardIndex,setCardIndex]=useState(0);
   const [revealed,setRevealed]=useState(false);
   const [quizIndex,setQuizIndex]=useState(0);
@@ -61,6 +62,7 @@ function AppBody(){
   const [permissionBlocked,setPermissionBlocked]=useState(false);
   const [seconds,setSeconds]=useState(0);
   const screenScroll=useRef<ScrollView>(null);
+  const paperCancel=useRef<(()=>boolean)|null>(null);
   const operation=useRef(0);
   const studyRequest=useRef(0);
   const alive=useRef(true);
@@ -212,7 +214,7 @@ function AppBody(){
       }
     }catch(e){if(operation.current===id)setError(message(e));}finally{if(operation.current===id)setBusy('');}
   }
-  async function cancel(){operation.current++;setBusy('');setAnswer('');setNotice('Generation cancelled.');try{await stopGeneration();}catch(e){setError(message(e));}}
+  async function cancel(){if(paperCancel.current?.())return;operation.current++;setBusy('');setAnswer('');setNotice('Generation cancelled.');try{await stopGeneration();}catch(e){setError(message(e));}}
   async function download(){try{setError('');await nativeDocuments().startModelDownload();setModel(await nativeDocuments().modelStatus());setNotice('You can leave the app while the download continues.');}catch(e){setError(message(e));}}
   const heading=(title:string,description?:string)=><View style={{gap:8}}><Text style={s.heading}>{title}</Text>{description&&<Text style={s.muted}>{description}</Text>}</View>;
   const selector=books.length>0&&<ScrollView horizontal contentContainerStyle={{gap:8}} showsHorizontalScrollIndicator={false}>{books.map(b=><Pressable key={b.id} accessibilityRole="button" onPress={()=>switchBook(b.id)} disabled={!!busy} style={[s.chip,b.id===activeId&&s.activeChip]}><Text numberOfLines={1} style={{color:b.id===activeId?c.buttonInk:c.text,maxWidth:230,fontFamily:'SourceSans3_600SemiBold'}}>{b.title}</Text></Pressable>)}</ScrollView>;
@@ -223,7 +225,7 @@ function AppBody(){
     {heading('Your documents, answered.','Read, ask and study on your device.')}
     <View style={[s.card,{backgroundColor:c.hero}]}><Text style={[s.title,{color:'#F6F4EE'}]}>{book?'Continue with your document':'Start with one document'}</Text><Text style={{color:'#D7EEE1',fontSize:17}}>{book?.title??'Import a document or image to start your private library.'}</Text>{button(book?'Open library':'Import a file',()=>book?setTab('Library'):void doImport(),!!busy,'home-primary')}{!book&&button('Take photo',()=>void addPhoto(true),!!busy,'home-take-photo')}</View>
     <View style={s.card}><Text style={s.title}>CiteCoach AI</Text><Text style={s.body}>{model.ready?'Ready offline':downloading?'Downloading…':'Set up once to use offline'}</Text>{button(model.ready?'Ask a question':'Set up offline AI',()=>setTab(model.ready?'Ask':'Settings'))}</View>
-    <View style={s.row}>{button('Flashcards',()=>{setMode('Flashcards');setTab('Learn');})}{button('Quiz',()=>{setMode('Quiz');setTab('Learn');})}</View>
+    <View style={s.row}>{button('Flashcards',()=>{setMode('Flashcards');setTab('Learn');})}{button('Quiz',()=>{setMode('Quiz');setTab('Learn');})}{button('Practice paper',()=>{setMode('Paper');setTab('Learn');})}</View>
     <Text style={s.muted}>{books.length} saved documents · {study.cards.length} saved flashcards</Text>
   </>;
   const library=<>
@@ -244,12 +246,14 @@ function AppBody(){
   </>;
   const currentCard=study.cards[cardIndex];const currentQuestion=study.quiz[quizIndex];
   const learn=<>
-    {heading('Learn','Flashcards and quizzes from your document.')}{selector}
-    <View style={s.row}>{(['Flashcards','Quiz'] as const).map(value=><Pressable key={value} accessibilityRole="tab" accessibilityState={{selected:mode===value}} onPress={()=>setMode(value)} style={[s.chip,mode===value&&s.activeChip]}><Text style={{color:mode===value?c.buttonInk:c.text}}>{value}</Text></Pressable>)}</View>
+    {heading('Learn','Flashcards, quizzes and practice papers from your documents.')}{mode!=='Paper'&&selector}
+    <View style={s.row}>{(['Flashcards','Quiz','Paper'] as const).map(value=><Pressable key={value} accessibilityRole="tab" accessibilityState={{selected:mode===value}} disabled={!!busy} onPress={()=>setMode(value)} style={[s.chip,mode===value&&s.activeChip]}><Text style={{color:mode===value?c.buttonInk:c.text}}>{value==='Paper'?'Practice paper':value}</Text></Pressable>)}</View>
+    {mode==='Paper'?<PracticePaper books={books} preferredBookId={activeId} modelPath={model.path} dark={dark} blocked={!!busy} onBusy={setBusy} onError={setError} cancelRef={paperCancel}/>:<>
     {pageScope}<TextInput accessibilityLabel="Study topic" placeholder="Study topic, e.g. supervised learning" value={topic} onChangeText={setTopic} style={s.input} editable={!busy}/>
     {button(mode==='Flashcards'?'Generate flashcards':'Generate quiz',()=>void run(mode==='Flashcards'?'cards':'quiz'),!book||!!busy,'generate-study')}
     {mode==='Flashcards'&&(currentCard?<View style={s.card}><Text style={s.label}>Card {cardIndex+1} of {study.cards.length}</Text><Text style={s.title}>{currentCard.q}</Text>{revealed?<><Text selectable style={s.body}>{currentCard.a}</Text>{sourceChip(currentCard.page,book?.pages.find(p=>p.page===currentCard.page)?.text??'')}</>:button('Reveal answer',()=>setRevealed(true))}{button('Next card',()=>{setCardIndex((cardIndex+1)%study.cards.length);setRevealed(false);})}</View>:<Text style={s.muted}>Your generated flashcards will appear here.</Text>)}
     {mode==='Quiz'&&(finished?<View style={s.card}><Text style={s.heading}>{scores.filter(Boolean).length} / {study.quiz.length}</Text><Text style={s.body}>Quiz complete. Review the explanations and sources as you practice again.</Text>{button('Try again',resetQuiz)}</View>:currentQuestion?<View style={s.card}><Text style={s.label}>Question {quizIndex+1} of {study.quiz.length}</Text><Text style={s.title}>{currentQuestion.q}</Text>{currentQuestion.options.map((option,i)=><Pressable key={i} accessibilityRole="radio" accessibilityState={{checked:choice===i,disabled:checked}} disabled={checked} onPress={()=>setChoice(i)} style={[s.chip,choice===i&&{borderWidth:2,borderColor:c.primary},checked&&i===currentQuestion.answer&&{backgroundColor:c.pale},checked&&choice===i&&i!==currentQuestion.answer&&{borderColor:'#B9532E'}]}><Text style={s.body}>{String.fromCharCode(65+i)}. {option}{checked&&i===currentQuestion.answer?' ✓':''}</Text></Pressable>)}{checked&&<><Text style={s.label}>{choice===currentQuestion.answer?'Correct.':'Not quite.'}</Text><Text style={s.body}>{currentQuestion.explanation}</Text>{sourceChip(currentQuestion.page,book?.pages.find(p=>p.page===currentQuestion.page)?.text??'')}</>}{button(checked?(quizIndex===study.quiz.length-1?'See results':'Next question'):'Check answer',()=>{if(!checked){setScores(previous=>[...previous,choice===currentQuestion.answer]);setChecked(true);}else if(quizIndex===study.quiz.length-1)setFinished(true);else{setQuizIndex(quizIndex+1);setChoice(null);setChecked(false);}},!checked&&choice===null)}</View>:<Text style={s.muted}>Your generated quiz will appear here.</Text>)}
+    </>}
   </>;
   const settings=<>
     {heading('Settings','Make CiteCoach yours')}
@@ -258,7 +262,7 @@ function AppBody(){
     <View style={s.card}><Text style={s.title}>Offline AI</Text><Text style={s.body}>{model.ready?'Ready to use offline':downloading?'Downloading…':'Not downloaded'}</Text><Text style={s.muted}>{model.ready?'No internet needed for answers.':'Set up once to use CiteCoach offline.'}</Text>{model.ready&&<Text style={s.muted}>{Math.round(model.bytes/1000000)} MB on this device</Text>}</View>
     <View style={s.card}><Text style={s.title}>Storage</Text><Text style={s.body}>{books.length} imported {books.length===1?'file':'files'} · {(storage.documents/1000000).toFixed(1)} MB</Text><Text style={s.muted}>Preview cache · {(storage.previews/1000000).toFixed(1)} MB</Text>{button('Clear preview cache',()=>{void nativeDocuments().clearPreviewCache('').then(()=>{setNotice('Preview cache cleared.');void refreshStorage();}).catch(e=>setError(message(e)));})}<Text style={s.muted}>Delete imported files from the Library.</Text></View>
     <View style={s.card}><Text style={s.title}>Privacy & permissions</Text><Text style={s.body}>Your documents and photos are processed on this device.</Text>{button('Camera & photo permissions',()=>void Linking.openSettings())}</View>
-    <View style={s.card}><Text style={s.title}>About CiteCoach</Text><Text style={s.muted}>Version 0.3.10</Text><Pressable accessibilityRole="button" accessibilityState={{expanded:showFormats}} onPress={()=>setShowFormats(!showFormats)} style={s.chip}><Text style={s.label}>Supported files {showFormats?'−':'+'}</Text></Pressable>{showFormats&&<Text style={s.muted}>PDF, JPG, PNG, WEBP, supported HEIC images, DOCX, PPTX, XLSX, OpenDocument, TXT, Markdown, CSV, JSON and HTML. OCR reads English and Latin-script text.</Text>}</View>
+    <View style={s.card}><Text style={s.title}>About CiteCoach</Text><Text style={s.muted}>Version 0.4.0</Text><Pressable accessibilityRole="button" accessibilityState={{expanded:showFormats}} onPress={()=>setShowFormats(!showFormats)} style={s.chip}><Text style={s.label}>Supported files {showFormats?'−':'+'}</Text></Pressable>{showFormats&&<Text style={s.muted}>PDF, JPG, PNG, WEBP, supported HEIC images, DOCX, PPTX, XLSX, OpenDocument, TXT, Markdown, CSV, JSON and HTML. OCR reads English and Latin-script text.</Text>}</View>
   </>;
 
   // Completion is derived from the persisted native download, never an in-memory

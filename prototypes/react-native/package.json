@@ -1,6 +1,6 @@
 {
   "name": "citecoach",
-  "version": "0.3.10",
+  "version": "0.4.0",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "export": "expo export --platform web",
-    "test:ui": "node scripts/check-real-app.mjs",
+    "test:ui": "node scripts/check-real-app.mjs && tsx scripts/check-paper-export.ts",
     "generate:icon": "node scripts/generate-icon.mjs",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -37,7 +37,9 @@
     "expo-splash-screen": "~55.0.25",
     "fflate": "0.8.2",
     "base64-js": "1.5.1",
-    "expo-image-picker": "~55.0.24"
+    "expo-image-picker": "~55.0.24",
+    "expo-print": "~55.0.19",
+    "expo-sharing": "~55.0.25"
   },
   "devDependencies": {
     "typescript": "~5.9.2",

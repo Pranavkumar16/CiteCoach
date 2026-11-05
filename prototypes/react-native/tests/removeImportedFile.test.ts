@@ -26,3 +26,9 @@ test('failed file removal keeps the library entry available for retry',async()=>
  await assert.rejects(()=>removeImportedFile(book,root,f.storage));
  assert.equal(f.values.get('citecoach-books-v1'),'["book-123","book-456"]');assert.equal(f.values.get('study:book-123'),'cards');
 });
+
+test('deleting a reference document also removes practice papers derived from it',async()=>{
+ const f=fixture();f.values.set('paper:book-123',JSON.stringify({templateId:'book-123'}));f.values.set('paper:book-456',JSON.stringify({templateId:'book-456',referenceId:'book-123'}));
+ await removeImportedFile(book,root,f.storage);
+ assert.equal(f.values.has('paper:book-123'),false);assert.equal(f.values.has('paper:book-456'),false);assert.equal(f.values.get('study:book-456'),'other cards');
+});
