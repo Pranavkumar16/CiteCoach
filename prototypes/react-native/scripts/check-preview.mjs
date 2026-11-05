@@ -66,6 +66,9 @@ try {
     await page.getByLabel('Back to Home').click();
     await page.screenshot({path:'screenshots/home-dark-' + viewport.width + '.png'});
     await page.getByTestId('open-settings').click();
+    await page.getByTestId('preview-busy').click();
+    await page.getByTestId('brand-busy').waitFor();
+    await page.getByRole('button',{name:'Cancel',exact:true}).click();
     await page.getByTestId('empty-library-preview').click();
     await page.getByTestId('try-sample-book').waitFor();
     assert.equal(await page.getByTestId('nav-Home').count(), 0);

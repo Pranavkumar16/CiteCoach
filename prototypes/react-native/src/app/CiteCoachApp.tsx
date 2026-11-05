@@ -18,6 +18,7 @@ import {SourceSans3_700Bold} from '@expo-google-fonts/source-sans-3/700Bold';
 import {SourceSerif4_400Regular_Italic} from '@expo-google-fonts/source-serif-4/400Regular_Italic';
 import {createTheme,font,typography,radius} from '../../theme/tokens';
 import {CiteMark} from '../../components/CiteMark';
+import {BrandBusyIndicator} from '../../components/BrandBusyIndicator';
 
 function Text(props: TextProps) {
   return <NativeText maxFontSizeMultiplier={1.35} {...props}
@@ -39,7 +40,7 @@ function AppBody() {
   const [chapter, setChapter] = useState('Chapter 2 · Classification');
   const [topic, setTopic] = useState('Supervised learning');
   const [question, setQuestion] = useState('');
-  const [modal, setModal] = useState<'book' | 'source' | 'chapter' | 'ask' | null>(null);
+  const [modal, setModal] = useState<'book' | 'source' | 'chapter' | 'ask' | 'busy' | null>(null);
   const [activeBook, setActiveBook] = useState<Book>(sampleBooks[0]);
   const [session, setSession] = useState(false);
   const [index, setIndex] = useState(0);
@@ -253,6 +254,7 @@ function AppBody() {
       {section('Offline AI')}
       <View style={s.card}><View style={{flexDirection: 'row', gap: 12}}><View style={s.quickIcon}>{icon('hardware-chip-outline', 24, c.ink)}</View><View style={{flex: 1, gap: 7}}><Text style={s.bookTitle}>Learn from your own books.</Text><Text style={s.body}>The offline model is not connected in this UI preview.</Text></View></View></View>
       {section('About this preview')}
+      <Pressable testID="preview-busy" accessibilityRole="button" onPress={()=>setModal('busy')} style={s.outline}><Text style={s.link}>Preview branded loading</Text></Pressable>
       <Pressable testID="empty-library-preview" onPress={() => {setBooks([]);navigate('Library');}} style={s.outline}><Text style={s.link}>Preview the empty library</Text></Pressable>
       <View style={s.card}><Text style={s.body}>Explore the layout, colors, navigation, and sample study flows. This is a separate preview app and does not replace your current CiteCoach installation.</Text></View>
       <Text style={[s.small, {textAlign: 'center', marginVertical: 12}]}>CiteCoach · Design system preview 0.2</Text>
@@ -275,7 +277,7 @@ function AppBody() {
         <View style={s.scrim}><SafeAreaView style={[s.sheet, {maxHeight: '85%'}]} edges={['bottom']}>
           <View style={s.sheetTop}><View style={s.handle} /><Pressable accessibilityLabel="Close" testID="close-modal" onPress={() => setModal(null)} style={{padding: 10}}>{icon('close', 24)}</Pressable></View>
           <ScrollView contentContainerStyle={{paddingHorizontal: 24, paddingBottom: 28, gap: 18}} keyboardShouldPersistTaps="handled">
-            {modal === 'chapter' ? <><Text style={s.heading}>Choose a chapter</Text><Text style={s.small}>Sample textbook chapters</Text>{['Whole book','Chapter 1 · Getting started','Chapter 2 · Classification','Chapter 3 · Regression'].map((value) => <Pressable key={value} testID={'chapter-' + value.split(' ')[1]} onPress={() => {setChapter(value); setModal(null); setSession(false);}} style={s.select}><Text style={[s.body, {flex: 1, color: c.text}]}>{value}</Text>{chapter === value && icon('checkmark-circle', 22, c.primary)}</Pressable>)}</> : modal === 'source' ? <><Text style={s.heading}>Sample source</Text>{pill('PDF page ' + source.page, 'document-text-outline')}<View style={[s.card, {backgroundColor: c.pale}]}><Text style={s.quote}>{source.text}</Text></View><Text style={s.small}>A sample excerpt for evaluating the citation interface.</Text></> : modal === 'ask' ? <><Text style={s.heading}>Ask your textbook</Text><Text style={s.bookTitle}>{question || 'What is supervised learning?'}</Text><View style={s.note}>{icon('information-circle-outline', 22, c.muted)}<Text style={[s.body, {flex: 1}]}>Offline AI is not connected in this UI preview. You can explore the sample quiz and flashcards.</Text></View>{button('Explore sample quiz', () => {setModal(null); openLearn('Quiz');}, 'arrow-forward-outline')}</> : <><View style={s.pdf}>{icon('document-text-outline', 30, c.amberText)}</View><Text style={s.heading}>{activeBook.title}</Text><Text style={s.body}>{activeBook.meta}</Text><Text style={s.small}>{activeBook.sample ? 'Explore the sample learning flow for this book.' : 'This PDF has been imported. Reading and AI processing are not connected in this UI preview.'}</Text>{activeBook.sample && button('Start studying', () => {setModal(null); openLearn('Quiz');}, 'school-outline')}</>}
+            {modal === 'busy' ? <BrandBusyIndicator label="Preparing your document…" dark={dark} onCancel={()=>setModal(null)}/> : modal === 'chapter' ? <><Text style={s.heading}>Choose a chapter</Text><Text style={s.small}>Sample textbook chapters</Text>{['Whole book','Chapter 1 · Getting started','Chapter 2 · Classification','Chapter 3 · Regression'].map((value) => <Pressable key={value} testID={'chapter-' + value.split(' ')[1]} onPress={() => {setChapter(value); setModal(null); setSession(false);}} style={s.select}><Text style={[s.body, {flex: 1, color: c.text}]}>{value}</Text>{chapter === value && icon('checkmark-circle', 22, c.primary)}</Pressable>)}</> : modal === 'source' ? <><Text style={s.heading}>Sample source</Text>{pill('PDF page ' + source.page, 'document-text-outline')}<View style={[s.card, {backgroundColor: c.pale}]}><Text style={s.quote}>{source.text}</Text></View><Text style={s.small}>A sample excerpt for evaluating the citation interface.</Text></> : modal === 'ask' ? <><Text style={s.heading}>Ask your textbook</Text><Text style={s.bookTitle}>{question || 'What is supervised learning?'}</Text><View style={s.note}>{icon('information-circle-outline', 22, c.muted)}<Text style={[s.body, {flex: 1}]}>Offline AI is not connected in this UI preview. You can explore the sample quiz and flashcards.</Text></View>{button('Explore sample quiz', () => {setModal(null); openLearn('Quiz');}, 'arrow-forward-outline')}</> : <><View style={s.pdf}>{icon('document-text-outline', 30, c.amberText)}</View><Text style={s.heading}>{activeBook.title}</Text><Text style={s.body}>{activeBook.meta}</Text><Text style={s.small}>{activeBook.sample ? 'Explore the sample learning flow for this book.' : 'This PDF has been imported. Reading and AI processing are not connected in this UI preview.'}</Text>{activeBook.sample && button('Start studying', () => {setModal(null); openLearn('Quiz');}, 'school-outline')}</>}
           </ScrollView>
         </SafeAreaView></View>
       </Modal>
@@ -365,6 +367,6 @@ export default function App() {
     BricolageGrotesque_600SemiBold,BricolageGrotesque_700Bold,BricolageGrotesque_800ExtraBold,
     SourceSans3_400Regular,SourceSans3_600SemiBold,SourceSans3_700Bold,SourceSerif4_400Regular_Italic,
   });
-  if (!loaded && !error) return <SafeAreaProvider><SafeAreaView style={{flex:1,backgroundColor:'#F6F4EE',alignItems:'center',justifyContent:'center',gap:16}}><CiteMark size={36}/><NativeText style={{color:'#1F4D3A',fontSize:17}}>Opening CiteCoach…</NativeText></SafeAreaView></SafeAreaProvider>;
+  if (!loaded && !error) return <SafeAreaProvider><SafeAreaView style={{flex:1,backgroundColor:'#F6F4EE',alignItems:'center',justifyContent:'center',gap:16}}><BrandBusyIndicator/></SafeAreaView></SafeAreaProvider>;
   return <SafeAreaProvider><AppBody /></SafeAreaProvider>;
 }
